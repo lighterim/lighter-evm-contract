@@ -1,1 +1,1 @@
-permit2/=lib/permit2
+@uniswap/permit2/=lib/permit2/src
