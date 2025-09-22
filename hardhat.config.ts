@@ -5,6 +5,10 @@ import { configVariable } from "hardhat/config";
 
 const config: HardhatUserConfig = {
   plugins: [hardhatToolboxViemPlugin],
+  remappings: [
+    "@uniswap/permit2/=lib/permit2/src/", 
+    "forge-std/=npm/forge-std@1.9.4/src"
+  ],
   solidity: {
     profiles: {
       default: {
@@ -35,6 +39,13 @@ const config: HardhatUserConfig = {
       chainType: "l1",
       url: configVariable("SEPOLIA_RPC_URL"),
       accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
+    },
+    baseSepolia: {
+      type: "http",
+      chainType: "generic",
+      url: configVariable("BASE_SEPOLIA_RPC_URL"),
+      accounts: [configVariable("BASE_SEPOLIA_PRIVATE_KEY")],
+      chainId: 84532,
     },
   },
 };
