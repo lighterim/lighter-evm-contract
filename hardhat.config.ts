@@ -7,23 +7,34 @@ const config: HardhatUserConfig = {
   plugins: [hardhatToolboxViemPlugin],
   remappings: [
     "@uniswap/permit2/=lib/permit2/src/", 
-    "forge-std/=npm/forge-std@1.9.4/src"
+    "forge-std/=npm/forge-std@1.9.4/src",
+    "@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/"
   ],
   solidity: {
-    profiles: {
-      default: {
-        version: "0.8.28",
-      },
-      production: {
-        version: "0.8.28",
+    compilers: [
+      {
+        version: "0.8.28", // Your primary version
         settings: {
+          // This settings block applies to all files compiled with 0.8.28
           optimizer: {
             enabled: true,
             runs: 200,
           },
         },
       },
-    },
+      {
+        version: "0.8.0",
+      },
+      {
+        version: "0.8.17",
+      },
+      {
+        version: "0.8.15",
+      },
+      {
+        version: "0.8.10",
+      },
+    ]
   },
   networks: {
     hardhatMainnet: {

@@ -1,1 +1,2 @@
 @uniswap/permit2/=lib/permit2/src
+@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/

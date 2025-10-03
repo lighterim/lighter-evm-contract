@@ -9,6 +9,27 @@ abstract contract Permit2PaymentAbstract is AbstractContext {
     
     string internal constant TOKEN_PERMISSIONS_TYPE = "TokenPermissions(address token,uint256 amount)";
 
+    string constant INTENT_WITNESS_TYPE_STRING = "IntentParams intentParams)TokenPermissions(address token,uint256 amount)Witness(address user)";
+    
+    // EIP-712 Domain Separator constants
+    // keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
+    bytes32 constant EIP712_DOMAIN_TYPEHASH = 0x22a86b360b5485458145028452a23e18ce4839843a9677579ab5c5f87a87e008;
+    
+    string constant INTENT_PARAMS_TYPE = "IntentParams(address token,Range range,uint64 expiryTime,bytes32 currency,bytes32 paymentMethod,bytes32 payeeDetails,uint256 price)Range(uint256 min,uint256 max)";
+    // keccak256("Range(uint256 min,uint256 max)")
+    bytes32 constant RANGE_TYPEHASH = 0x4f957099e465954533e4f7c229f55b0a330752b757366579c2a64f434b9b59c7;
+    // keccak256("IntentParams(address token,Range range,uint64 expiryTime,bytes32 currency,bytes32 paymentMethod,bytes32 payeeDetails,uint256 price)Range(uint256 min,uint256 max)")
+    bytes32 constant INTENT_PARAMS_TYPEHASH = 0x22a86b360b5485458145028452a23e18ce4839843a9677579ab5c5f87a87e008;
+
+    string constant ESCROW_PARAMS_TYPE = "EscrowParams(uint256 id,address token,uint256 volume,uint256 price,uint256 usdRate,address seller,address sellerFeeRate,bytes32 paymentMethod,bytes32 currency,bytes32 payeeId,bytes32 payeeAccount,address buyer,address buyerFeeRate)";
+    
+    // Additional EIP-712 type constants
+    string internal constant SLIPPAGE_TYPE = "Slippage(uint256 minAmountOut,uint256 maxAmountIn)";
+    string internal constant SLIPPAGE_AND_ACTIONS_TYPE = "SlippageAndActions(Slippage slippage,bytes[] actions)Slippage(uint256 minAmountOut,uint256 maxAmountIn)";
+    // keccak256("EscrowParams(uint256 id,address token,uint256 volume,uint256 price,uint256 usdRate,address seller,address sellerFeeRate,bytes32 paymentMethod,bytes32 currency,bytes32 payeeId,bytes32 payeeAccount,address buyer,address buyerFeeRate)")
+    bytes32 constant ESCROW_PARAMS_TYPEHASH = 0x22a86b360b5485458145028452a23e18ce4839843a9677579ab5c5f87a87e008;
+
+
     function _isRestrictedTarget(address) internal view virtual returns (bool);
 
     function _operator() internal view virtual returns (address);
@@ -41,7 +62,7 @@ abstract contract Permit2PaymentAbstract is AbstractContext {
      * @param sig signature
      * @param isForwarded is forwarded
      */
-    function _transferFromIKnowWhatImDoing(
+    function _transferWithSellerIntent(
         ISignatureTransfer.PermitTransferFrom memory permit,
         ISignatureTransfer.SignatureTransferDetails memory transferDetails,
         address from,
@@ -51,7 +72,7 @@ abstract contract Permit2PaymentAbstract is AbstractContext {
         bool isForwarded
     ) internal virtual;
 
-    function _transferFromIKnowWhatImDoing(
+    function _transferWithSellerIntent(
         ISignatureTransfer.PermitTransferFrom memory permit,
         ISignatureTransfer.SignatureTransferDetails memory transferDetails,
         address from,
@@ -67,14 +88,14 @@ abstract contract Permit2PaymentAbstract is AbstractContext {
      * @param sig signature
      * @param isForwarded is forwarded
      */
-    function _transferFrom(
+    function _signatureTransferFrom(
         ISignatureTransfer.PermitTransferFrom memory permit,
         ISignatureTransfer.SignatureTransferDetails memory transferDetails,
         bytes memory sig,
         bool isForwarded
     ) internal virtual;
 
-    function _transferFrom(
+    function _signatureTransferFrom(
         ISignatureTransfer.PermitTransferFrom memory permit,
         ISignatureTransfer.SignatureTransferDetails memory transferDetails,
         bytes memory sig
@@ -87,11 +108,7 @@ abstract contract Permit2PaymentAbstract is AbstractContext {
         function (bytes calldata) internal returns (bytes memory) callback
     ) internal virtual returns (bytes memory);
 
-    modifier metaTx(address msgSender, bytes32 witness) virtual;
-
-    modifier takerSubmitted() virtual;
-
-    /**
+        /**
      * allowanceTransferWithPermit
      * @param token The token to transfer
      * @param owner The owner of the token
@@ -101,4 +118,9 @@ abstract contract Permit2PaymentAbstract is AbstractContext {
     function _allowanceHolderTransferFrom(address token, address owner, address recipient, uint256 amount)
         internal
         virtual;
+
+    modifier metaTx(address msgSender, bytes32 witness) virtual;
+
+    modifier takerSubmitted() virtual;
+
 }
