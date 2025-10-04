@@ -42,7 +42,7 @@ contract MainnetSettler is Settler, MainnetMixin, FreeMemory {
         return true;
     }
 
-    function _dispatchVIP(uint256 action, bytes calldata data) internal virtual override DANGEROUS_freeMemory returns (bool) {
+    function _dispatchVIP(uint256 action, bytes calldata data) internal virtual override returns (bool) {
         if(action == uint32(ISettlerActions.BULK_SELL.selector)) {
             (
                 IAllowanceTransfer.PermitSingle memory permitSingle, 
