@@ -2,6 +2,7 @@
 pragma solidity ^0.8.25;
 
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
+import {ISettlerBase} from "../interfaces/ISettlerBase.sol";
 
 /// @notice Thrown when an offset is not the expected value
 error InvalidOffset();
@@ -24,11 +25,19 @@ error InvalidSender();
 
 error InvalidSpender();
 
+error EscrowAlreadyExists(bytes32 escrowHash);
+
+error EscrowNotExists(bytes32 escrowHash);
+
+error EscrowStatusError(bytes32 escrowHash, ISettlerBase.EscrowStatus expected, ISettlerBase.EscrowStatus actual);
+
 /// @notice Thrown in cases when using a Trusted Forwarder / AllowanceHolder is not allowed
 error ForwarderNotAllowed();
 
 /// @notice Thrown when a signature length is not the expected length
 error InvalidSignatureLen();
+
+error InvalidSignature();
 
 /// @notice Thrown when a slippage limit is exceeded
 error TooMuchSlippage(IERC20 token, uint256 expected, uint256 actual);
@@ -108,6 +117,9 @@ error ZeroBuyAmount(IERC20 buyToken);
 error BoughtSellToken(IERC20 sellToken);
 error TokenHashCollision(IERC20 token0, IERC20 token1);
 error ZeroToken();
+error InvalidToken();
+error InvalidAmount();
+error InsufficientBalance(uint256 amount);
 
 /// @notice Thrown for liquidities that require a Newton-Raphson approximation to solve their
 ///         constant function when Newton-Raphson fails to converge on the solution in a

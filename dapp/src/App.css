@@ -1,0 +1,406 @@
+.App {
+  text-align: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+}
+
+.App-header {
+  padding: 2rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.App-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.App-header p {
+  font-size: 1.2rem;
+  margin-bottom: 2rem;
+  opacity: 0.9;
+}
+
+.wallet-section {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.wallet-connect-section {
+  text-align: center;
+}
+
+.wallet-connect-section h3 {
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+}
+
+.connect-btn {
+  background: linear-gradient(45deg, #4CAF50, #45a049);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  font-size: 1.1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.connect-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+}
+
+.connected-wallet {
+  text-align: center;
+}
+
+.wallet-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.wallet-info p {
+  font-size: 1.1rem;
+  margin: 0;
+  word-break: break-all;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+}
+
+.disconnect-btn {
+  background: linear-gradient(45deg, #f44336, #da190b);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.disconnect-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.contract-section {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.contract-address-input {
+  margin-bottom: 2rem;
+}
+
+.contract-address-input label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.address-input {
+  width: 100%;
+  max-width: 500px;
+  padding: 12px;
+  font-size: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  backdrop-filter: blur(10px);
+}
+
+.address-input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.address-input:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+}
+
+.contract-interaction {
+  margin-top: 2rem;
+  text-align: left;
+}
+
+.contract-interaction h3 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+}
+
+.contract-info {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.contract-info p {
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  background: linear-gradient(45deg, #2196F3, #1976D2);
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  font-size: 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.action-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+}
+
+.action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.bulk-sell-form {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.bulk-sell-form h4 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  color: #81c784;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.form-input {
+  width: 100%;
+  padding: 10px;
+  font-size: 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.form-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+.bulk-sell-btn {
+  background: linear-gradient(45deg, #FF9800, #F57C00) !important;
+  width: 100%;
+  margin-top: 1rem;
+}
+
+/* 签名生成区域样式 */
+.signature-section {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.signature-section h5 {
+  text-align: center;
+  margin-bottom: 1rem;
+  color: #81c784;
+  font-size: 1.1rem;
+}
+
+.signature-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.signature-btn {
+  background: linear-gradient(45deg, #9C27B0, #7B1FA2) !important;
+  font-size: 0.9rem;
+  padding: 10px 16px;
+}
+
+.signature-btn:hover:not(:disabled) {
+  background: linear-gradient(45deg, #8E24AA, #6A1B9A) !important;
+}
+
+.signature-display {
+  margin-bottom: 1rem;
+}
+
+.signature-display label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: bold;
+  font-size: 0.9rem;
+  color: #81c784;
+}
+
+.signature-textarea {
+  width: 100%;
+  padding: 10px;
+  font-size: 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.2);
+  color: #c8e6c9;
+  font-family: 'Courier New', monospace;
+  resize: vertical;
+  min-height: 50px;
+}
+
+.signature-textarea:focus {
+  outline: none;
+  border-color: #9C27B0;
+  box-shadow: 0 0 0 2px rgba(156, 39, 176, 0.2);
+}
+
+.error-message {
+  background: rgba(244, 67, 54, 0.2);
+  border: 1px solid rgba(244, 67, 54, 0.5);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.error-message h4 {
+  margin: 0 0 0.5rem 0;
+  color: #ffcdd2;
+}
+
+.error-message p {
+  margin: 0;
+  color: #ffcdd2;
+}
+
+.result-message {
+  background: rgba(76, 175, 80, 0.2);
+  border: 1px solid rgba(76, 175, 80, 0.5);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.result-message h4 {
+  margin: 0 0 0.5rem 0;
+  color: #c8e6c9;
+}
+
+.result-message pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: #c8e6c9;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+}
+
+.contract-note {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 2rem;
+}
+
+.contract-note h4 {
+  margin: 0 0 1rem 0;
+  color: #81c784;
+}
+
+.contract-note p {
+  margin: 0.5rem 0;
+  line-height: 1.6;
+  opacity: 0.9;
+}
+
+.contract-note ul {
+  text-align: left;
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+}
+
+.contract-note li {
+  margin: 0.5rem 0;
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .App-header {
+    padding: 1rem;
+  }
+  
+  .App-header h1 {
+    font-size: 2rem;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .action-btn {
+    width: 100%;
+    max-width: 300px;
+  }
+  
+  .wallet-info {
+    text-align: center;
+  }
+  
+  .wallet-info p {
+    font-size: 0.9rem;
+  }
+}
