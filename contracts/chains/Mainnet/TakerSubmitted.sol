@@ -21,7 +21,7 @@ import {FreeMemory} from "../../utils/FreeMemory.sol";
 contract MainnetSettler is Settler, MainnetMixin, FreeMemory {
     
     
-    constructor(bytes20 gitCommit) SettlerBase(gitCommit) {}
+    constructor(address lighterRelayer, bytes20 gitCommit) MainnetMixin(lighterRelayer, gitCommit) {}
 
     /**
      * @dev Returns the EIP-712 domain separator for this contract
@@ -38,11 +38,12 @@ contract MainnetSettler is Settler, MainnetMixin, FreeMemory {
         );
     }
 
+    function _dispatch(uint256 index, uint256 action, bytes calldata data) internal virtual override returns (bool) {
+        return true;
+    }
+
     function _dispatchVIP(uint256 action, bytes calldata data) internal virtual override DANGEROUS_freeMemory returns (bool) {
-        if(super._dispatchVIP(action, data)) {
-            return true;
-        }
-        else if(action == uint32(ISettlerActions.BULK_SELL.selector)) {
+        if(action == uint32(ISettlerActions.BULK_SELL.selector)) {
             (
                 IAllowanceTransfer.PermitSingle memory permitSingle, 
                 ISettlerBase.IntentParams memory intentParams, 
@@ -81,11 +82,12 @@ contract MainnetSettler is Settler, MainnetMixin, FreeMemory {
                     )
             );
 
-            _takeSellerIntent(permit, intentParams, escrowParams, permitSig, sig);
+            _takeSellerIntent(permit, transferDetails, intentParams, escrowParams, permitSig, sig);
         }
         else if(action == uint32(ISettlerActions.TAKE_BUYER_INTENT.selector)) {
             (
                 ISignatureTransfer.PermitTransferFrom memory permit, 
+                ISignatureTransfer.SignatureTransferDetails memory transferDetails,
                 ISettlerBase.IntentParams memory intentParams, 
                 ISettlerBase.EscrowParams memory escrowParams, 
                 bytes memory permitSig, 
@@ -94,6 +96,7 @@ contract MainnetSettler is Settler, MainnetMixin, FreeMemory {
             ) = abi.decode(
                 data, (
                     ISignatureTransfer.PermitTransferFrom, 
+                    ISignatureTransfer.SignatureTransferDetails,
                     ISettlerBase.IntentParams, 
                     ISettlerBase.EscrowParams, 
                     bytes, 
@@ -102,7 +105,7 @@ contract MainnetSettler is Settler, MainnetMixin, FreeMemory {
                     )
             );
             
-            _takeBuyerIntent(permit, intentParams, escrowParams, permitSig, intentSig, sig);
+            _takeBuyerIntent(permit, transferDetails, intentParams, escrowParams, permitSig, intentSig, sig);
         }
         else{
             return false;
@@ -130,7 +133,7 @@ contract MainnetSettler is Settler, MainnetMixin, FreeMemory {
         bytes memory permitSig, 
         bytes memory sig
     ) internal {
-        require(permit.permitted.token == intentParams.token, "Invalid token");
+        require(address(permit.permitted.token) == address(intentParams.token), "Invalid token");
         require(permit.permitted.amount >= intentParams.range.min && permit.permitted.amount >= intentParams.range.max, "Invalid amount");
         require(permit.deadline < block.timestamp, "Invalid expiry time");
         if(transferDetails.to != address(this)) revert InvalidSpender();
@@ -172,7 +175,7 @@ contract MainnetSettler is Settler, MainnetMixin, FreeMemory {
         bytes memory intentSig, 
         bytes memory sig
     ) internal {
-        require(permit.permitted.token == intentParams.token, "Invalid token");
+        require(address(permit.permitted.token) == address(intentParams.token), "Invalid token");
         require(transferDetails.to == address(this), "Invalid spender");
         require(transferDetails.requestedAmount == escrowParams.volume, "Invalid amount");
 
@@ -210,9 +213,9 @@ contract MainnetSettler is Settler, MainnetMixin, FreeMemory {
         bytes memory sig
         ) internal 
     {
-        require(permitSingle.details.token == intentParams.token, "Invalid token");
+        require(address(permitSingle.details.token) == address(intentParams.token), "Invalid token");
         require(permitSingle.details.amount > intentParams.range.min && permitSingle.details.amount >= intentParams.range.max, "Invalid amount");
-        require(permitSingle.details.expiryTime < block.timestamp, "Invalid expiry time");
+        require(permitSingle.sigDeadline < block.timestamp, "Invalid expiry time");
         if (permitSingle.spender != address(this)) revert InvalidSpender(); 
         
         // EIP-712 signature verification for intentParams
@@ -224,7 +227,7 @@ contract MainnetSettler is Settler, MainnetMixin, FreeMemory {
         require(recoveredSigner == msg.sender, "Invalid intent signature");
 
         // Call permit2 directly
-        IAllowanceTransfer(0x000000000022D473030F116dDEE9F6B43aC78BA3).permit(msg.sender, permitSingle, permitSig); 
+        _permit(msg.sender, permitSingle, permitSig); 
 
     }
 
@@ -241,7 +244,8 @@ contract MainnetSettler is Settler, MainnetMixin, FreeMemory {
         bytes memory sig, 
         bytes memory intentSig
     ) internal {
-        require(escrowParams.token == intentParams.token, "Invalid token");
+        address tokenAddress = address(escrowParams.token);
+        require(tokenAddress == address(intentParams.token), "Invalid token");
         require(escrowParams.volume >= intentParams.range.min && escrowParams.volume <= intentParams.range.max, "Invalid amount");
         require(intentParams.expiryTime < block.timestamp, "Invalid expiry time");
         
@@ -258,7 +262,7 @@ contract MainnetSettler is Settler, MainnetMixin, FreeMemory {
         
         require(signer == lighterRelayer, "Invalid intent signature");
 
-        _allowanceHolderTransferFrom(escrowParams.token, escrowParams.seller, address(this), escrowParams.volume);
+        _allowanceHolderTransferFrom(tokenAddress, escrowParams.seller, address(this), escrowParams.volume);
         _makeEscrow(escrowTypedDataHash, escrowParams, 0, 0);
     }
 
@@ -267,21 +271,21 @@ contract MainnetSettler is Settler, MainnetMixin, FreeMemory {
     function _isRestrictedTarget(address target)
         internal
         pure
-        override(Settler, Permit2PaymentAbstract)
+        override(Settler)
         returns (bool)
     {
         return super._isRestrictedTarget(target);
     }
 
-    function _dispatch(uint256 i, uint256 action, bytes calldata data)
-        internal
-        override(Settler, MainnetMixin)
-        returns (bool)
-    {
-        return super._dispatch(i, action, data);
-    }
+    // function _dispatch(uint256 i, uint256 action, bytes calldata data)
+    //     internal
+    //     override(Settler, MainnetMixin)
+    //     returns (bool)
+    // {
+    //     return super._dispatch(i, action, data);
+    // }
 
-    function _msgSender() internal view override(Settler, AbstractContext) returns (address) {
+    function _msgSender() internal view override(Settler) returns (address) {
         return super._msgSender();
     }
 }

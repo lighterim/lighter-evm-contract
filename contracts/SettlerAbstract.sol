@@ -17,5 +17,6 @@ abstract contract SettlerAbstract is Permit2PaymentAbstract {
 
     function _dispatch(uint256 i, uint256 action, bytes calldata data) internal virtual returns (bool);
 
-    function _div512to256(uint512 n, uint512 d) internal view virtual returns (uint256);
+    
+
 }

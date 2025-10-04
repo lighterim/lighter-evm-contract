@@ -171,7 +171,7 @@ library FullMath {
         (uint256 prod0, uint256 prod1, uint256 remainder) = _mulDivSetup(a, b, denominator);
         uint256 overflow;
         unchecked {
-            overflow = (denominator > prod1).toInt() - 1;
+            overflow = (denominator > prod1 ? 1 : 0) - 1;
         }
         if (prod1 == 0) {
             return prod0.unsafeDivUp(denominator).saturatingAdd(overflow);

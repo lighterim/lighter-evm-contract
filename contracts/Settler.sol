@@ -23,7 +23,7 @@ abstract contract Settler is ISettlerTakerSubmitted, Permit2PaymentTakerSubmitte
     using UnsafeMath for uint256;
     using CalldataDecoder for bytes[];
 
-    function _tokenId() internal view virtual returns (uint256) {
+    function _tokenId() internal pure override returns (uint256) {
         return 2;
     }
 
@@ -33,48 +33,37 @@ abstract contract Settler is ISettlerTakerSubmitted, Permit2PaymentTakerSubmitte
 
     function _domainSeparator() internal view virtual returns (bytes32);
 
-    function _dispatch(uint256 index, uint256 action, bytes calldata data) internal virtual override(SettlerAbstract, SettlerBase) returns (bool) {
-        if(super._dispatch(index, action, data)) {
-            return true;
-        }
-        else if(action == uint32(ISettlerActions.NATIVE_CHECK.selector)) {
-            (uint256 deadline, uint256 msgValue) = abi.decode(data, (uint256, uint256));
-            if (block.timestamp > deadline) {
-                assembly ("memory-safe") {
-                    mstore(0x00, 0xcd21db4f) // selector for `SignatureExpired(uint256)`
-                    mstore(0x20, deadline)
-                    revert(0x1c, 0x24)
-                }
-            }
-            if (msg.value < msgValue) {
-                assembly ("memory-safe") {
-                    mstore(0x00, 0x4a094431) // selector for `MsgValueMismatch(uint256,uint256)`
-                    mstore(0x20, msgValue)
-                    mstore(0x40, callvalue())
-                    revert(0x1c, 0x44)
-                }
-            }
-        }
-        else{
-            return false;
-        }
-        return true;
-    }
+    // function _dispatch(uint256 index, uint256 action, bytes calldata data) internal virtual override(SettlerAbstract/*, SettlerBase*/) returns (bool) {
+    //     if(super._dispatch(index, action, data)) {
+    //         return true;
+    //     }
+    //     else if(action == uint32(ISettlerActions.NATIVE_CHECK.selector)) {
+    //         (uint256 deadline, uint256 msgValue) = abi.decode(data, (uint256, uint256));
+    //         if (block.timestamp > deadline) {
+    //             assembly ("memory-safe") {
+    //                 mstore(0x00, 0xcd21db4f) // selector for `SignatureExpired(uint256)`
+    //                 mstore(0x20, deadline)
+    //                 revert(0x1c, 0x24)
+    //             }
+    //         }
+    //         if (msg.value < msgValue) {
+    //             assembly ("memory-safe") {
+    //                 mstore(0x00, 0x4a094431) // selector for `MsgValueMismatch(uint256,uint256)`
+    //                 mstore(0x20, msgValue)
+    //                 mstore(0x40, callvalue())
+    //                 revert(0x1c, 0x44)
+    //             }
+    //         }
+    //     }
+    //     else{
+    //         return false;
+    //     }
+    //     return true;
+    // }
 
-    function _dispatchVIP(uint256 action, bytes calldata data) internal virtual returns (bool) {
-        if (action == uint32(ISettlerActions.TRANSFER_FROM.selector)) {
-            (address recipient, ISignatureTransfer.PermitTransferFrom memory permit, bytes memory sig) =
-                abi.decode(data, (address, ISignatureTransfer.PermitTransferFrom, bytes));
-            (ISignatureTransfer.SignatureTransferDetails memory transferDetails,) =
-                _permitToTransferDetails(permit, recipient);
-            _transferFrom(permit, transferDetails, sig);
-        } else {
-            return false;
-        }
-        return true;
-    }
+    function _dispatchVIP(uint256 action, bytes calldata data) internal virtual returns (bool);
 
-    function execute(/*AllowedSlippage calldata slippage,*/ bytes[] calldata actions, bytes32 /* zid & affiliate */ )
+    function execute(bytes[] calldata actions, bytes32 /* zid & affiliate */ )
         public
         payable
         override
@@ -97,7 +86,6 @@ abstract contract Settler is ISettlerTakerSubmitted, Permit2PaymentTakerSubmitte
             }
         }
 
-        // _checkSlippageAndTransfer(slippage);
         return true;
     }
 
@@ -179,7 +167,7 @@ abstract contract Settler is ISettlerTakerSubmitted, Permit2PaymentTakerSubmitte
         internal
         view
         virtual
-        override(Permit2PaymentTakerSubmitted, AbstractContext)
+        override(Permit2PaymentTakerSubmitted)
         returns (address)
     {
         return super._msgSender();
@@ -189,7 +177,7 @@ abstract contract Settler is ISettlerTakerSubmitted, Permit2PaymentTakerSubmitte
         internal
         pure
         virtual
-        override(Permit2PaymentTakerSubmitted, Permit2PaymentAbstract)
+        override(Permit2PaymentTakerSubmitted)
         returns (bool)
     {
         return super._isRestrictedTarget(target);

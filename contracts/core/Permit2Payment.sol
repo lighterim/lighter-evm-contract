@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
+import {Permit2PaymentAbstract} from "./Permit2PaymentAbstract.sol";
 import {revertConfusedDeputy} from "./SettlerErrors.sol";
 import {Context, AbstractContext} from "../Context.sol";
 import {SettlerAbstract} from "../SettlerAbstract.sol";
@@ -8,6 +9,7 @@ import {AllowanceHolderContext} from "../allowanceholder/AllowanceHolderContext.
 import {FullMath} from "../vendor/FullMath.sol";
 import {SafeTransferLib} from "../vendor/SafeTransferLib.sol";
 import {Panic} from "../utils/Panic.sol";
+
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer.sol";
 import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
@@ -228,17 +230,17 @@ abstract contract Permit2PaymentBase is Context, SettlerAbstract {
     //     return _setOperatorAndCall(payable(target), 0, data, selector, callback);
     // }
 
-    function _invokeCallback(bytes calldata data) internal returns (bytes memory) {
-        // Retrieve callback and perform call with untrusted calldata
-        return TransientStorage.getAndClearCallback()(data[4:]);
-    }
+    // function _invokeCallback(bytes calldata data) internal returns (bytes memory) {
+    //     // Retrieve callback and perform call with untrusted calldata
+    //     return TransientStorage.getAndClearCallback()(data[4:]);
+    // }
 }
 
 abstract contract Permit2Payment is Permit2PaymentBase {
     
-    fallback(bytes calldata) external virtual returns (bytes memory) {
-        return _invokeCallback(_msgData());
-    }
+    // fallback(bytes calldata) external virtual returns (bytes memory) {
+    //     return _invokeCallback(_msgData());
+    // }
 
     function _permitToTransferDetails(ISignatureTransfer.PermitTransferFrom memory permit, address recipient)
         internal
@@ -248,6 +250,9 @@ abstract contract Permit2Payment is Permit2PaymentBase {
     {
         transferDetails.to = recipient;
         transferDetails.requestedAmount = sellAmount = _permitToSellAmount(permit);
+    }
+    function _permit(address owner, IAllowanceTransfer.PermitSingle memory permitSingle, bytes memory signature) internal virtual override(Permit2PaymentAbstract) {
+        _PERMIT2_ALLOWANCE.permit(owner, permitSingle, signature);
     }
 
     // This function is provided *EXCLUSIVELY* for use here and in RfqOrderSettlement. Any other use
@@ -261,7 +266,7 @@ abstract contract Permit2Payment is Permit2PaymentBase {
         string memory witnessTypeString,
         bytes memory sig,
         bool isForwarded
-    ) internal override {
+    ) internal {
         if (isForwarded) {
             assembly ("memory-safe") {
                 mstore(0x00, 0x1c500e5c) // selector for `ForwarderNotAllowed()`
@@ -332,7 +337,7 @@ abstract contract Permit2Payment is Permit2PaymentBase {
         bytes32 witness,
         string memory witnessTypeString,
         bytes memory sig
-    ) internal override {
+    ) internal {
         _transferFromIKnowWhatImDoing(permit, transferDetails, from, witness, witnessTypeString, sig, _isForwarded());
     }
 
@@ -340,7 +345,7 @@ abstract contract Permit2Payment is Permit2PaymentBase {
         ISignatureTransfer.PermitTransferFrom memory permit,
         ISignatureTransfer.SignatureTransferDetails memory transferDetails,
         bytes memory sig
-    ) internal override {
+    ) internal virtual override(Permit2PaymentAbstract) {
         _transferFrom(permit, transferDetails, sig, _isForwarded());
     }
 
@@ -350,7 +355,7 @@ abstract contract Permit2Payment is Permit2PaymentBase {
      * @param permitSingle Data signed over by the owner specifying the terms of approval
      * @param signature The owner's signature over the permit data
      */
-    function _permit(address owner, IAllowanceTransfer.PermitSingle memory permitSingle, bytes calldata signature) external {
+    function _allowanceHolderTransferFrom(address owner, IAllowanceTransfer.PermitSingle memory permitSingle, bytes calldata signature) internal virtual {
         _PERMIT2_ALLOWANCE.permit(owner, permitSingle, signature);
     }
     
@@ -366,21 +371,6 @@ abstract contract Permit2PaymentTakerSubmitted is AllowanceHolderContext, Permit
         assert(!_hasMetaTxn());
     }
 
-    function _permitToSellAmountCalldata(ISignatureTransfer.PermitTransferFrom calldata permit)
-        internal
-        view
-        override
-        returns (uint256 sellAmount)
-    {
-        sellAmount = permit.permitted.amount;
-        if (sellAmount > type(uint256).max - BASIS) {
-            unchecked {
-                sellAmount -= type(uint256).max - BASIS;
-            }
-            sellAmount = IERC20(permit.permitted.token).fastBalanceOf(_msgSender()).mulDiv(sellAmount, BASIS);
-        }
-    }
-
     function _permitToSellAmount(ISignatureTransfer.PermitTransferFrom memory permit)
         internal
         view
@@ -388,11 +378,11 @@ abstract contract Permit2PaymentTakerSubmitted is AllowanceHolderContext, Permit
         returns (uint256 sellAmount)
     {
         sellAmount = permit.permitted.amount;
-        if (sellAmount > type(uint256).max - BASIS) {
-            unchecked {
-                sellAmount -= type(uint256).max - BASIS;
+        unchecked {
+            if (~sellAmount < BASIS) {
+                sellAmount = BASIS - ~sellAmount;
+                sellAmount = IERC20(permit.permitted.token).fastBalanceOf(_msgSender()).unsafeMulDiv(sellAmount, BASIS);
             }
-            sellAmount = IERC20(permit.permitted.token).fastBalanceOf(_msgSender()).mulDiv(sellAmount, BASIS);
         }
     }
 
@@ -405,7 +395,7 @@ abstract contract Permit2PaymentTakerSubmitted is AllowanceHolderContext, Permit
         ISignatureTransfer.SignatureTransferDetails memory transferDetails,
         bytes memory sig,
         bool isForwarded
-    ) internal override {
+    ) internal virtual override(Permit2PaymentAbstract) {
         if (isForwarded) {
             if (sig.length != 0) {
                 assembly ("memory-safe") {
@@ -512,7 +502,7 @@ abstract contract Permit2PaymentTakerSubmitted is AllowanceHolderContext, Permit
         TransientStorage.clearPayer(msgSender);
     }
 
-    modifier metaTx(address, bytes32) override {
+    modifier metaTx(address) override {
         revert();
         _;
     }
@@ -556,18 +546,9 @@ abstract contract Permit2PaymentMetaTxn is Context, Permit2Payment {
         assert(_hasMetaTxn());
     }
 
-    function _permitToSellAmountCalldata(ISignatureTransfer.PermitTransferFrom calldata permit)
-        internal
-        pure
-        override
-        returns (uint256)
-    {
-        return permit.permitted.amount;
-    }
-
     function _permitToSellAmount(ISignatureTransfer.PermitTransferFrom memory permit)
         internal
-        pure
+        view
         virtual
         override
         returns (uint256)
@@ -607,7 +588,7 @@ abstract contract Permit2PaymentMetaTxn is Context, Permit2Payment {
         _;
     }
 
-    modifier metaTx(address msgSender, bytes32 witness) override {
+    modifier metaTx(address msgSender/*, bytes32 witness*/) override {
         if (_isForwarded()) {
             assembly ("memory-safe") {
                 mstore(0x00, 0x1c500e5c) // selector for `ForwarderNotAllowed()`
@@ -617,13 +598,13 @@ abstract contract Permit2PaymentMetaTxn is Context, Permit2Payment {
         if (_operator() == msgSender) {
             revertConfusedDeputy();
         }
-        TransientStorage.setWitness(witness);
+        // TransientStorage.setWitness(witness);
         TransientStorage.setPayer(msgSender);
         _;
         TransientStorage.clearPayer(msgSender);
         // It should not be possible for this check to revert because the very first thing that a
         // metatransaction does is spend the witness.
-        TransientStorage.checkSpentWitness();
+        // TransientStorage.checkSpentWitness();
     }
 
     // Solidity inheritance is stupid

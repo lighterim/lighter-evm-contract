@@ -66,106 +66,68 @@ abstract contract SettlerBase is ISettlerBase {
         }
     }
 
-    function _div512to256(uint512 n, uint512 d) internal view virtual override returns (uint256) {
-        return n.div(d);
-    }
 
+    // function _dispatch(uint256, uint256 action, bytes calldata data) internal virtual override returns (bool) {
+    //     //// NOTICE: This function has been largely copy/paste'd into
+    //     //// `src/chains/Mainnet/Common.sol:MainnetMixin._dispatch`. If you make changes here, you
+    //     //// need to make sure that corresponding changes are made to that function.
 
-    function _dispatch(uint256, uint256 action, bytes calldata data) internal virtual override returns (bool) {
-        //// NOTICE: This function has been largely copy/paste'd into
-        //// `src/chains/Mainnet/Common.sol:MainnetMixin._dispatch`. If you make changes here, you
-        //// need to make sure that corresponding changes are made to that function.
+    //     if (action == uint32(ISettlerActions.BULK_SELL_PREMIT)) {
+    //         // ISignatureTransfer.PermitTransferFrom memory permit;
+    //         // (address recipient, permit) = CalldataDecoder.decodeCall(data, 0);
+    //         // ISettlerActions(msg.sender).TRANSFER_FROM(recipient, permit, data[4:]);
+    //         (
+    //             IAllowanceTransfer.PermitSingle memory permitSingle, 
+    //             ISettlerBase.IntentParams memory intentParams,
+    //             bytes memory permitSig,
+    //             bytes memory intentSig
+    //         ) = abi.decode(data, (IAllowanceTransfer.PermitSingle, ISettlerBase.IntentParams, bytes, bytes));
+    //         _bulkSellPermit(permitSingle, intentParams, permitSig, intentSig);
+    //     } else if (action == uint32(ISettlerActions.BULK_SELL_INTENT)) {
+    //         (
+    //             ISettlerBase.IntentParams memory intentParams, 
+    //             bytes memory intentSig
+    //         ) = abi.decode(data, (ISettlerBase.IntentParams, bytes));
 
-        if (action == uint32(ISettlerActions.BULK_SELL_PREMIT)) {
-            // ISignatureTransfer.PermitTransferFrom memory permit;
-            // (address recipient, permit) = CalldataDecoder.decodeCall(data, 0);
-            // ISettlerActions(msg.sender).TRANSFER_FROM(recipient, permit, data[4:]);
-            (
-                IAllowanceTransfer.PermitSingle memory permitSingle, 
-                ISettlerBase.IntentParams memory intentParams,
-                bytes memory permitSig,
-                bytes memory intentSig
-            ) = abi.decode(data, (IAllowanceTransfer.PermitSingle, ISettlerBase.IntentParams, bytes, bytes));
-            _bulkSellPermit(permitSingle, intentParams, permitSig, intentSig);
-        } else if (action == uint32(ISettlerActions.BULK_SELL_INTENT)) {
-            (
-                ISettlerBase.IntentParams memory intentParams, 
-                bytes memory intentSig
-            ) = abi.decode(data, (ISettlerBase.IntentParams, bytes));
+    //         _validateBulkSellIntent(intentParams, intentSig);
+    //     } else if (action == uint32(ISettlerActions.TAKE_SELLER_INTENT)) {
+    //         // ISignatureTransfer.PermitTransferFrom memory permit;
+    //         // (address recipient, permit) = CalldataDecoder.decodeCall(data, 0);
+    //         // ISettlerActions(msg.sender).METATXN_TRANSFER_FROM(recipient, permit);
+    //         (
+    //             ISettlerBase.EscrowParams memory escrowParams,
+    //             bytes memory sig
+    //         ) = abi.decode(data, (ISettlerBase.EscrowParams, bytes));
+    //         _makeEscrowByBuyer(escrowParams, sig);
 
-            _validateBulkSellIntent(intentParams, intentSig);
-        } else if (action == uint32(ISettlerActions.TAKE_SELLER_INTENT)) {
-            // ISignatureTransfer.PermitTransferFrom memory permit;
-            // (address recipient, permit) = CalldataDecoder.decodeCall(data, 0);
-            // ISettlerActions(msg.sender).METATXN_TRANSFER_FROM(recipient, permit);
-            (
-                ISettlerBase.EscrowParams memory escrowParams,
-                bytes memory sig
-            ) = abi.decode(data, (ISettlerBase.EscrowParams, bytes));
-            _makeEscrowByBuyer(escrowParams, sig);
+    //     } else if (action == uint32(ISettlerActions.TAKE_BUYER_INTENT0)) {
+    //         (
+    //             ISettlerBase.IntentParams memory intentParams,
+    //             bytes memory sig
+    //         ) = abi.decode(data, (ISettlerBase.IntentParams, bytes));
+    //         _validatorBuyerIntent(intentParams, sig);
+    //     } else if (action == uint32(ISettlerActions.TAKE_BUYER_INTENT1)) {
+    //         (
+    //             ISettlerBase.EscrowParams memory escrowParams,
+    //             bytes memory sig
+    //         ) = abi.decode(data, (ISettlerBase.EscrowParams, bytes));
+    //         _makeEscrowBySerller(escrowParams, sig);
+    //     } else if (action == uint32(ISettlerActions.SIGNATURE_TRANSFER_FROM_WITH_WITNESS)) {
+    //         (
+    //             address owner,
+    //             address recipient,
+    //             ISignatureTransfer.PermitTransferFrom memory permit,
+    //             ISettlerBase.IntentParams memory witness,
+    //             bytes memory sig
+    //         ) = abi.decode(data, (address, address, ISignatureTransfer.PermitTransferFrom, ISettlerBase.IntentParams, bytes));
 
-        } else if (action == uint32(ISettlerActions.TAKE_BUYER_INTENT0)) {
-            (
-                ISettlerBase.IntentParams memory intentParams,
-                bytes memory sig
-            ) = abi.decode(data, (ISettlerBase.IntentParams, bytes));
-            _validatorBuyerIntent(intentParams, sig);
-        } else if (action == uint32(ISettlerActions.TAKE_BUYER_INTENT1)) {
-            (
-                ISettlerBase.EscrowParams memory escrowParams,
-                bytes memory sig
-            ) = abi.decode(data, (ISettlerBase.EscrowParams, bytes));
-            _makeEscrowBySerller(escrowParams, sig);
-        } else if (action == uint32(ISettlerActions.SIGNATURE_TRANSFER_FROM_WITH_WITNESS)) {
-            (
-                address owner,
-                address recipient,
-                ISignatureTransfer.PermitTransferFrom memory permit,
-                ISettlerBase.IntentParams memory witness,
-                bytes memory sig
-            ) = abi.decode(data, (address, address, ISignatureTransfer.PermitTransferFrom, ISettlerBase.IntentParams, bytes));
+    //         _signatureTransferFromWithWitness(owner, recipient, permit, witness, sig);
 
-            _signatureTransferFromWithWitness(owner, recipient, permit, witness, sig);
+    //     } else {
+    //         revert("Unknown action");
+    //     }
+    //     return true;
+    // }
 
-        } else {
-            revert("Unknown action");
-        }
-        return true;
-    }
-
-    // Virtual functions to be implemented by subclasses
-    function _bulkSellPermit(
-        IAllowanceTransfer.PermitSingle memory permitSingle, 
-        ISettlerBase.IntentParams memory intentParams,
-        bytes memory permitSig,
-        bytes memory intentSig
-    ) internal virtual;
-
-    function _validateBulkSellIntent(
-        ISettlerBase.IntentParams memory intentParams, 
-        bytes memory intentSig
-    ) internal virtual;
-
-    function _makeEscrowByBuyer(
-        ISettlerBase.EscrowParams memory escrowParams,
-        bytes memory sig
-    ) internal virtual;
-
-    function _validatorBuyerIntent(
-        ISettlerBase.IntentParams memory intentParams,
-        bytes memory sig
-    ) internal virtual;
-
-    function _makeEscrowBySerller(
-        ISettlerBase.EscrowParams memory escrowParams,
-        bytes memory sig
-    ) internal virtual;
-
-    function _signatureTransferFromWithWitness(
-        address owner,
-        address recipient,
-        ISignatureTransfer.PermitTransferFrom memory permit,
-        ISettlerBase.IntentParams memory witness,
-        bytes memory sig
-    ) internal virtual;
+    
 }

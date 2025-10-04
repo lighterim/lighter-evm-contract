@@ -10,28 +10,21 @@ import {ISettlerActions} from "../../ISettlerActions.sol";
 
 import {SettlerAbstract} from "../../SettlerAbstract.sol";
 import {SettlerBase} from "../../SettlerBase.sol";
-import {AbstractContext} from "../../Context.sol";
+import {Context} from "../../Context.sol";
 
 
 contract MainnetSettlerMetaTxn is MainnetMixin, SettlerMetaTxn {
 
-    constructor(bytes20 gitCommit) SettlerBase(gitCommit) {}
+    constructor(address lighterRelayer, bytes20 gitCommit) MainnetMixin(lighterRelayer, gitCommit) {}
 
-    function _dispatch(uint256 index, uint256 action, bytes calldata data) internal virtual override(SettlerAbstract, SettlerBase, MainnetMixin) returns (bool) {
-        return super._dispatch(index, action, data);
-    }
-
-    function _dispatchVIP(uint256 action, bytes calldata data) internal virtual override(SettlerAbstract, SettlerBase) returns (bool) {
-        if(super._dispatchVIP(action, data)) {
-            return true;
-        }
-        else{
-            return false;
-        }
+    function _dispatch(uint256 index, uint256 action, bytes calldata data) internal virtual override returns (bool) {
+        // return super._dispatch(index, action, data);
         return true;
     }
 
-    function _msgSender() internal view virtual override(SettlerMetaTxn, AbstractContext) returns (address) {
+    
+
+    function _msgSender() internal view virtual override(SettlerMetaTxn) returns (address) {
         return super._msgSender();
     }
 }

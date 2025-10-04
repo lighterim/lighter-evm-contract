@@ -4,6 +4,7 @@ pragma solidity ^0.8.25;
 import {AbstractContext} from "../Context.sol";
 
 import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
+import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer.sol";
 
 abstract contract Permit2PaymentAbstract is AbstractContext {
     
@@ -30,15 +31,15 @@ abstract contract Permit2PaymentAbstract is AbstractContext {
     bytes32 constant ESCROW_PARAMS_TYPEHASH = 0x22a86b360b5485458145028452a23e18ce4839843a9677579ab5c5f87a87e008;
 
 
-    function _isRestrictedTarget(address) internal view virtual returns (bool);
+    function _isRestrictedTarget(address) internal pure virtual returns (bool);
 
     function _operator() internal view virtual returns (address);
 
-    function _permitToSellAmountCalldata(ISignatureTransfer.PermitTransferFrom calldata permit)
-        internal
-        view
-        virtual
-        returns (uint256 sellAmount);
+    // function _permitToSellAmountCalldata(ISignatureTransfer.PermitTransferFrom calldata permit)
+    //     internal
+    //     view
+    //     virtual
+    //     returns (uint256 sellAmount);
 
     function _permitToSellAmount(ISignatureTransfer.PermitTransferFrom memory permit)
         internal
@@ -52,34 +53,34 @@ abstract contract Permit2PaymentAbstract is AbstractContext {
         virtual
         returns (ISignatureTransfer.SignatureTransferDetails memory transferDetails, uint256 sellAmount);
 
-    /**
-     * signatureTransferWithWitness SignatureTransfer technique with extra witness data
-     * @param permit ISignatureTransfer.PermitTransferFrom(
-     * @param transferDetails ISignatureTransfer.SignatureTransferDetails
-     * @param from The address from which the transfer is made
-     * @param witness The witness of the transfer
-     * @param witnessTypeString The type of witness
-     * @param sig signature
-     * @param isForwarded is forwarded
-     */
-    function _transferWithSellerIntent(
-        ISignatureTransfer.PermitTransferFrom memory permit,
-        ISignatureTransfer.SignatureTransferDetails memory transferDetails,
-        address from,
-        bytes32 witness,
-        string memory witnessTypeString,
-        bytes memory sig,
-        bool isForwarded
-    ) internal virtual;
+    // /**
+    //  * signatureTransferWithWitness SignatureTransfer technique with extra witness data
+    //  * @param permit ISignatureTransfer.PermitTransferFrom(
+    //  * @param transferDetails ISignatureTransfer.SignatureTransferDetails
+    //  * @param from The address from which the transfer is made
+    //  * @param witness The witness of the transfer
+    //  * @param witnessTypeString The type of witness
+    //  * @param sig signature
+    //  * @param isForwarded is forwarded
+    //  */
+    // function _transferWithSellerIntent(
+    //     ISignatureTransfer.PermitTransferFrom memory permit,
+    //     ISignatureTransfer.SignatureTransferDetails memory transferDetails,
+    //     address from,
+    //     bytes32 witness,
+    //     string memory witnessTypeString,
+    //     bytes memory sig,
+    //     bool isForwarded
+    // ) internal virtual;
 
-    function _transferWithSellerIntent(
-        ISignatureTransfer.PermitTransferFrom memory permit,
-        ISignatureTransfer.SignatureTransferDetails memory transferDetails,
-        address from,
-        bytes32 witness,
-        string memory witnessTypeString,
-        bytes memory sig
-    ) internal virtual;
+    // function _transferWithSellerIntent(
+    //     ISignatureTransfer.PermitTransferFrom memory permit,
+    //     ISignatureTransfer.SignatureTransferDetails memory transferDetails,
+    //     address from,
+    //     bytes32 witness,
+    //     string memory witnessTypeString,
+    //     bytes memory sig
+    // ) internal virtual;
 
     /**
      * signatureTransfer
@@ -88,25 +89,25 @@ abstract contract Permit2PaymentAbstract is AbstractContext {
      * @param sig signature
      * @param isForwarded is forwarded
      */
-    function _signatureTransferFrom(
+    function _transferFrom(
         ISignatureTransfer.PermitTransferFrom memory permit,
         ISignatureTransfer.SignatureTransferDetails memory transferDetails,
         bytes memory sig,
         bool isForwarded
     ) internal virtual;
 
-    function _signatureTransferFrom(
+    function _transferFrom(
         ISignatureTransfer.PermitTransferFrom memory permit,
         ISignatureTransfer.SignatureTransferDetails memory transferDetails,
         bytes memory sig
     ) internal virtual;
 
-    function _setOperatorAndCall(
-        address target,
-        bytes memory data,
-        uint32 selector,
-        function (bytes calldata) internal returns (bytes memory) callback
-    ) internal virtual returns (bytes memory);
+    // function _setOperatorAndCall(
+    //     address target,
+    //     bytes memory data,
+    //     uint32 selector,
+    //     function (bytes calldata) internal returns (bytes memory) callback
+    // ) internal virtual returns (bytes memory);
 
         /**
      * allowanceTransferWithPermit
@@ -119,7 +120,12 @@ abstract contract Permit2PaymentAbstract is AbstractContext {
         internal
         virtual;
 
-    modifier metaTx(address msgSender, bytes32 witness) virtual;
+    function _permit(address owner, IAllowanceTransfer.PermitSingle memory permitSingle, bytes memory signature)
+        internal 
+        virtual;
+    
+
+    modifier metaTx(address msgSender/*, bytes32 witness*/) virtual;
 
     modifier takerSubmitted() virtual;
 
