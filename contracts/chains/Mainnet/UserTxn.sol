@@ -47,8 +47,8 @@ contract MainnetUserTxn is EIP712 {
     function _bulkSell(
         IAllowanceTransfer.PermitSingle calldata permitSingle, 
         ISettlerBase.IntentParams calldata intentParams, 
-        bytes calldata permitSig, 
-        bytes calldata sig
+        bytes memory permitSig, 
+        bytes memory sig
         ) external  
     {
         if(address(permitSingle.details.token) != address(intentParams.token)) revert InvalidSpender();
@@ -75,8 +75,8 @@ contract MainnetUserTxn is EIP712 {
     function _takeBulkSellIntent(
         ISettlerBase.EscrowParams calldata escrowParams, 
         ISettlerBase.IntentParams calldata intentParams, 
-        bytes calldata sig, 
-        bytes calldata intentSig
+        bytes memory sig, 
+        bytes memory intentSig
     ) external {
         address tokenAddress = address(escrowParams.token);
         if(tokenAddress == address(intentParams.token)) revert InvalidToken();
@@ -97,7 +97,7 @@ contract MainnetUserTxn is EIP712 {
         _makeEscrow(escrowTypedHash, escrowParams, 0, 0);
     }
 
-    function paid(ISettlerBase.EscrowParams calldata escrowParams, bytes calldata sig) external {
+    function paid(ISettlerBase.EscrowParams calldata escrowParams, bytes memory sig) external {
         if(escrowParams.buyer != msg.sender) revert InvalidSender();
 
         bytes32 escrowHash = escrowParams.hash();
@@ -157,7 +157,7 @@ contract MainnetUserTxn is EIP712 {
         // Solidity won't let us reference the constant `_ALLOWANCE_HOLDER` in assembly, but this
         // compiles down to just a single PUSH opcode just before the CALL, with optimization turned
         // on.
-        address __ALLOWANCE_HOLDER = address(_ALLOWANCE_HOLDER);
+        address __ALLOWANCE_HOLDER = address(_PERMIT2_ALLOWANCE);
         assembly ("memory-safe") {
             let ptr := mload(0x40)
             mstore(add(0x80, ptr), amount)

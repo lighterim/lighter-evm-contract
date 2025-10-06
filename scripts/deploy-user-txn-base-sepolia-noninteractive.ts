@@ -41,20 +41,16 @@ async function main() {
         "3. https://www.coinbase.com/faucets/base-ethereum-sepolia-faucet"
       );
     }
-    
-    // Deploy the SignatureVerification library first
-    console.log("\n📦 Deploying SignatureVerification library...");
-    const signatureVerificationLib = await viem.deployContract("SignatureVerification");
-    console.log("✅ SignatureVerification library deployed at:", signatureVerificationLib.address);
-    
-    // Deploy the MainnetUserTxn contract with library linking
+
+    //Deploy the Escrow contract first
+    console.log("\n📦 Deploying Escrow contract...");
+    const escrow = await viem.deployContract("Escrow", [wallet.account.address]);
+    console.log("✅ Escrow contract deployed at:", escrow.address);
+
+    // Deploy the MainnetUserTxn contract
     console.log("\n📦 Deploying MainnetUserTxn contract...");
     
-    const userTxn = await viem.deployContract("MainnetUserTxn", [lighterRelayerAddress], {
-      libraries: {
-        "SignatureVerification": signatureVerificationLib.address
-      }
-    });
+    const userTxn = await viem.deployContract("MainnetUserTxn", [lighterRelayerAddress, escrow.address]);
     
     console.log("✅ Deployment completed!");
     console.log("MainnetUserTxn contract deployed at:", userTxn.address);

@@ -42,16 +42,21 @@ async function main() {
         "4. https://sepolia-faucet.pk910.de/"
       );
     }
-    
+
+    //Deploy the Escrow contract first
+    console.log("\n📦 Deploying Escrow contract...");
+    const escrow = await viem.deployContract("Escrow", [wallet.account.address]);
+    console.log("✅ Escrow contract deployed at:", escrow.address);
+
     // Deploy the SignatureVerification library first
     console.log("\n📦 Deploying SignatureVerification library...");
     const signatureVerificationLib = await viem.deployContract("SignatureVerification");
     console.log("✅ SignatureVerification library deployed at:", signatureVerificationLib.address);
-    
-    // Deploy the MainnetUserTxn contract with library linking
+
+    // Deploy the MainnetUserTxn contract
     console.log("\n📦 Deploying MainnetUserTxn contract...");
     
-    const userTxn = await viem.deployContract("MainnetUserTxn", [lighterRelayerAddress], {
+    const userTxn = await viem.deployContract("MainnetUserTxn", [lighterRelayerAddress, escrow.address], {
       libraries: {
         "SignatureVerification": signatureVerificationLib.address
       }
@@ -84,8 +89,8 @@ async function main() {
     console.log("- Chain ID:", chainId);
     console.log("- Deployer:", wallet.account.address);
     console.log("- Lighter Relayer:", lighterRelayerAddress);
+    console.log("- Escrow Contract:", escrow.address);
     console.log("- Contract Address:", userTxn.address);
-    console.log("- SignatureVerification Library:", signatureVerificationLib.address);
     
     // Instructions for next steps
     console.log("\n📝 Next Steps:");
@@ -95,6 +100,7 @@ async function main() {
     console.log("- Update the lighterRelayer address if needed for production use");
     
     return {
+      escrowAddress: escrow.address,
       contractAddress: userTxn.address,
       deployer: wallet.account.address,
       lighterRelayer: lighterRelayerAddress,
