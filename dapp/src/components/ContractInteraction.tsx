@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
-import { useReadContract, useWriteContract, usePublicClient, useWalletClient } from 'wagmi';
-import { parseEther, formatEther, encodeAbiParameters, parseAbiParameters, hashTypedData } from 'viem';
+import React, { useState, useEffect } from 'react';
+import { useWriteContract, usePublicClient, useWalletClient, useAccount } from 'wagmi';
+import { parseEther, formatEther, decodeErrorResult } from 'viem';
+import { AllowanceTransfer } from '@uniswap/permit2-sdk';
 
 interface ContractInteractionProps {
   contractAddress: string;
   userAddress: string;
 }
 
-// MainnetUserTxn 合约 ABI
+// MainnetUserTxn 合约 ABI (包含错误定义)
 const CONTRACT_ABI = [
   {
     "type": "function",
@@ -56,6 +57,56 @@ const CONTRACT_ABI = [
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  // 错误定义
+  {
+    "type": "error",
+    "name": "InvalidSpender",
+    "inputs": []
+  },
+  {
+    "type": "error", 
+    "name": "InvalidAmount",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidSignature", 
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SignatureExpired",
+    "inputs": [
+      {"name": "deadline", "type": "uint256"}
+    ]
+  },
+  // Permit2 错误定义
+  {
+    "type": "error",
+    "name": "SignatureExpired",
+    "inputs": [
+      {"name": "signatureDeadline", "type": "uint256"}
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidNonce",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AllowanceExpired",
+    "inputs": [
+      {"name": "deadline", "type": "uint256"}
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InsufficientAllowance",
+    "inputs": [
+      {"name": "amount", "type": "uint256"}
+    ]
   }
 ] as const;
 
@@ -75,12 +126,53 @@ export const ContractInteraction: React.FC<ContractInteractionProps> = ({
   const [price, setPrice] = useState<string>('');
   
   const publicClient = usePublicClient();
-  const { writeContract } = useWriteContract();
+  const { writeContract, isPending, error: writeError, data: writeData } = useWriteContract();
   const { data: walletClient } = useWalletClient();
+  const { address: accountAddress, isConnected } = useAccount();
   
   // 签名状态
   const [permitSignature, setPermitSignature] = useState<string>('');
   const [intentSignature, setIntentSignature] = useState<string>('');
+  
+  // 交易状态
+  const [transactionHash, setTransactionHash] = useState<string>('');
+  const [isTransactionPending, setIsTransactionPending] = useState<boolean>(false);
+  
+  // 全局时间戳管理 - 确保签名和调用使用相同的时间
+  const [globalExpiryTime, setGlobalExpiryTime] = useState<number>(0);
+  const [globalNonce, setGlobalNonce] = useState<number>(-1);
+
+  // 监听交易状态变化
+  useEffect(() => {
+    if (writeData && isTransactionPending) {
+      console.log('✅ 交易成功:', writeData);
+      setTransactionHash(writeData);
+      setIsTransactionPending(false);
+      setIsLoading(false);
+      setResult(`
+🎉 _bulkSell 调用成功！
+
+📋 交易详情:
+- 交易哈希: ${writeData}
+- 代币地址: ${tokenAddress}
+- 数量: ${amount} ETH
+- 数量范围: ${minAmount} - ${maxAmount} ETH
+- 价格: ${price} ETH
+
+🔗 可以在区块链浏览器中查看交易详情。
+      `);
+    }
+  }, [writeData, isTransactionPending, tokenAddress, amount, minAmount, maxAmount, price]);
+
+  // 监听交易错误
+  useEffect(() => {
+    if (writeError && isTransactionPending) {
+      console.error('❌ 交易失败:', writeError);
+      setError(writeError.message || '交易失败');
+      setIsTransactionPending(false);
+      setIsLoading(false);
+    }
+  }, [writeError, isTransactionPending]);
 
   const handleCheckContract = async () => {
     setIsLoading(true);
@@ -109,7 +201,7 @@ export const ContractInteraction: React.FC<ContractInteractionProps> = ({
 
 📋 合约信息:
 - 地址: ${contractAddress}
-- 网络: ${chainId === 1 ? 'Ethereum Mainnet' : chainId === 31337 ? 'Local Network' : `Chain ID ${chainId}`}
+- 网络: ${chainId === 1 ? 'Ethereum Mainnet' : chainId === 31337 ? 'Local Network' : `Chain ID ${chainId}`}, chainId:${chainId}
 - 代码长度: ${code ? code.length : 0} 字符
 - 用户地址: ${userAddress}
 
@@ -153,7 +245,7 @@ export const ContractInteraction: React.FC<ContractInteractionProps> = ({
   // 生成 Permit2 签名
   const generatePermitSignature = async () => {
     if (!walletClient || !tokenAddress || !amount) {
-      setError('请先连接钱包并填写代币地址和数量');
+      setError(`请先连接钱包并填写代币地址和数量 wc:${walletClient}, tokenAddr:${tokenAddress}, amount:${amount}`);
       return;
     }
 
@@ -162,50 +254,95 @@ export const ContractInteraction: React.FC<ContractInteractionProps> = ({
     setResult('');
 
     try {
-      // 构造 Permit2 签名数据
-      const permitSingle = {
-        details: {
-          token: tokenAddress as `0x${string}`,
-          amount: parseEther(amount),
-          expiration: BigInt(Math.floor(Date.now() / 1000) + 3600), // 1小时后过期
-          nonce: BigInt(Math.floor(Date.now() / 1000)) // 使用时间戳作为nonce
-        },
-        spender: contractAddress as `0x${string}`,
-        sigDeadline: BigInt(Math.floor(Date.now() / 1000) + 3600)
-      };
+      // 获取当前连接的账户地址
+      const accounts = await walletClient.getAddresses();
+      const owner = accounts[0];
+      const chainId = publicClient?.chain?.id || 1;
 
-      // Permit2 的 EIP-712 域分隔符
-      const domain = {
-        name: 'Permit2',
-        chainId: publicClient?.chain?.id || 1,
-        verifyingContract: '0x000000000022D473030F116dDEE9F6B43aC78BA3' as `0x${string}`
-      };
+      // Permit2 合约地址
+      const PERMIT2_ADDRESS = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
 
-      // Permit2 的 types
-      const types = {
-        PermitSingle: [
-          { name: 'details', type: 'PermitDetails' },
-          { name: 'spender', type: 'address' },
-          { name: 'sigDeadline', type: 'uint256' }
+      // 检查 Permit2 合约是否存在
+      if (!publicClient) {
+        throw new Error('Public client 未初始化');
+      }
+      const permit2Code = await publicClient.getCode({ address: PERMIT2_ADDRESS as `0x${string}` });
+      if (permit2Code === '0x') {
+        throw new Error(`Permit2 合约在网络 ${chainId} 上不存在。地址: ${PERMIT2_ADDRESS}`);
+      }
+
+      // 查询用户当前的 nonce
+      const currentAllowance = await publicClient.readContract({
+        address: PERMIT2_ADDRESS as `0x${string}`,
+        abi: [
+          {
+            "type": "function",
+            "name": "allowance",
+            "inputs": [
+              {"name": "user", "type": "address"},
+              {"name": "token", "type": "address"},
+              {"name": "spender", "type": "address"}
+            ],
+            "outputs": [
+              {"name": "amount", "type": "uint160"},
+              {"name": "expiration", "type": "uint48"},
+              {"name": "nonce", "type": "uint48"}
+            ],
+            "stateMutability": "view"
+          }
         ],
-        PermitDetails: [
-          { name: 'token', type: 'address' },
-          { name: 'amount', type: 'uint160' },
-          { name: 'expiration', type: 'uint48' },
-          { name: 'nonce', type: 'uint48' }
-        ]
+        functionName: 'allowance',
+        args: [owner, tokenAddress as `0x${string}`, contractAddress as `0x${string}`]
+      });
+
+      // 使用当前存储的 nonce（存储的 nonce = 签名 nonce + 1）
+      const newNonce = Number(currentAllowance[2]);
+      const newExpiryTime = Math.floor(Date.now() / 1000) + 3600; // 1小时后过期
+      
+      console.log('📋 Permit2 Nonce 信息:');
+      console.log('- 当前 nonce:', currentAllowance[2]);
+      console.log('- 使用 nonce:', newNonce);
+      console.log('- 当前 amount:', currentAllowance[0]);
+      console.log('- 当前 expiration:', currentAllowance[1]);
+      
+      // 设置全局变量
+      setGlobalNonce(newNonce);
+      setGlobalExpiryTime(newExpiryTime);
+      
+      // 构造 Permit2 数据
+      const permitData = {
+        details: {
+          token: tokenAddress,
+          amount: parseEther(amount).toString(),
+          expiration: newExpiryTime,
+          nonce: newNonce
+        },
+        spender: contractAddress,
+        sigDeadline: newExpiryTime
+      };
+
+      // 使用 Uniswap Permit2 SDK 获取签名数据
+      const { domain: sdkDomain, types, values } = AllowanceTransfer.getPermitData(permitData, PERMIT2_ADDRESS, chainId);
+
+      // 转换 domain 格式以兼容 viem
+      const domain = {
+        name: sdkDomain.name,
+        version: sdkDomain.version,
+        chainId: Number(sdkDomain.chainId),
+        verifyingContract: sdkDomain.verifyingContract as `0x${string}`
       };
 
       // 生成签名
       const signature = await walletClient.signTypedData({
+        account: owner,
         domain,
         types,
         primaryType: 'PermitSingle',
-        message: permitSingle
+        message: values as unknown as Record<string, unknown>
       });
 
       setPermitSignature(signature);
-      setResult(`✅ Permit2 签名生成成功！\n\n签名: ${signature}\n\n📋 签名参数:\n- 代币: ${tokenAddress}\n- 数量: ${amount} ETH\n- 过期时间: ${new Date((Number(permitSingle.details.expiration) * 1000)).toLocaleString()}\n- Nonce: ${permitSingle.details.nonce.toString()}\n- Spender: ${contractAddress}`);
+      setResult(`✅ Permit2 签名生成成功！\n\n签名: ${signature}\n\n📋 签名参数:\n- 签名者: ${owner}\n- 代币: ${tokenAddress}\n- 数量: ${amount} ETH\n- 过期时间: ${new Date(permitData.details.expiration * 1000).toLocaleString()}\n- 当前存储 Nonce: ${currentAllowance[2]}\n- 签名使用 Nonce: ${permitData.details.nonce} (等于当前存储值)\n- Spender: ${contractAddress}\n\n🔍 当前授权状态:\n- 授权金额: ${formatEther(currentAllowance[0])} ETH\n- 授权过期: ${currentAllowance[1] === 0 ? '永不过期' : new Date(Number(currentAllowance[1]) * 1000).toLocaleString()}`);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : '签名生成失败');
@@ -226,6 +363,13 @@ export const ContractInteraction: React.FC<ContractInteractionProps> = ({
     setResult('');
 
     try {
+      // 如果没有全局过期时间，先生成一个
+      let expiryTime = globalExpiryTime;
+      if (expiryTime === 0) {
+        expiryTime = Math.floor(Date.now() / 1000) + 3600;
+        setGlobalExpiryTime(expiryTime);
+      }
+
       // 构造 IntentParams 签名数据
       const intentParams = {
         token: tokenAddress as `0x${string}`,
@@ -233,7 +377,7 @@ export const ContractInteraction: React.FC<ContractInteractionProps> = ({
           min: parseEther(minAmount),
           max: parseEther(maxAmount)
         },
-        expiryTime: BigInt(Math.floor(Date.now() / 1000) + 3600),
+        expiryTime: BigInt(expiryTime),
         currency: "0x0000000000000000000000000000000000000000000000000000000000000000" as `0x${string}`,
         paymentMethod: "0x0000000000000000000000000000000000000000000000000000000000000000" as `0x${string}`,
         payeeDetails: "0x0000000000000000000000000000000000000000000000000000000000000000" as `0x${string}`,
@@ -294,61 +438,142 @@ export const ContractInteraction: React.FC<ContractInteractionProps> = ({
       return;
     }
 
+    if (!isConnected || !accountAddress) {
+      setError('请先连接钱包');
+      return;
+    }
+
+    console.log('🚀 开始调用 _bulkSell...');
+    console.log('钱包连接状态:', { isConnected, accountAddress });
+    console.log('合约地址:', contractAddress);
+
     setIsLoading(true);
+    setIsTransactionPending(true);
     setError('');
     setResult('');
+    setTransactionHash('');
 
     try {
-      // 构造 permitSingle 参数
+      // 检查是否有全局变量，如果没有则报错
+      if (globalExpiryTime === 0 || globalNonce === -1) {
+        throw new Error('请先生成 Permit2 签名和 IntentParams 签名');
+      }
+
+      // 构造 permitSingle 参数 (使用全局变量确保一致性)
       const permitSingle = {
         details: {
           token: tokenAddress as `0x${string}`,
           amount: parseEther(amount),
-          expiration: Math.floor(Date.now() / 1000) + 3600,
-          nonce: Math.floor(Date.now() / 1000)
+          expiration: globalExpiryTime,
+          nonce: globalNonce
         },
         spender: contractAddress as `0x${string}`,
-        sigDeadline: BigInt(Math.floor(Date.now() / 1000) + 3600)
+        sigDeadline: BigInt(globalExpiryTime)
       };
 
-      // 构造 intentParams 参数
+      // 构造 intentParams 参数 (使用全局变量确保一致性)
       const intentParams = {
         token: tokenAddress as `0x${string}`,
         range: {
           min: parseEther(minAmount),
           max: parseEther(maxAmount)
         },
-        expiryTime: BigInt(Math.floor(Date.now() / 1000) + 3600),
+        expiryTime: BigInt(globalExpiryTime),
         currency: "0x0000000000000000000000000000000000000000000000000000000000000000" as `0x${string}`,
         paymentMethod: "0x0000000000000000000000000000000000000000000000000000000000000000" as `0x${string}`,
         payeeDetails: "0x0000000000000000000000000000000000000000000000000000000000000000" as `0x${string}`,
         price: parseEther(price)
       };
 
-      // 调用 _bulkSell 函数
-      const hash = await writeContract({
-        address: contractAddress as `0x${string}`,
-        abi: CONTRACT_ABI,
-        functionName: '_bulkSell',
-        args: [permitSingle, intentParams, permitSignature as `0x${string}`, intentSignature as `0x${string}`]
+      console.log('📋 调用参数:', {
+        permitSingle,
+        intentParams,
+        permitSignature,
+        intentSignature
       });
 
-      setResult(`
-🎉 _bulkSell 调用成功！
+      // 验证参数
+      console.log('🔍 参数验证:');
+      console.log('- token 地址匹配:', permitSingle.details.token === intentParams.token);
+      console.log('- amount 在范围内:', 
+        permitSingle.details.amount >= intentParams.range.min && 
+        permitSingle.details.amount <= intentParams.range.max
+      );
+      console.log('- spender 匹配:', permitSingle.spender === contractAddress);
+      console.log('- 调用者地址:', accountAddress);
+      console.log('- 合约地址:', contractAddress);
+      console.log('- msg.sender (合约调用者):', accountAddress);
+      console.log('- Permit2 签名者 (owner):', accountAddress);
+      console.log('- msg.sender === Permit2 owner:', accountAddress === accountAddress);
 
-📋 交易详情:
-- 交易哈希: ${hash}
-- 代币地址: ${tokenAddress}
-- 数量: ${amount} ETH
-- 数量范围: ${minAmount} - ${maxAmount} ETH
-- 价格: ${price} ETH
+      // 先模拟合约调用以获取详细错误信息
+      console.log('🔄 模拟合约调用...');
+      try {
+        if (!publicClient) {
+          throw new Error('Public client 未初始化');
+        }
+        
+        await publicClient.simulateContract({
+          address: contractAddress as `0x${string}`,
+          abi: CONTRACT_ABI,
+          functionName: '_bulkSell',
+          args: [permitSingle, intentParams, permitSignature as `0x${string}`, intentSignature as `0x${string}`],
+          account: accountAddress as `0x${string}`
+        });
+        
+        console.log('✅ 模拟调用成功，可以执行实际调用');
+        
+        // 模拟成功，执行实际调用
+        console.log('🔄 执行实际合约调用...');
+        writeContract({
+          address: contractAddress as `0x${string}`,
+          abi: CONTRACT_ABI,
+          functionName: '_bulkSell',
+          args: [permitSingle, intentParams, permitSignature as `0x${string}`, intentSignature as `0x${string}`]
+        });
+        
+      } catch (simulateError) {
+        console.error('❌ 模拟调用失败:', simulateError);
+        
+        // 尝试解码错误
+        let errorMessage = '未知错误';
+        if (simulateError instanceof Error) {
+          errorMessage = simulateError.message;
+          
+          // 如果错误包含数据，尝试解码
+          const errorString = simulateError.toString();
+          const errorDataMatch = errorString.match(/0x[a-fA-F0-9]{8}/);
+          if (errorDataMatch) {
+            try {
+              const errorData = errorDataMatch[0] as `0x${string}`;
+              console.log('尝试解码错误:', errorData);
+              
+              const decodedError = decodeErrorResult({
+                abi: CONTRACT_ABI,
+                data: errorData
+              });
+              
+              console.log('解码后的错误:', decodedError);
+              errorMessage = `合约错误: ${decodedError.errorName}${decodedError.args ? ` (${decodedError.args.join(', ')})` : ''}`;
+            } catch (decodeError) {
+              console.log('错误解码失败:', decodeError);
+              errorMessage = `合约错误: ${errorDataMatch[0]} (无法解码)`;
+            }
+          }
+        }
+        
+        setError(`模拟调用失败: ${errorMessage}`);
+        setIsTransactionPending(false);
+        setIsLoading(false);
+        return;
+      }
 
-🔗 可以在区块链浏览器中查看交易详情。
-      `);
+      console.log('✅ writeContract 调用完成');
 
     } catch (err) {
+      console.error('❌ 调用失败:', err);
       setError(err instanceof Error ? err.message : '调用失败');
-    } finally {
+      setIsTransactionPending(false);
       setIsLoading(false);
     }
   };
@@ -441,6 +666,33 @@ export const ContractInteraction: React.FC<ContractInteractionProps> = ({
           />
         </div>
 
+        {/* 全局变量显示 */}
+        <div className="form-group">
+          <label>全局参数:</label>
+          <div className="global-params">
+            <div className="param-item">
+              <span>Nonce: {globalNonce || '未设置'}</span>
+            </div>
+            <div className="param-item">
+              <span>过期时间: {globalExpiryTime ? new Date(globalExpiryTime * 1000).toLocaleString() : '未设置'}</span>
+            </div>
+            <button 
+              type="button"
+              onClick={() => {
+                setGlobalNonce(0);
+                setGlobalExpiryTime(0);
+                setPermitSignature('');
+                setIntentSignature('');
+                setResult('');
+                setError('');
+              }}
+              className="reset-button"
+            >
+              重置全局参数
+            </button>
+          </div>
+        </div>
+
         {/* 签名生成区域 */}
         <div className="signature-section">
           <h5>🔐 签名生成</h5>
@@ -491,10 +743,10 @@ export const ContractInteraction: React.FC<ContractInteractionProps> = ({
         
         <button 
           onClick={handleBulkSell} 
-          disabled={isLoading || !permitSignature || !intentSignature}
+          disabled={isLoading || isTransactionPending || !permitSignature || !intentSignature}
           className="action-btn bulk-sell-btn"
         >
-          {isLoading ? '调用中...' : '调用 _bulkSell'}
+          {isLoading || isTransactionPending ? '调用中...' : '调用 _bulkSell'}
         </button>
       </div>
 

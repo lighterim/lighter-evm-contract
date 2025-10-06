@@ -1,13 +1,13 @@
 import { network } from "hardhat";
 
 async function main() {
-  console.log("🚀 Deploying MainnetUserTxn to Base Sepolia...");
-  console.log("==============================================");
+  console.log("🚀 Deploying MainnetUserTxn to Ethereum Sepolia...");
+  console.log("=================================================");
   
   try {
-    // Connect to Base Sepolia network
-    console.log("\n📡 Connecting to Base Sepolia network...");
-    const { viem } = await network.connect({ network: "baseSepolia", chainType: "generic" });
+    // Connect to Ethereum Sepolia network
+    console.log("\n📡 Connecting to Ethereum Sepolia network...");
+    const { viem } = await network.connect({ network: "sepolia", chainType: "l1" });
     
     // Get wallet clients
     const walletClients = await viem.getWalletClients();
@@ -35,10 +35,11 @@ async function main() {
     
     if (balance === 0n) {
       throw new Error(
-        "Account balance is 0. Please get some Base Sepolia ETH from:\n" +
-        "1. https://bridge.base.org/\n" +
-        "2. https://faucet.quicknode.com/base/sepolia\n" +
-        "3. https://www.coinbase.com/faucets/base-ethereum-sepolia-faucet"
+        "Account balance is 0. Please get some Sepolia ETH from:\n" +
+        "1. https://sepoliafaucet.com/\n" +
+        "2. https://faucet.sepolia.dev/\n" +
+        "3. https://www.infura.io/faucet/sepolia\n" +
+        "4. https://sepolia-faucet.pk910.de/"
       );
     }
     
@@ -61,7 +62,7 @@ async function main() {
     
     // Get chain ID for verification
     const chainId = await publicClient.getChainId();
-    console.log("Contract deployed on Base Sepolia (Chain ID:", chainId + ")");
+    console.log("Contract deployed on Ethereum Sepolia (Chain ID:", chainId + ")");
     
     // Verify the deployment
     console.log("\n🔍 Verifying deployment...");
@@ -73,13 +74,13 @@ async function main() {
     }
     
     // Display results
-    console.log("\n🎉 MainnetUserTxn successfully deployed to Base Sepolia!");
-    console.log("You can view your contract at: https://sepolia.basescan.org/address/" + userTxn.address);
+    console.log("\n🎉 MainnetUserTxn successfully deployed to Ethereum Sepolia!");
+    console.log("You can view your contract at: https://sepolia.etherscan.io/address/" + userTxn.address);
     
     // Additional contract information
     console.log("\n📋 Contract Details:");
     console.log("- Contract Name: MainnetUserTxn");
-    console.log("- Network: Base Sepolia Testnet");
+    console.log("- Network: Ethereum Sepolia Testnet");
     console.log("- Chain ID:", chainId);
     console.log("- Deployer:", wallet.account.address);
     console.log("- Lighter Relayer:", lighterRelayerAddress);
@@ -88,9 +89,9 @@ async function main() {
     
     // Instructions for next steps
     console.log("\n📝 Next Steps:");
-    console.log("- Contract is deployed on Base Sepolia testnet");
+    console.log("- Contract is deployed on Ethereum Sepolia testnet");
     console.log("- You can interact with it using the contract address above");
-    console.log("- Consider adding contract verification on Basescan");
+    console.log("- Consider adding contract verification on Etherscan");
     console.log("- Update the lighterRelayer address if needed for production use");
     
     return {
@@ -108,7 +109,7 @@ async function main() {
 }
 
 // Export for use in other scripts
-export { main as deployUserTxnBaseSepolia };
+export { main as deployUserTxnEthereumSepolia };
 
 // Run if called directly
 main()
