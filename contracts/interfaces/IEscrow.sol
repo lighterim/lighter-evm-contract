@@ -7,20 +7,23 @@ import {ISettlerBase} from "./ISettlerBase.sol";
 
 interface IEscrow {
 
-    function creditOf(IERC20 token, address account) external view returns (uint256);
+    function creditOf(address token, address account) external view returns (uint256);
 
-    function create(IERC20 token, address buyer, address seller, uint256 amount, bytes32 escrowHash, ISettlerBase.EscrowData memory escrowData) external;
+    function create(address token, address buyer, address seller, uint256 amount, bytes32 escrowHash, ISettlerBase.EscrowData memory escrowData) external;
 
-    function release(IERC20 token, address buyer, address seller, uint256 amount, bytes32 escrowHash, ISettlerBase.EscrowStatus status) external;
+    function paid(bytes32 escrowHash, address token, address buyer) external;
 
-    function cancel(IERC20 token, address buyer, address seller, uint256 amount, bytes32 escrowHash, ISettlerBase.EscrowStatus status) external;
+    function release(address token, address buyer, address seller, uint256 amount, bytes32 escrowHash, ISettlerBase.EscrowStatus status) external;
 
-    function claim(IERC20 token, address to, uint256 amount) external;
+    function cancel(address token, address buyer, address seller, uint256 amount, bytes32 escrowHash, ISettlerBase.EscrowStatus status) external;
+
+    function claim(address token, address to, uint256 amount) external;
 
 
     //event
-    event Created(IERC20 indexed token, address indexed buyer, address indexed seller, bytes32 escrowHash, uint256 amount);
-    event Released(IERC20 indexed token, address indexed buyer, address indexed seller, bytes32 escrowHash, uint256 amount, ISettlerBase.EscrowStatus status);
-    event Cancelled(IERC20 indexed token, address indexed buyer, address indexed seller, bytes32 escrowHash, uint256 amount, ISettlerBase.EscrowStatus status);
-    event Claimed(IERC20 indexed token, address indexed to, uint256 amount);
+    event Created(address indexed token, address indexed buyer, address indexed seller, bytes32 escrowHash, uint256 amount);
+    event Paid(address indexed token, address indexed buyer, bytes32 indexed escrowHash, uint64 paidSeconds);
+    event Released(address indexed token, address indexed buyer, address indexed seller, bytes32 escrowHash, uint256 amount, ISettlerBase.EscrowStatus status);
+    event Cancelled(address indexed token, address indexed buyer, address indexed seller, bytes32 escrowHash, uint256 amount, ISettlerBase.EscrowStatus status);
+    event Claimed(address indexed token, address indexed to, uint256 amount);
 }

@@ -349,15 +349,15 @@ abstract contract Permit2Payment is Permit2PaymentBase {
         _transferFrom(permit, transferDetails, sig, _isForwarded());
     }
 
-    /**
-     * @dev Permit a spender to a given amount of the owner's token via the owner's EIP-712 signature
-     * @param owner The owner of the tokens being approved
-     * @param permitSingle Data signed over by the owner specifying the terms of approval
-     * @param signature The owner's signature over the permit data
-     */
-    function _allowanceHolderTransferFrom(address owner, IAllowanceTransfer.PermitSingle memory permitSingle, bytes calldata signature) internal virtual {
-        _PERMIT2_ALLOWANCE.permit(owner, permitSingle, signature);
-    }
+    // /**
+    //  * @dev Permit a spender to a given amount of the owner's token via the owner's EIP-712 signature
+    //  * @param owner The owner of the tokens being approved
+    //  * @param permitSingle Data signed over by the owner specifying the terms of approval
+    //  * @param signature The owner's signature over the permit data
+    //  */
+    // function _allowanceHolderTransferFrom(address owner, IAllowanceTransfer.PermitSingle memory permitSingle, bytes calldata signature) internal virtual {
+    //     _PERMIT2_ALLOWANCE.transferFrom(owner, to, amount, token);n
+    // }
     
 }
 
