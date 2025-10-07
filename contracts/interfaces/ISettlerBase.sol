@@ -28,14 +28,14 @@ interface ISettlerBase {
         uint256 usdRate;
 
         address seller;
-        address sellerFeeRate;
+        uint256 sellerFeeRate;
         bytes32 paymentMethod;
         bytes32 currency;        
         bytes32 payeeId;
         bytes32 payeeAccount;
 
         address buyer;
-        address buyerFeeRate;
+        uint256 buyerFeeRate;
     }
 
     enum EscrowStatus {

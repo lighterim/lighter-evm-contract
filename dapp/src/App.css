@@ -137,6 +137,156 @@
   box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
+/* 标签页样式 */
+.tabs {
+  margin-top: 1rem;
+}
+
+.tab-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  justify-content: center;
+}
+
+.tab-button {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.tab-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.tab-button.active {
+  background: linear-gradient(45deg, #4CAF50, #45a049);
+  border-color: #4CAF50;
+  box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
+}
+
+.tab-content {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+  backdrop-filter: blur(10px);
+}
+
+/* 买家交互组件样式 */
+.buyer-interaction {
+  text-align: left;
+}
+
+.buyer-interaction h2 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  color: #fff;
+  font-size: 1.8rem;
+}
+
+.buyer-interaction h3 {
+  color: #e0e0e0;
+  margin: 1.5rem 0 1rem 0;
+  font-size: 1.3rem;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+  padding-bottom: 0.5rem;
+}
+
+.section {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.button-group {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.primary-button {
+  background: linear-gradient(45deg, #4CAF50, #45a049);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.primary-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(76, 175, 80, 0.4);
+}
+
+.primary-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.secondary-button {
+  background: linear-gradient(45deg, #2196F3, #1976D2);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.secondary-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(33, 150, 243, 0.4);
+}
+
+.secondary-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* 时间显示样式 */
+.time-display {
+  font-size: 0.8rem;
+  color: #b0b0b0;
+  margin-top: 0.25rem;
+  font-style: italic;
+}
+
+/* 区域描述样式 */
+.section-description {
+  font-size: 0.9rem;
+  color: #d0d0d0;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  border-left: 3px solid #4CAF50;
+}
+
 .contract-section {
   margin: 2rem 0;
   padding: 1.5rem;

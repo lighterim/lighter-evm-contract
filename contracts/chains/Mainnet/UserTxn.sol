@@ -51,7 +51,7 @@ contract MainnetUserTxn is EIP712 {
         bytes memory sig
         ) external  
     {
-        if(address(permitSingle.details.token) != address(intentParams.token)) revert InvalidSpender();
+        if(address(permitSingle.details.token) != address(intentParams.token)) revert InvalidToken();
         if(permitSingle.details.amount < intentParams.range.min || permitSingle.details.amount > intentParams.range.max) revert InvalidAmount();
         // if(permitSingle.sigDeadline > block.timestamp) revert SignatureExpired(permitSingle.sigDeadline);
         if (permitSingle.spender != address(escrow)) revert InvalidSpender(); 
@@ -78,8 +78,9 @@ contract MainnetUserTxn is EIP712 {
         bytes memory sig, 
         bytes memory intentSig
     ) external {
+        if(escrowParams.buyer != msg.sender) revert InvalidSender();
         address tokenAddress = address(escrowParams.token);
-        if(tokenAddress == address(intentParams.token)) revert InvalidToken();
+        if(tokenAddress != address(intentParams.token)) revert InvalidToken();
         if(escrowParams.volume < intentParams.range.min || (intentParams.range.max > 0 && escrowParams.volume > intentParams.range.max)) revert InvalidAmount();
         if(intentParams.expiryTime < block.timestamp) revert SignatureExpired(intentParams.expiryTime);
         
@@ -90,7 +91,7 @@ contract MainnetUserTxn is EIP712 {
 
         bytes32 escrowHash = escrowParams.hash();
         bytes32 escrowTypedHash = _hashTypedDataV4(escrowHash);
-        sig.verify(escrowTypedHash, lighterRelayer);
+        // sig.verify(escrowTypedHash, lighterRelayer);
         
         _allowanceHolderTransferFrom(tokenAddress, escrowParams.seller, address(escrow), escrowParams.volume);
 

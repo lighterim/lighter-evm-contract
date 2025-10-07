@@ -3,6 +3,7 @@ import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { injected } from 'wagmi/connectors';
 import { WalletConnectButton } from './components/WalletConnectButton';
 import { ContractInteraction } from './components/ContractInteraction';
+import BuyerInteraction from './components/BuyerInteraction';
 import './App.css';
 
 function App() {
@@ -10,6 +11,7 @@ function App() {
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
   const [contractAddress, setContractAddress] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<'seller' | 'buyer'>('seller');
 
   const handleConnectWallet = () => {
     connect({ connector: injected() });
@@ -52,12 +54,36 @@ function App() {
               className="address-input"
             />
           </div>
-          
+
           {isConnected && contractAddress && (
-            <ContractInteraction 
-              contractAddress={contractAddress} 
-              userAddress={address!} 
-            />
+            <div className="tabs">
+              <div className="tab-buttons">
+                <button 
+                  className={`tab-button ${activeTab === 'seller' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('seller')}
+                >
+                  🏪 卖家业务 (_bulkSell)
+                </button>
+                <button 
+                  className={`tab-button ${activeTab === 'buyer' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('buyer')}
+                >
+                  🛒 买家业务 (_takeBulkSellIntent, paid)
+                </button>
+              </div>
+              
+              <div className="tab-content">
+                {activeTab === 'seller' && (
+                  <ContractInteraction 
+                    contractAddress={contractAddress} 
+                    userAddress={address!} 
+                  />
+                )}
+                {activeTab === 'buyer' && (
+                  <BuyerInteraction />
+                )}
+              </div>
+            </div>
           )}
         </div>
       </header>

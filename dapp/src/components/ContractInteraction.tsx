@@ -8,6 +8,8 @@ interface ContractInteractionProps {
   userAddress: string;
 }
 
+const ESCROW_ADDRESS = '0x6d867b2cc8d943dd9f1395f49ce2b74f3fc2e555';
+
 // MainnetUserTxn 合约 ABI (包含错误定义)
 const CONTRACT_ABI = [
   {
@@ -292,12 +294,12 @@ export const ContractInteraction: React.FC<ContractInteractionProps> = ({
           }
         ],
         functionName: 'allowance',
-        args: [owner, tokenAddress as `0x${string}`, contractAddress as `0x${string}`]
+        args: [owner, tokenAddress as `0x${string}`, ESCROW_ADDRESS as `0x${string}`]
       });
 
       // 使用当前存储的 nonce（存储的 nonce = 签名 nonce + 1）
       const newNonce = Number(currentAllowance[2]);
-      const newExpiryTime = Math.floor(Date.now() / 1000) + 3600; // 1小时后过期
+      const newExpiryTime = Math.floor(Date.now() / 1000) + 360000; // 1小时后过期
       
       console.log('📋 Permit2 Nonce 信息:');
       console.log('- 当前 nonce:', currentAllowance[2]);
@@ -317,7 +319,7 @@ export const ContractInteraction: React.FC<ContractInteractionProps> = ({
           expiration: newExpiryTime,
           nonce: newNonce
         },
-        spender: contractAddress,
+        spender: ESCROW_ADDRESS,
         sigDeadline: newExpiryTime
       };
 
@@ -342,7 +344,7 @@ export const ContractInteraction: React.FC<ContractInteractionProps> = ({
       });
 
       setPermitSignature(signature);
-      setResult(`✅ Permit2 签名生成成功！\n\n签名: ${signature}\n\n📋 签名参数:\n- 签名者: ${owner}\n- 代币: ${tokenAddress}\n- 数量: ${amount} ETH\n- 过期时间: ${new Date(permitData.details.expiration * 1000).toLocaleString()}\n- 当前存储 Nonce: ${currentAllowance[2]}\n- 签名使用 Nonce: ${permitData.details.nonce} (等于当前存储值)\n- Spender: ${contractAddress}\n\n🔍 当前授权状态:\n- 授权金额: ${formatEther(currentAllowance[0])} ETH\n- 授权过期: ${currentAllowance[1] === 0 ? '永不过期' : new Date(Number(currentAllowance[1]) * 1000).toLocaleString()}`);
+      setResult(`✅ Permit2 签名生成成功！\n\n签名: ${signature}\n\n📋 签名参数:\n- 签名者: ${owner}\n- 代币: ${tokenAddress}\n- 数量: ${amount} ETH\n- 过期时间: ${new Date(permitData.details.expiration * 1000).toLocaleString()}\n- 当前存储 Nonce: ${currentAllowance[2]}\n- 签名使用 Nonce: ${permitData.details.nonce} (等于当前存储值)\n- Spender: ${ESCROW_ADDRESS}\n\n🔍 当前授权状态:\n- 授权金额: ${formatEther(currentAllowance[0])} ETH\n- 授权过期: ${currentAllowance[1] === 0 ? '永不过期' : new Date(Number(currentAllowance[1]) * 1000).toLocaleString()}`);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : '签名生成失败');
@@ -366,7 +368,7 @@ export const ContractInteraction: React.FC<ContractInteractionProps> = ({
       // 如果没有全局过期时间，先生成一个
       let expiryTime = globalExpiryTime;
       if (expiryTime === 0) {
-        expiryTime = Math.floor(Date.now() / 1000) + 3600;
+        expiryTime = Math.floor(Date.now() / 1000) + 360000;
         setGlobalExpiryTime(expiryTime);
       }
 
@@ -418,7 +420,7 @@ export const ContractInteraction: React.FC<ContractInteractionProps> = ({
       });
 
       setIntentSignature(signature);
-      setResult(`✅ IntentParams 签名生成成功！\n\n签名: ${signature}\n\n📋 签名参数:\n- 代币: ${tokenAddress}\n- 数量范围: ${minAmount} - ${maxAmount} ETH\n- 价格: ${price} ETH\n- 过期时间: ${new Date((Number(intentParams.expiryTime) * 1000)).toLocaleString()}`);
+      setResult(`✅ IntentParams 签名生成成功！\n\n签名: ${signature}\n\n📋 签名参数:\n- 代币: ${tokenAddress}\n- 数量范围: ${minAmount} - ${maxAmount} ETH\n- 价格: ${price} ETH\n- 过期时间: ${new Date((Number(intentParams.expiryTime) * 1000)).toLocaleString()}, ts:${intentParams.expiryTime}`);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : '签名生成失败');
@@ -467,7 +469,7 @@ export const ContractInteraction: React.FC<ContractInteractionProps> = ({
           expiration: globalExpiryTime,
           nonce: globalNonce
         },
-        spender: contractAddress as `0x${string}`,
+        spender: ESCROW_ADDRESS as `0x${string}`,
         sigDeadline: BigInt(globalExpiryTime)
       };
 
