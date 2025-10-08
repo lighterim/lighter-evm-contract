@@ -14,7 +14,9 @@ library ParamsHash {
     
     bytes32 public constant _RANGE_TYPEHASH = keccak256("Range(uint256 min,uint256 max)");
 
-    bytes32 public constant _ESCROW_PARAMS_TYPEHASH = keccak256("EscrowParams(uint256 id,address token,uint256 volume,uint256 price,uint256 usdRate,address seller,address sellerFeeRate,bytes32 paymentMethod,bytes32 currency,bytes32 payeeId,bytes32 payeeAccount,address buyer,address buyerFeeRate)");
+    bytes32 public constant _ESCROW_PARAMS_TYPEHASH = keccak256(
+        "EscrowParams(uint256 id,address token,uint256 volume,uint256 price,uint256 usdRate,address seller,uint256 sellerFeeRate,bytes32 paymentMethod,bytes32 currency,bytes32 payeeId,bytes32 payeeAccount,address buyer,uint256 buyerFeeRate)"
+    );
 
     /*
     bytes32 public constant _PERMIT_DETAILS_TYPEHASH =

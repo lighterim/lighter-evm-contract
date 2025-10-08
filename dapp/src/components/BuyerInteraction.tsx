@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAccount, usePublicClient, useWalletClient, useWriteContract } from 'wagmi';
-import { parseEther, formatEther, decodeErrorResult } from 'viem';
+import { parseUnits, parseEther, formatUnits, decodeErrorResult } from 'viem';
 import { AllowanceTransfer } from '@uniswap/permit2-sdk';
 
 // 合约 ABI
@@ -140,6 +140,7 @@ const BuyerInteraction: React.FC = () => {
   // EscrowParams 参数状态
   const [escrowId, setEscrowId] = useState<string>('1');
   const [escrowToken, setEscrowToken] = useState<string>('0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238');
+  const [tokenDecimals, setTokenDecimals] = useState<number>(6);
   const [escrowVolume, setEscrowVolume] = useState<string>('1.5');
   const [escrowPrice, setEscrowPrice] = useState<string>('1');
   const [escrowUsdRate, setEscrowUsdRate] = useState<string>('1');
@@ -213,7 +214,7 @@ const BuyerInteraction: React.FC = () => {
       const escrowParams = {
         id: BigInt(escrowId),
         token: escrowToken as `0x${string}`,
-        volume: parseEther(escrowVolume),
+        volume: parseUnits(escrowVolume, tokenDecimals),
         price: parseEther(escrowPrice),
         usdRate: parseEther(escrowUsdRate),
         seller: escrowSeller as `0x${string}`,
@@ -304,7 +305,7 @@ const BuyerInteraction: React.FC = () => {
       const escrowParams = {
         id: BigInt(escrowId),
         token: escrowToken as `0x${string}`,
-        volume: parseEther(escrowVolume),
+        volume: parseUnits(escrowVolume, tokenDecimals),
         price: parseEther(escrowPrice),
         usdRate: parseEther(escrowUsdRate),
         seller: escrowSeller as `0x${string}`,
@@ -320,8 +321,8 @@ const BuyerInteraction: React.FC = () => {
       const intentParams = {
         token: intentToken as `0x${string}`,
         range: {
-          min: parseEther(intentMinAmount),
-          max: parseEther(intentMaxAmount)
+          min: parseUnits(intentMinAmount, tokenDecimals),
+          max: parseUnits(intentMaxAmount, tokenDecimals)
         },
         expiryTime: BigInt(parseInt(intentExpiryTime)),
         currency: intentCurrency as `0x${string}`,
@@ -340,7 +341,7 @@ const BuyerInteraction: React.FC = () => {
       // 参数验证
       console.log('🔍 参数验证:');
       console.log('- escrow token === intent token:', escrowToken === intentToken);
-      console.log('- volume 在范围内:', parseEther(escrowVolume) >= parseEther(intentMinAmount) && parseEther(escrowVolume) <= parseEther(intentMaxAmount));
+      console.log('- volume 在范围内:', parseUnits(escrowVolume, tokenDecimals) >= parseUnits(intentMinAmount, tokenDecimals) && parseUnits(escrowVolume, tokenDecimals) <= parseUnits(intentMaxAmount, tokenDecimals));
       console.log('- 调用者地址:', address);
       console.log('- 合约地址:', contractAddress);
 
@@ -423,7 +424,7 @@ const BuyerInteraction: React.FC = () => {
       const escrowParams = {
         id: BigInt(escrowId),
         token: escrowToken as `0x${string}`,
-        volume: parseEther(escrowVolume),
+        volume: parseUnits(escrowVolume, tokenDecimals),
         price: parseEther(escrowPrice),
         usdRate: parseEther(escrowUsdRate),
         seller: escrowSeller as `0x${string}`,
@@ -612,10 +613,20 @@ const BuyerInteraction: React.FC = () => {
             />
           </div>
           <div className="form-group">
-            <label>数量 (ETH):</label>
+            <label>Token Decimals:</label>
             <input
               type="number"
-              step="0.1"
+              min={0}
+              max={36}
+              value={tokenDecimals}
+              onChange={(e) => setTokenDecimals(Number(e.target.value) || 0)}
+            />
+          </div>
+          <div className="form-group">
+            <label>数量 (Token 单位):</label>
+            <input
+              type="number"
+              step="0.000001"
               value={escrowVolume}
               onChange={(e) => setEscrowVolume(e.target.value)}
             />

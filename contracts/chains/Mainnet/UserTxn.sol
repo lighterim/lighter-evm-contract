@@ -54,7 +54,7 @@ contract MainnetUserTxn is EIP712 {
         if(address(permitSingle.details.token) != address(intentParams.token)) revert InvalidToken();
         if(permitSingle.details.amount < intentParams.range.min || permitSingle.details.amount > intentParams.range.max) revert InvalidAmount();
         // if(permitSingle.sigDeadline > block.timestamp) revert SignatureExpired(permitSingle.sigDeadline);
-        if (permitSingle.spender != address(escrow)) revert InvalidSpender(); 
+        if (permitSingle.spender != address(this)) revert InvalidSpender(); 
         
         // EIP-712 signature verification for intentParams
         bytes32 intentParamsHash = intentParams.hash();
@@ -81,7 +81,7 @@ contract MainnetUserTxn is EIP712 {
         if(escrowParams.buyer != msg.sender) revert InvalidSender();
         address tokenAddress = address(escrowParams.token);
         if(tokenAddress != address(intentParams.token)) revert InvalidToken();
-        if(escrowParams.volume < intentParams.range.min || (intentParams.range.max > 0 && escrowParams.volume > intentParams.range.max)) revert InvalidAmount();
+        // if(escrowParams.volume < intentParams.range.min || (intentParams.range.max > 0 && escrowParams.volume > intentParams.range.max)) revert InvalidAmount();
         if(intentParams.expiryTime < block.timestamp) revert SignatureExpired(intentParams.expiryTime);
         
         // EIP-712 signature verification for intentParams
@@ -91,9 +91,10 @@ contract MainnetUserTxn is EIP712 {
 
         bytes32 escrowHash = escrowParams.hash();
         bytes32 escrowTypedHash = _hashTypedDataV4(escrowHash);
-        // sig.verify(escrowTypedHash, lighterRelayer);
+        sig.verify(escrowTypedHash, lighterRelayer);
         
-        _allowanceHolderTransferFrom(tokenAddress, escrowParams.seller, address(escrow), escrowParams.volume);
+        // _allowanceHolderTransferFrom(tokenAddress, escrowParams.seller, address(escrow), escrowParams.volume);
+        _PERMIT2_ALLOWANCE.transferFrom(escrowParams.seller, address(escrow), uint160(escrowParams.volume), tokenAddress);
 
         _makeEscrow(escrowTypedHash, escrowParams, 0, 0);
     }
@@ -148,34 +149,7 @@ contract MainnetUserTxn is EIP712 {
     function _allowanceHolderTransferFrom(address token, address owner, address recipient, uint256 amount)
         internal
     {
-        // `owner` is always `_msgSender()`
-        // This is effectively
-        /*
-        _ALLOWANCE_HOLDER.transferFrom(token, owner, recipient, amount);
-        */
-        // but it's written in assembly for contract size reasons.
-
-        // Solidity won't let us reference the constant `_ALLOWANCE_HOLDER` in assembly, but this
-        // compiles down to just a single PUSH opcode just before the CALL, with optimization turned
-        // on.
-        address __ALLOWANCE_HOLDER = address(_PERMIT2_ALLOWANCE);
-        assembly ("memory-safe") {
-            let ptr := mload(0x40)
-            mstore(add(0x80, ptr), amount)
-            mstore(add(0x60, ptr), recipient)
-            mstore(add(0x4c, ptr), shl(0x60, owner)) // clears `recipient`'s padding
-            mstore(add(0x2c, ptr), shl(0x60, token)) // clears `owner`'s padding
-            mstore(add(0x0c, ptr), 0x15dacbea000000000000000000000000) // selector for `transferFrom(address,address,address,uint256)` with `token`'s padding
-
-            // Although `transferFrom` returns `bool`, we don't need to bother checking the return
-            // value because `AllowanceHolder` always either reverts or returns `true`. We also
-            // don't need to check that it has code.
-            if iszero(call(gas(), __ALLOWANCE_HOLDER, 0x00, add(0x1c, ptr), 0x84, 0x00, 0x00)) {
-                let ptr_ := mload(0x40)
-                returndatacopy(ptr_, 0x00, returndatasize())
-                revert(ptr_, returndatasize())
-            }
-        }
+       _PERMIT2_ALLOWANCE.transferFrom(owner, recipient, uint160(amount), token);
     }
 
 }

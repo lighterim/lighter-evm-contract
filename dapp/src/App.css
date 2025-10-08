@@ -287,6 +287,48 @@
   border-left: 3px solid #4CAF50;
 }
 
+/* Release 表单样式 */
+.release-form {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.release-form h4 {
+  color: #FF9800;
+  margin-bottom: 1rem;
+  font-size: 1.3rem;
+}
+
+.release-btn {
+  background: linear-gradient(45deg, #FF9800, #F57C00);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 1rem;
+}
+
+.release-btn:hover:not(:disabled) {
+  background: linear-gradient(45deg, #F57C00, #EF6C00);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+}
+
+.release-btn:disabled {
+  background: #666;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 .contract-section {
   margin: 2rem 0;
   padding: 1.5rem;
