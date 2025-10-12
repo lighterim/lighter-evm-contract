@@ -38,10 +38,10 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     uint256 public rentPrice;
     
     /// @notice 票券租借记录
-    mapping(address => uint256) public ticketReceipts;
+    mapping(address => uint256) public ticketRents;
 
     // pending tx list [user => [tradeId...]]
-    mapping(address => uint32) internal pendingTxCount;
+    mapping(address => uint32) internal ticketPendingCounts;
 
     // / @notice 租借者地址
     // address payable public rentee;
@@ -63,24 +63,24 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         address indexed renter,
         uint256 indexed tokenId,
         address indexed tbaAddress,
-        bytes32 nostrPubKey,
-        uint256 rent
+        uint256 rent,
+        bytes32 nostrPubKey
     );
 
     event QuotaUpgraded(
         address indexed renter,
         uint256 indexed tokenId,
         address indexed tbaAddress,
-        string hexNostrPubKey,
-        uint256 rent
+        uint256 rent,
+        string hexNostrPubKey
     );
 
     event TicketDestroyed(
         address indexed recipient,
         uint256 indexed tokenId,
         address indexed tbaAddress,
-        string hexNostrPubKey,
-        uint256 amount
+        uint256 amount,
+        string hexNostrPubKey
     );
     
     /**
@@ -154,13 +154,17 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         unchecked {
             totalRented++;
         }
-        ticketReceipts[tbaAddress] += msg.value;
         
-        emit TicketRentedWithTBA(recipient, tokenId, tbaAddress, nostrPubKey, msg.value);
+        ticketRents[tbaAddress] += msg.value;
+        
+        emit TicketRentedWithTBA(recipient, tokenId, tbaAddress, msg.value, nostrPubKey);
         
         return (tokenId, tbaAddress);
     }
 
+    /// @notice 销毁票券，也会失去去TBA的控制权，退回租借资产。
+    /// @param tokenId token id
+    /// @param recipient recipient address
     function destroyAccount(uint256 tokenId, address payable recipient) external nonReentrant {
         if (tokenId == 0) revert InvalidTokenId();
         if (recipient == address(0)) revert ZeroAddress();
@@ -177,26 +181,26 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         if (msg.sender != tbaAddress) revert InvalidSender();
 
         string memory hexNostrPubKey = ticketContract.burn(tokenId);
-        uint256 amount = ticketReceipts[tbaAddress];
-        if (ticketReceipts[tbaAddress] > 0) {
-            delete ticketReceipts[tbaAddress];
+        uint256 amount = ticketRents[tbaAddress];
+        if (ticketRents[tbaAddress] > 0) {
+            delete ticketRents[tbaAddress];
             (bool success, ) = recipient.call{value: amount}("");
             if (!success) revert WithdrawalFailed();
         }
 
-        emit TicketDestroyed(recipient, tokenId, tbaAddress, hexNostrPubKey, amount);
+        emit TicketDestroyed(recipient, tokenId, tbaAddress, amount, hexNostrPubKey);
     }
     
     /// @notice add pending tx count
     /// @param account user address
     function addPendingTx(address account) external {
-        pendingTxCount[account]++;
+        ticketPendingCounts[account]++;
     }
 
     /// @notice remove pending tx count
     /// @param account user address
     function removePendingTx(address account) external {
-        pendingTxCount[account]--;
+        ticketPendingCounts[account]--;
     }
 
     /// @notice upgrade quota
@@ -214,16 +218,19 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         );
 
         if (account == address(0)) revert ZeroAddress();
-        if (pendingTxCount[account] > 0) revert HasPendingTx(account);
+        if (ticketPendingCounts[account] > 0) revert HasPendingTx(account);
         string memory hexNostrPubKey = ticketContract.tokenURI(tokenId);
 
-        ticketReceipts[account] += msg.value;
+        ticketRents[account] += msg.value;
 
-        emit QuotaUpgraded(account, tokenId, account, hexNostrPubKey, msg.value);
-        
+        emit QuotaUpgraded(msg.sender, tokenId, account, msg.value, hexNostrPubKey);
     }
 
-        /**
+    function setTicketBaseURI(string calldata newBaseURI) external onlyOwner {
+        ticketContract.setBaseURI(newBaseURI);
+    }
+
+    /**
      * @notice 计算指定 NFT 的 TBA 地址（不创建）
      * @param tokenId NFT token ID
      * @return TBA 地址
@@ -268,14 +275,14 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     /// @return true if user has available quota
     function hasAvailableQuota(address account) public view returns (bool) {
         uint256 quota = getQuota(account);
-        return pendingTxCount[account] < quota;
+        return ticketPendingCounts[account] < quota;
     }
 
     /// @notice get quota
     /// @param account user address
     /// @return quota quota
     function getQuota(address account) public view returns (uint256) {
-        return ticketReceipts[account] == 0 ? 1 : (ticketReceipts[account] + rentPrice-1) / rentPrice;
+        return ticketRents[account] == 0 ? 1 : (ticketRents[account] + rentPrice-1) / rentPrice;
     }
 
     // ============ Admin Functions ============
