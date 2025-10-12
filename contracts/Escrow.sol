@@ -22,8 +22,7 @@ contract Escrow is Ownable, Pausable, IEscrow{
     mapping(address => mapping(address => uint256)) internal sellerEscrow;
     // credit for buyer [token => [buyer => amount]]
     mapping(address => mapping(address => uint256)) internal userCredit;
-    // pending tx list [user => [tradeId...]]
-    mapping(address => mapping(bytes32 => bool)) internal pendingTxList;
+    
 
     constructor(address _owner) Ownable(_owner) {
     }
@@ -33,8 +32,6 @@ contract Escrow is Ownable, Pausable, IEscrow{
         
         allEscrow[escrowHash] = escrowData;
         sellerEscrow[token][seller] += amount;
-        pendingTxList[seller][escrowHash] = true;
-        pendingTxList[buyer][escrowHash] = true;
 
         emit Created(token, buyer, seller, escrowHash, amount);
     }
@@ -64,8 +61,6 @@ contract Escrow is Ownable, Pausable, IEscrow{
 
         sellerEscrow[token][seller] -= amount;
         userCredit[token][buyer] += amount;
-        delete pendingTxList[seller][escrowHash];
-        delete pendingTxList[buyer][escrowHash];
 
         emit Released(token, buyer, seller, escrowHash, amount, status);
     }
@@ -78,8 +73,6 @@ contract Escrow is Ownable, Pausable, IEscrow{
         allEscrow[escrowHash].status = status;
 
         sellerEscrow[token][seller] -= amount;
-        delete pendingTxList[seller][escrowHash];
-        delete pendingTxList[buyer][escrowHash];
 
         emit Cancelled(token, buyer, seller, escrowHash, amount, status);
     }

@@ -6,19 +6,19 @@ import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer
 
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
-import {InvalidSpender, InvalidAmount, SignatureExpired, InvalidSignature, InvalidToken, InvalidSender} from "../../core/SettlerErrors.sol";
+import {InvalidSpender, InvalidAmount, SignatureExpired, InvalidSignature, InvalidToken, InvalidSender, InsufficientQuota} from "../../core/SettlerErrors.sol";
 import {ISettlerBase} from "../../interfaces/ISettlerBase.sol";
 import {IEscrow} from "../../interfaces/IEscrow.sol";
+import {LighterAccount} from "../../account/LighterAccount.sol";
 import {ParamsHash} from "../../utils/ParamsHash.sol";
 import {IAllowanceHolder} from "../../allowanceholder/IAllowanceHolder.sol";
-import {SignatureVerification} from "../../utils/SignatureVerification.sol";
+
 
 
 
 contract MainnetUserTxn is EIP712 {
-
-    using SignatureVerification for bytes;
     using ParamsHash for ISettlerBase.IntentParams;
     using ParamsHash for ISettlerBase.EscrowParams;
     
@@ -27,11 +27,13 @@ contract MainnetUserTxn is EIP712 {
 
     address internal lighterRelayer;
     IEscrow internal escrow;
+    LighterAccount internal lighterAccount;
 
-    constructor(address lighterRelayer_, IEscrow escrow_) EIP712("MainnetUserTxn", "1") {
+    constructor(address lighterRelayer_, IEscrow escrow_, LighterAccount lighterAccount_) EIP712("MainnetUserTxn", "1") {
         lighterRelayer = lighterRelayer_;
         // assert(block.chainid == 1 || block.chainid == 31337);
         escrow = escrow_;
+        lighterAccount = lighterAccount_;
     }
 
 
@@ -59,7 +61,8 @@ contract MainnetUserTxn is EIP712 {
         // EIP-712 signature verification for intentParams
         bytes32 intentParamsHash = intentParams.hash();
         bytes32 typedDataHash = _hashTypedDataV4(intentParamsHash);
-        sig.verify(typedDataHash, msg.sender);
+        // sig.verify(typedDataHash, msg.sender);
+        SignatureChecker.isValidSignatureNow(msg.sender, typedDataHash, sig);
 
         _permit(msg.sender, permitSingle, permitSig); 
 
@@ -79,19 +82,21 @@ contract MainnetUserTxn is EIP712 {
         bytes memory intentSig
     ) external {
         if(escrowParams.buyer != msg.sender) revert InvalidSender();
+        if(!lighterAccount.hasAvailableQuota(escrowParams.buyer)) revert InsufficientQuota();
+        if(!lighterAccount.hasAvailableQuota(escrowParams.seller)) revert InsufficientQuota();
         address tokenAddress = address(escrowParams.token);
         if(tokenAddress != address(intentParams.token)) revert InvalidToken();
-        // if(escrowParams.volume < intentParams.range.min || (intentParams.range.max > 0 && escrowParams.volume > intentParams.range.max)) revert InvalidAmount();
+        if(escrowParams.volume < intentParams.range.min || (intentParams.range.max > 0 && escrowParams.volume > intentParams.range.max)) revert InvalidAmount();
         if(intentParams.expiryTime < block.timestamp) revert SignatureExpired(intentParams.expiryTime);
         
         // EIP-712 signature verification for intentParams
         bytes32 intentHash = intentParams.hash();
         bytes32 intentTypedHash = _hashTypedDataV4(intentHash);
-        intentSig.verify(intentTypedHash, escrowParams.seller);
+        SignatureChecker.isValidSignatureNow(escrowParams.seller, intentTypedHash, intentSig);
 
         bytes32 escrowHash = escrowParams.hash();
         bytes32 escrowTypedHash = _hashTypedDataV4(escrowHash);
-        sig.verify(escrowTypedHash, lighterRelayer);
+        SignatureChecker.isValidSignatureNow(lighterRelayer, escrowTypedHash, sig);
         
         // _allowanceHolderTransferFrom(tokenAddress, escrowParams.seller, address(escrow), escrowParams.volume);
         _PERMIT2_ALLOWANCE.transferFrom(escrowParams.seller, address(escrow), uint160(escrowParams.volume), tokenAddress);
@@ -104,7 +109,7 @@ contract MainnetUserTxn is EIP712 {
 
         bytes32 escrowHash = escrowParams.hash();
         bytes32 escrowTypedHash = _hashTypedDataV4(escrowHash);
-        sig.verify(escrowTypedHash, lighterRelayer);
+        SignatureChecker.isValidSignatureNow(lighterRelayer, escrowTypedHash, sig);
 
         escrow.paid(escrowTypedHash, address(escrowParams.token), escrowParams.buyer);
     }
@@ -114,9 +119,12 @@ contract MainnetUserTxn is EIP712 {
 
         bytes32 escrowHash = escrowParams.hash();
         bytes32 escrowTypedHash = _hashTypedDataV4(escrowHash);
-        sig.verify(escrowTypedHash, lighterRelayer);
+        SignatureChecker.isValidSignatureNow(lighterRelayer, escrowTypedHash, sig);
 
         escrow.release(address(escrowParams.token), escrowParams.buyer, escrowParams.seller, escrowParams.volume, escrowTypedHash, ISettlerBase.EscrowStatus.SellerReleased);
+        
+        lighterAccount.removePendingTx(escrowParams.buyer);
+        lighterAccount.removePendingTx(escrowParams.seller);
     }
 
 
@@ -139,6 +147,9 @@ contract MainnetUserTxn is EIP712 {
             gasSpentForSeller: gasSpentForSeller
             })
         );
+
+        lighterAccount.addPendingTx(escrowParams.buyer);
+        lighterAccount.addPendingTx(escrowParams.seller);
     }
 
 

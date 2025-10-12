@@ -4,6 +4,7 @@ import { injected } from 'wagmi/connectors';
 import { WalletConnectButton } from './components/WalletConnectButton';
 import { ContractInteraction } from './components/ContractInteraction';
 import BuyerInteraction from './components/BuyerInteraction';
+import LighterAccountInteraction from './components/LighterAccountInteraction';
 import './App.css';
 
 function App() {
@@ -11,7 +12,8 @@ function App() {
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
   const [contractAddress, setContractAddress] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'seller' | 'buyer'>('seller');
+  const [lighterAccountAddress, setLighterAccountAddress] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<'seller' | 'buyer' | 'lighter'>('lighter');
 
   const handleConnectWallet = () => {
     connect({ connector: injected() });
@@ -24,8 +26,8 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <h1>MainnetUserTxn DApp</h1>
-        <p>与 MainnetUserTxn 合约交互的前端应用</p>
+        <h1>Lighter Platform DApp</h1>
+        <p>与 Lighter 智能合约交互的前端应用</p>
         
         <div className="wallet-section">
           {!isConnected ? (
@@ -55,9 +57,15 @@ function App() {
             />
           </div>
 
-          {isConnected && contractAddress && (
+          {isConnected && (
             <div className="tabs">
               <div className="tab-buttons">
+                <button 
+                  className={`tab-button ${activeTab === 'lighter' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('lighter')}
+                >
+                  🎫 LighterAccount (票券管理)
+                </button>
                 <button 
                   className={`tab-button ${activeTab === 'seller' ? 'active' : ''}`}
                   onClick={() => setActiveTab('seller')}
@@ -73,7 +81,25 @@ function App() {
               </div>
               
               <div className="tab-content">
-                {activeTab === 'seller' && (
+                {activeTab === 'lighter' && (
+                  <div>
+                    <div className="contract-address-input" style={{marginBottom: '20px'}}>
+                      <label htmlFor="lighter-account-address">LighterAccount 合约地址:</label>
+                      <input
+                        id="lighter-account-address"
+                        type="text"
+                        value={lighterAccountAddress}
+                        onChange={(e) => setLighterAccountAddress(e.target.value)}
+                        placeholder="输入 LighterAccount 合约地址"
+                        className="address-input"
+                      />
+                    </div>
+                    {lighterAccountAddress && (
+                      <LighterAccountInteraction contractAddress={lighterAccountAddress} />
+                    )}
+                  </div>
+                )}
+                {activeTab === 'seller' && contractAddress && (
                   <ContractInteraction 
                     contractAddress={contractAddress} 
                     userAddress={address!} 

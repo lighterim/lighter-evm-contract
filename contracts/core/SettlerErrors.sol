@@ -17,6 +17,11 @@ function revertConfusedDeputy() pure {
     }
 }
 
+error InsufficientPayment(uint256 required, uint256 provided);
+error InvalidCount();
+error InvalidRecipient();
+error WithdrawalFailed();
+
 /// @notice Thrown when a target contract is invalid given the context
 error InvalidTarget();
 
@@ -24,6 +29,16 @@ error InvalidTarget();
 error InvalidSender();
 
 error InvalidSpender();
+
+error HasPendingTx(address account);
+
+error PendingTxExists(address account, bytes32 escrowHash);
+
+error PendingTxNotExists(address account, bytes32 escrowHash);
+
+error InvalidRentPrice();
+
+error InsufficientQuota();
 
 error EscrowAlreadyExists(bytes32 escrowHash);
 
@@ -117,8 +132,11 @@ error ZeroBuyAmount(IERC20 buyToken);
 error BoughtSellToken(IERC20 sellToken);
 error TokenHashCollision(IERC20 token0, IERC20 token1);
 error ZeroToken();
+error ZeroAddress();
 error InvalidToken();
+error InvalidTokenId();
 error InvalidAmount();
+error ZeroFunds();
 error InsufficientBalance(uint256 amount);
 
 /// @notice Thrown for liquidities that require a Newton-Raphson approximation to solve their

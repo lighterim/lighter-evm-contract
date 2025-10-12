@@ -8,7 +8,11 @@ const config: HardhatUserConfig = {
   remappings: [
     "@uniswap/permit2/=lib/permit2/src/", 
     "forge-std/=npm/forge-std@1.9.4/src",
-    "@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/"
+    "@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/",
+    "lib/openzeppelin-contracts/contracts/=node_modules/@openzeppelin/contracts/",
+    "@tokenbound/=lib/tokenbound/src/",
+    "erc6551/=lib/tokenbound/lib/erc6551/",
+    "solady/=node_modules/solady/"
   ],
   solidity: {
     compilers: [
