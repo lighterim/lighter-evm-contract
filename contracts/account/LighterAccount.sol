@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {LibString} from "solady/src/utils/LibString.sol";
 import "erc6551/src/interfaces/IERC6551Registry.sol";
+import "erc6551/src/interfaces/IERC6551Account.sol";
 import "../token/LighterTicket.sol";
 import {
     PendingTxExists, ZeroAddress, ZeroFunds, InvalidRecipient, InvalidRentPrice, HasPendingTx,
@@ -154,7 +155,7 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         unchecked {
             totalRented++;
         }
-        
+
         ticketRents[tbaAddress] += msg.value;
         
         emit TicketRentedWithTBA(recipient, tokenId, tbaAddress, msg.value, nostrPubKey);
@@ -163,10 +164,10 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     }
 
     /// @notice 销毁票券，也会失去去TBA的控制权，退回租借资产。
-    /// @param tokenId token id
+    /// @param nftId token id
     /// @param recipient recipient address
-    function destroyAccount(uint256 tokenId, address payable recipient) external nonReentrant {
-        if (tokenId == 0) revert InvalidTokenId();
+    function destroyAccount(uint256 nftId, address payable recipient) external nonReentrant {
+        if (nftId == 0) revert InvalidTokenId();
         if (recipient == address(0)) revert ZeroAddress();
 
         address tbaAddress = IERC6551Registry(registry).account(
@@ -174,13 +175,13 @@ contract LighterAccount is Ownable, ReentrancyGuard {
             salt,
             block.chainid,
             address(ticketContract),
-            tokenId
+            nftId
         );
 
         if (tbaAddress == address(0)) revert ZeroAddress();
-        if (msg.sender != tbaAddress) revert InvalidSender();
+        if (msg.sender != ticketContract.ownerOf(nftId)) revert InvalidSender();
 
-        string memory hexNostrPubKey = ticketContract.burn(tokenId);
+        string memory hexNostrPubKey = ticketContract.burn(nftId);
         uint256 amount = ticketRents[tbaAddress];
         if (ticketRents[tbaAddress] > 0) {
             delete ticketRents[tbaAddress];
@@ -188,7 +189,7 @@ contract LighterAccount is Ownable, ReentrancyGuard {
             if (!success) revert WithdrawalFailed();
         }
 
-        emit TicketDestroyed(recipient, tokenId, tbaAddress, amount, hexNostrPubKey);
+        emit TicketDestroyed(recipient, nftId, tbaAddress, amount, hexNostrPubKey);
     }
     
     /// @notice add pending tx count
@@ -204,8 +205,8 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     }
 
     /// @notice upgrade quota
-    /// @param tokenId token id
-    function upgradeQuota(uint256  tokenId) external payable {
+    /// @param nftId token id
+    function upgradeQuota(uint256  nftId) external payable {
         if (msg.value < rentPrice) {
             revert InsufficientPayment(rentPrice, msg.value);
         }
@@ -214,20 +215,25 @@ contract LighterAccount is Ownable, ReentrancyGuard {
             salt,
             block.chainid,
             address(ticketContract),
-            tokenId
+            nftId
         );
 
         if (account == address(0)) revert ZeroAddress();
         if (ticketPendingCounts[account] > 0) revert HasPendingTx(account);
-        string memory hexNostrPubKey = ticketContract.tokenURI(tokenId);
+        string memory hexNostrPubKey = ticketContract.tokenURI(nftId);
 
         ticketRents[account] += msg.value;
 
-        emit QuotaUpgraded(msg.sender, tokenId, account, msg.value, hexNostrPubKey);
+        emit QuotaUpgraded(msg.sender, nftId, account, msg.value, hexNostrPubKey);
     }
 
     function setTicketBaseURI(string calldata newBaseURI) external onlyOwner {
         ticketContract.setBaseURI(newBaseURI);
+    }
+
+    function token(address tbaAddress) external view returns (uint256, address, uint256) {
+        IERC6551Account account = IERC6551Account(payable(tbaAddress));
+        return account.token();
     }
 
     /**
@@ -284,6 +290,7 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     function getQuota(address account) public view returns (uint256) {
         return ticketRents[account] == 0 ? 1 : (ticketRents[account] + rentPrice-1) / rentPrice;
     }
+
 
     // ============ Admin Functions ============
 

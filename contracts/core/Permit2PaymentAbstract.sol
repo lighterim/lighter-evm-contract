@@ -9,20 +9,11 @@ import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer
 abstract contract Permit2PaymentAbstract is AbstractContext {
     
     string internal constant TOKEN_PERMISSIONS_TYPE = "TokenPermissions(address token,uint256 amount)";
-
-    string constant INTENT_WITNESS_TYPE_STRING = "IntentParams intentParams)TokenPermissions(address token,uint256 amount)Witness(address user)";
     
     // EIP-712 Domain Separator constants
     // keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
     bytes32 constant EIP712_DOMAIN_TYPEHASH = 0x22a86b360b5485458145028452a23e18ce4839843a9677579ab5c5f87a87e008;
     
-    string constant INTENT_PARAMS_TYPE = "IntentParams(address token,Range range,uint64 expiryTime,bytes32 currency,bytes32 paymentMethod,bytes32 payeeDetails,uint256 price)Range(uint256 min,uint256 max)";
-    // keccak256("Range(uint256 min,uint256 max)")
-    bytes32 constant RANGE_TYPEHASH = 0x4f957099e465954533e4f7c229f55b0a330752b757366579c2a64f434b9b59c7;
-    // keccak256("IntentParams(address token,Range range,uint64 expiryTime,bytes32 currency,bytes32 paymentMethod,bytes32 payeeDetails,uint256 price)Range(uint256 min,uint256 max)")
-    bytes32 constant INTENT_PARAMS_TYPEHASH = 0x22a86b360b5485458145028452a23e18ce4839843a9677579ab5c5f87a87e008;
-
-    string constant ESCROW_PARAMS_TYPE = "EscrowParams(uint256 id,address token,uint256 volume,uint256 price,uint256 usdRate,address seller,address sellerFeeRate,bytes32 paymentMethod,bytes32 currency,bytes32 payeeId,bytes32 payeeAccount,address buyer,address buyerFeeRate)";
     
     // Additional EIP-712 type constants
     string internal constant SLIPPAGE_TYPE = "Slippage(uint256 minAmountOut,uint256 maxAmountIn)";
