@@ -15,7 +15,7 @@ import {LighterAccount} from "../../account/LighterAccount.sol";
 import {ParamsHash} from "../../utils/ParamsHash.sol";
 import {IAllowanceHolder} from "../../allowanceholder/IAllowanceHolder.sol";
 
-import {console} from "forge-std/console.sol";
+// import {console} from "forge-std/console.sol";
 
 
 contract MainnetUserTxn is EIP712 {
@@ -139,10 +139,10 @@ contract MainnetUserTxn is EIP712 {
         
 
         bytes32 escrowParamsHash = escrowParams.hash();
-        console.logBytes32(escrowParamsHash);
+        // console.logBytes32(escrowParamsHash);
         bytes32 escrowTypedDataHash = _hashTypedDataV4(escrowParamsHash);
-        console.logBytes32(escrowTypedDataHash);
-        console.logBytes(sig);
+        // console.logBytes32(escrowTypedDataHash);
+        // console.logBytes(sig);
         if (!SignatureChecker.isValidSignatureNow(lighterRelayer, escrowTypedDataHash, sig)) revert InvalidSignature();
 
         bytes32 intentParamsHash = intentParams.hash(); 
