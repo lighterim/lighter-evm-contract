@@ -16,6 +16,7 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
 import {LighterAccount} from "../../account/LighterAccount.sol";
 import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
 import {ISettlerBase} from "../../interfaces/ISettlerBase.sol";
+import {console} from "forge-std/console.sol";
 
 contract UserTxnTest is Test {
 
@@ -96,9 +97,14 @@ bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermission
     bytes32 intentHash = intentParams.hash();
     bytes32 escrowHash = escrowParams.hash();
 
+
+    console.logBytes32(escrowHash);
+    
     bytes32 escrowTypeDataHash = MessageHashUtils.toTypedDataHash(_buildDomainSeparator(), escrowHash);
+    console.logBytes32(escrowTypeDataHash);
     (uint8 v_escrow, bytes32 r_escrow, bytes32 s_escrow) = vm.sign(relayerPrivKey, escrowTypeDataHash);
     escrowSig = abi.encodePacked(r_escrow, s_escrow, v_escrow);
+    console.logBytes(escrowSig);
 
     (permit, transferDetails) = getTransferWithWitness();
     bytes32 permitHash = _hashPermitTransferWithWitness(permit, intentHash, address(userTxn));
@@ -153,7 +159,7 @@ bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermission
   }
 
   function _buildDomainSeparator() internal view returns (bytes32) {
-    return keccak256(abi.encode(TYPE_HASH, "MainnetUserTxn", "1", block.chainid, address(userTxn)));
+    return keccak256(abi.encode(TYPE_HASH, keccak256(bytes("MainnetUserTxn")), keccak256(bytes("1")), block.chainid, address(userTxn)));
   }
 
 
