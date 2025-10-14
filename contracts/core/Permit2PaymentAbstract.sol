@@ -14,7 +14,7 @@ abstract contract Permit2PaymentAbstract is AbstractContext {
     // keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
     bytes32 constant EIP712_DOMAIN_TYPEHASH = 0x22a86b360b5485458145028452a23e18ce4839843a9677579ab5c5f87a87e008;
     
-    
+        string constant INTENT_WITNESS_TYPE_STRING = "IntentParams intentParams)TokenPermissions(address token,uint256 amount)Witness(address user)";
     // Additional EIP-712 type constants
     string internal constant SLIPPAGE_TYPE = "Slippage(uint256 minAmountOut,uint256 maxAmountIn)";
     string internal constant SLIPPAGE_AND_ACTIONS_TYPE = "SlippageAndActions(Slippage slippage,bytes[] actions)Slippage(uint256 minAmountOut,uint256 maxAmountIn)";
@@ -93,12 +93,12 @@ abstract contract Permit2PaymentAbstract is AbstractContext {
         bytes memory sig
     ) internal virtual;
 
-    // function _setOperatorAndCall(
-    //     address target,
-    //     bytes memory data,
-    //     uint32 selector,
-    //     function (bytes calldata) internal returns (bytes memory) callback
-    // ) internal virtual returns (bytes memory);
+    function _setOperatorAndCall(
+        address target,
+        bytes memory data,
+        uint32 selector,
+        function (bytes calldata) internal returns (bytes memory) callback
+    ) internal virtual returns (bytes memory);
 
         /**
      * allowanceTransferWithPermit
@@ -111,9 +111,9 @@ abstract contract Permit2PaymentAbstract is AbstractContext {
         internal
         virtual;
 
-    function _permit(address owner, IAllowanceTransfer.PermitSingle memory permitSingle, bytes memory signature)
-        internal 
-        virtual;
+    // function _permit(address owner, IAllowanceTransfer.PermitSingle memory permitSingle, bytes memory signature)
+    //     internal 
+    //     virtual;
     
 
     modifier metaTx(address msgSender/*, bytes32 witness*/) virtual;

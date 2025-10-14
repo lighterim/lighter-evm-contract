@@ -5,10 +5,11 @@ import {Permit2PaymentAbstract} from "./Permit2PaymentAbstract.sol";
 import {revertConfusedDeputy} from "./SettlerErrors.sol";
 import {Context, AbstractContext} from "../Context.sol";
 import {SettlerAbstract} from "../SettlerAbstract.sol";
-import {AllowanceHolderContext} from "../allowanceholder/AllowanceHolderContext.sol";
+import {AllowanceHolderContext, ALLOWANCE_HOLDER} from "../allowanceholder/AllowanceHolderContext.sol";
 import {FullMath} from "../vendor/FullMath.sol";
 import {SafeTransferLib} from "../vendor/SafeTransferLib.sol";
 import {Panic} from "../utils/Panic.sol";
+import {Revert} from "../utils/Revert.sol";
 
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer.sol";
@@ -28,71 +29,71 @@ library TransientStorage {
     // supporting EOF, and where the Spurious Dragon size limit is not enforced,
     // it might be possible to violate this assumption. However, our
     // `foundry.toml` enforces the use of the IR pipeline, so the point is moot.
-    //
+    
     // `operator` must not be `address(0)`. This is not checked.
     // `callback` must not be zero. This is checked in `_invokeCallback`.
-    // function setOperatorAndCallback(
-    //     address operator,
-    //     uint32 selector,
-    //     function (bytes calldata) internal returns (bytes memory) callback
-    // ) internal {
-    //     address currentSigner;
-    //     assembly ("memory-safe") {
-    //         currentSigner := tload(_PAYER_SLOT)
-    //     }
-    //     if (operator == currentSigner) {
-    //         revertConfusedDeputy();
-    //     }
-    //     uint256 callbackInt;
-    //     assembly ("memory-safe") {
-    //         callbackInt := tload(_OPERATOR_SLOT)
-    //     }
-    //     if (callbackInt != 0) {
-    //         // It should be impossible to reach this error because the first thing the fallback does
-    //         // is clear the operator. It's also not possible to reenter the entrypoint function
-    //         // because `_PAYER_SLOT` is an implicit reentrancy guard.
-    //         assembly ("memory-safe") {
-    //             mstore(0x00, 0xab7646c4) // selector for `ReentrantCallback(uint256)`
-    //             mstore(0x20, callbackInt)
-    //             revert(0x1c, 0x24)
-    //         }
-    //     }
-    //     assembly ("memory-safe") {
-    //         tstore(
-    //             _OPERATOR_SLOT,
-    //             or(
-    //                 shl(0xe0, selector),
-    //                 or(shl(0xa0, and(0xffff, callback)), and(0xffffffffffffffffffffffffffffffffffffffff, operator))
-    //             )
-    //         )
-    //     }
-    // }
+    function setOperatorAndCallback(
+        address operator,
+        uint32 selector,
+        function (bytes calldata) internal returns (bytes memory) callback
+    ) internal {
+        address currentSigner;
+        assembly ("memory-safe") {
+            currentSigner := tload(_PAYER_SLOT)
+        }
+        if (operator == currentSigner) {
+            revertConfusedDeputy();
+        }
+        uint256 callbackInt;
+        assembly ("memory-safe") {
+            callbackInt := tload(_OPERATOR_SLOT)
+        }
+        if (callbackInt != 0) {
+            // It should be impossible to reach this error because the first thing the fallback does
+            // is clear the operator. It's also not possible to reenter the entrypoint function
+            // because `_PAYER_SLOT` is an implicit reentrancy guard.
+            assembly ("memory-safe") {
+                mstore(0x00, 0xab7646c4) // selector for `ReentrantCallback(uint256)`
+                mstore(0x20, callbackInt)
+                revert(0x1c, 0x24)
+            }
+        }
+        assembly ("memory-safe") {
+            tstore(
+                _OPERATOR_SLOT,
+                or(
+                    shl(0xe0, selector),
+                    or(shl(0xa0, and(0xffff, callback)), and(0xffffffffffffffffffffffffffffffffffffffff, operator))
+                )
+            )
+        }
+    }
 
-    // function checkSpentOperatorAndCallback() internal view {
-    //     uint256 callbackInt;
-    //     assembly ("memory-safe") {
-    //         callbackInt := tload(_OPERATOR_SLOT)
-    //     }
-    //     if (callbackInt != 0) {
-    //         assembly ("memory-safe") {
-    //             mstore(0x00, 0xd66fcc38) // selector for `CallbackNotSpent(uint256)`
-    //             mstore(0x20, callbackInt)
-    //             revert(0x1c, 0x24)
-    //         }
-    //     }
-    // }
+    function checkSpentOperatorAndCallback() internal view {
+        uint256 callbackInt;
+        assembly ("memory-safe") {
+            callbackInt := tload(_OPERATOR_SLOT)
+        }
+        if (callbackInt != 0) {
+            assembly ("memory-safe") {
+                mstore(0x00, 0xd66fcc38) // selector for `CallbackNotSpent(uint256)`
+                mstore(0x20, callbackInt)
+                revert(0x1c, 0x24)
+            }
+        }
+    }
 
-    // function getAndClearCallback()
-    //     internal
-    //     returns (function (bytes calldata) internal returns (bytes memory) callback)
-    // {
-    //     assembly ("memory-safe") {
-    //         let slot := tload(_OPERATOR_SLOT)
-    //         if or(shr(0xe0, xor(calldataload(0), slot)), shl(0x60, xor(caller(), slot))) { revert(0x00, 0x00) }
-    //         callback := and(0xffff, shr(0xa0, slot))
-    //         tstore(_OPERATOR_SLOT, 0x00)
-    //     }
-    // }
+    function getAndClearCallback()
+        internal
+        returns (function (bytes calldata) internal returns (bytes memory) callback)
+    {
+        assembly ("memory-safe") {
+            let slot := tload(_OPERATOR_SLOT)
+            if or(shr(0xe0, xor(calldataload(0), slot)), shl(0x60, xor(caller(), slot))) { revert(0x00, 0x00) }
+            callback := and(0xffff, shr(0xa0, slot))
+            tstore(_OPERATOR_SLOT, 0x00)
+        }
+    }
 
     // `newWitness` must not be `bytes32(0)`. This is not checked.
     function setWitness(bytes32 newWitness) internal {
@@ -180,11 +181,10 @@ library TransientStorage {
 
 abstract contract Permit2PaymentBase is Context, SettlerAbstract {
 
+    using Revert for bool;
+
     /// @dev Permit2 address
     ISignatureTransfer internal constant _PERMIT2 = ISignatureTransfer(0x000000000022D473030F116dDEE9F6B43aC78BA3);
-    
-    /// @dev Permit2 AllowanceTransfer interface
-    IAllowanceTransfer internal constant _PERMIT2_ALLOWANCE = IAllowanceTransfer(0x000000000022D473030F116dDEE9F6B43aC78BA3);
 
     function _isRestrictedTarget(address target) internal pure virtual override returns (bool) {
         return target == address(_PERMIT2);
@@ -207,33 +207,33 @@ abstract contract Permit2PaymentBase is Context, SettlerAbstract {
     ///      the trusted initcode (or equivalent) must ensure that that calldata is relayed
     ///      unmodified. The library function `AddressDerivation.deriveDeterministicContract` is
     ///      recommended.
-    // function _setOperatorAndCall(
-    //     address payable target,
-    //     uint256 value,
-    //     bytes memory data,
-    //     uint32 selector,
-    //     function (bytes calldata) internal returns (bytes memory) callback
-    // ) internal returns (bytes memory) {
-    //     TransientStorage.setOperatorAndCallback(target, selector, callback);
-    //     (bool success, bytes memory returndata) = target.call{value: value}(data);
-    //     success.maybeRevert(returndata);
-    //     TransientStorage.checkSpentOperatorAndCallback();
-    //     return returndata;
-    // }
+    function _setOperatorAndCall(
+        address payable target,
+        uint256 value,
+        bytes memory data,
+        uint32 selector,
+        function (bytes calldata) internal returns (bytes memory) callback
+    ) internal returns (bytes memory) {
+        TransientStorage.setOperatorAndCallback(target, selector, callback);
+        (bool success, bytes memory returndata) = target.call{value: value}(data);
+        success.maybeRevert(returndata);
+        TransientStorage.checkSpentOperatorAndCallback();
+        return returndata;
+    }
 
-    // function _setOperatorAndCall(
-    //     address target,
-    //     bytes memory data,
-    //     uint32 selector,
-    //     function (bytes calldata) internal returns (bytes memory) callback
-    // ) internal override returns (bytes memory) {
-    //     return _setOperatorAndCall(payable(target), 0, data, selector, callback);
-    // }
+    function _setOperatorAndCall(
+        address target,
+        bytes memory data,
+        uint32 selector,
+        function (bytes calldata) internal returns (bytes memory) callback
+    ) internal override returns (bytes memory) {
+        return _setOperatorAndCall(payable(target), 0, data, selector, callback);
+    }
 
-    // function _invokeCallback(bytes calldata data) internal returns (bytes memory) {
-    //     // Retrieve callback and perform call with untrusted calldata
-    //     return TransientStorage.getAndClearCallback()(data[4:]);
-    // }
+    function _invokeCallback(bytes calldata data) internal returns (bytes memory) {
+        // Retrieve callback and perform call with untrusted calldata
+        return TransientStorage.getAndClearCallback()(data[4:]);
+    }
 }
 
 abstract contract Permit2Payment is Permit2PaymentBase {
@@ -251,9 +251,9 @@ abstract contract Permit2Payment is Permit2PaymentBase {
         transferDetails.to = recipient;
         transferDetails.requestedAmount = sellAmount = _permitToSellAmount(permit);
     }
-    function _permit(address owner, IAllowanceTransfer.PermitSingle memory permitSingle, bytes memory signature) internal virtual override(Permit2PaymentAbstract) {
-        _PERMIT2_ALLOWANCE.permit(owner, permitSingle, signature);
-    }
+    // function _permit(address owner, IAllowanceTransfer.PermitSingle memory permitSingle, bytes memory signature) internal virtual override(Permit2PaymentAbstract) {
+    //     _PERMIT2_ALLOWANCE.permit(owner, permitSingle, signature);
+    // }
 
     // This function is provided *EXCLUSIVELY* for use here and in RfqOrderSettlement. Any other use
     // of this function is forbidden. You must use the version that does *NOT* take a `from` or
@@ -387,7 +387,7 @@ abstract contract Permit2PaymentTakerSubmitted is AllowanceHolderContext, Permit
     }
 
     function _isRestrictedTarget(address target) internal pure virtual override returns (bool) {
-        return target == address(_ALLOWANCE_HOLDER) || super._isRestrictedTarget(target);
+        return target == address(ALLOWANCE_HOLDER) || super._isRestrictedTarget(target);
     }
 
     function _transferFrom(
@@ -475,7 +475,7 @@ abstract contract Permit2PaymentTakerSubmitted is AllowanceHolderContext, Permit
         // Solidity won't let us reference the constant `_ALLOWANCE_HOLDER` in assembly, but this
         // compiles down to just a single PUSH opcode just before the CALL, with optimization turned
         // on.
-        address __ALLOWANCE_HOLDER = address(_ALLOWANCE_HOLDER);
+        address _ALLOWANCE_HOLDER = address(ALLOWANCE_HOLDER);
         assembly ("memory-safe") {
             let ptr := mload(0x40)
             mstore(add(0x80, ptr), amount)
@@ -487,7 +487,7 @@ abstract contract Permit2PaymentTakerSubmitted is AllowanceHolderContext, Permit
             // Although `transferFrom` returns `bool`, we don't need to bother checking the return
             // value because `AllowanceHolder` always either reverts or returns `true`. We also
             // don't need to check that it has code.
-            if iszero(call(gas(), __ALLOWANCE_HOLDER, 0x00, add(0x1c, ptr), 0x84, 0x00, 0x00)) {
+            if iszero(call(gas(), _ALLOWANCE_HOLDER, 0x00, add(0x1c, ptr), 0x84, 0x00, 0x00)) {
                 let ptr_ := mload(0x40)
                 returndatacopy(ptr_, 0x00, returndatasize())
                 revert(ptr_, returndatasize())

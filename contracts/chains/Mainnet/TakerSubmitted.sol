@@ -8,20 +8,31 @@ import {Settler} from "../../Settler.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
 import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer.sol";
+import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import {ISettlerActions} from "../../ISettlerActions.sol";
 import {ISettlerBase} from "../../interfaces/ISettlerBase.sol";
-import {InvalidSpender} from "../../core/SettlerErrors.sol";
+import {InvalidSpender, InvalidSignature} from "../../core/SettlerErrors.sol";
 
 import {SettlerAbstract} from "../../SettlerAbstract.sol";
 import {SettlerBase} from "../../SettlerBase.sol";
 import {AbstractContext} from "../../Context.sol";
+import {ParamsHash} from "../../utils/ParamsHash.sol";
 import {Permit2PaymentAbstract} from "../../core/Permit2PaymentAbstract.sol";
 import {FreeMemory} from "../../utils/FreeMemory.sol";
 
-contract MainnetSettler is Settler, MainnetMixin, FreeMemory {
+contract MainnetSettler is Settler, MainnetMixin, FreeMemory, EIP712 {
+
+    using ParamsHash for ISettlerBase.IntentParams;
+    using ParamsHash for ISettlerBase.EscrowParams;
     
     
-    constructor(address lighterRelayer, bytes20 gitCommit) MainnetMixin(lighterRelayer, gitCommit) {}
+    constructor(address lighterRelayer, bytes20 gitCommit) 
+        MainnetMixin(lighterRelayer, gitCommit)
+        EIP712("MainnetSettler", "1") 
+    {
+
+    }
 
     /**
      * @dev Returns the EIP-712 domain separator for this contract
@@ -139,13 +150,11 @@ contract MainnetSettler is Settler, MainnetMixin, FreeMemory {
         if(transferDetails.to != address(this)) revert InvalidSpender();
         require(transferDetails.requestedAmount == escrowParams.volume, "Invalid amount");
 
-        bytes32 escrowParamsHash = _hashEscrowParams(escrowParams);
+        bytes32 escrowParamsHash = escrowParams.hash();
         bytes32 escrowTypedDataHash = _hashTypedDataV4(escrowParamsHash);
-        address signer = _recover(escrowTypedDataHash, sig);
-        
-        require(signer == lighterRelayer, "Invalid intent signature");
+        if (!SignatureChecker.isValidSignatureNow(lighterRelayer, escrowTypedDataHash, sig)) revert InvalidSignature();
 
-        bytes32 intentParamsHash = _hashIntentParams(intentParams);
+        bytes32 intentParamsHash = intentParams.hash(); 
         bytes32 typedDataHash = _hashTypedDataV4(intentParamsHash);
         _transferFromIKnowWhatImDoing(permit, transferDetails, escrowParams.seller, typedDataHash, INTENT_WITNESS_TYPE_STRING, permitSig);
 
@@ -179,17 +188,13 @@ contract MainnetSettler is Settler, MainnetMixin, FreeMemory {
         require(transferDetails.to == address(this), "Invalid spender");
         require(transferDetails.requestedAmount == escrowParams.volume, "Invalid amount");
 
-        bytes32 escrowParamsHash = _hashEscrowParams(escrowParams);
+        bytes32 escrowParamsHash = escrowParams.hash();
         bytes32 escrowTypedDataHash = _hashTypedDataV4(escrowParamsHash);
-        address signer = _recover(escrowTypedDataHash, sig);
-        
-        require(signer == lighterRelayer, "Invalid intent signature");
+        SignatureChecker.isValidSignatureNow(lighterRelayer,escrowTypedDataHash, sig);
 
-        bytes32 intentParamsHash = _hashIntentParams(intentParams);
+        bytes32 intentParamsHash = intentParams.hash();
         bytes32 intentTypedDataHash = _hashTypedDataV4(intentParamsHash);
-        address recoveredSigner = _recover(intentTypedDataHash, intentSig);
-
-        require(recoveredSigner == escrowParams.buyer, "Invalid intent signature");
+        SignatureChecker.isValidSignatureNow(escrowParams.buyer, intentTypedDataHash,  intentSig);
 
         _transferFrom(permit, transferDetails, permitSig);
 
@@ -219,15 +224,13 @@ contract MainnetSettler is Settler, MainnetMixin, FreeMemory {
         if (permitSingle.spender != address(this)) revert InvalidSpender(); 
         
         // EIP-712 signature verification for intentParams
-        bytes32 intentParamsHash = _hashIntentParams(intentParams);
+        bytes32 intentParamsHash = intentParams.hash();
         bytes32 typedDataHash = _hashTypedDataV4(intentParamsHash);
-        address recoveredSigner = _recover(typedDataHash, sig);
+        if (!SignatureChecker.isValidSignatureNow(msg.sender, typedDataHash, sig)) revert InvalidSignature();
         
-        // Verify that the recovered signer is the expected signer (e.g., msg.sender or a specific authorized address)
-        require(recoveredSigner == msg.sender, "Invalid intent signature");
 
         // Call permit2 directly
-        _permit(msg.sender, permitSingle, permitSig); 
+        // _permit(msg.sender, permitSingle, permitSig); 
 
     }
 
@@ -250,17 +253,14 @@ contract MainnetSettler is Settler, MainnetMixin, FreeMemory {
         require(intentParams.expiryTime < block.timestamp, "Invalid expiry time");
         
         // EIP-712 signature verification for intentParams
-        bytes32 intentParamsHash = _hashIntentParams(intentParams);
+        bytes32 intentParamsHash = intentParams.hash();
         bytes32 typedDataHash = _hashTypedDataV4(intentParamsHash);
-        address recoveredSigner = _recover(typedDataHash, intentSig);
+        if (!SignatureChecker.isValidSignatureNow(escrowParams.seller, typedDataHash, intentSig)) revert InvalidSignature();
         
-        require(recoveredSigner == escrowParams.seller, "Invalid intent signature");
-
-        bytes32 escrowParamsHash = _hashEscrowParams(escrowParams);
+        bytes32 escrowParamsHash = escrowParams.hash();
         bytes32 escrowTypedDataHash = _hashTypedDataV4(escrowParamsHash);
-        address signer = _recover(escrowTypedDataHash, sig);
+        if (!SignatureChecker.isValidSignatureNow(lighterRelayer, escrowTypedDataHash, sig)) revert InvalidSignature();
         
-        require(signer == lighterRelayer, "Invalid intent signature");
 
         _allowanceHolderTransferFrom(tokenAddress, escrowParams.seller, address(this), escrowParams.volume);
         _makeEscrow(escrowTypedDataHash, escrowParams, 0, 0);
