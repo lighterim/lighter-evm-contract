@@ -216,7 +216,7 @@ contract MainnetSettler is Settler, MainnetMixin, FreeMemory, EIP712 {
         ISettlerBase.IntentParams memory intentParams, 
         bytes memory permitSig, 
         bytes memory sig
-        ) internal 
+        ) internal view
     {
         require(address(permitSingle.details.token) == address(intentParams.token), "Invalid token");
         require(permitSingle.details.amount > intentParams.range.min && permitSingle.details.amount >= intentParams.range.max, "Invalid amount");

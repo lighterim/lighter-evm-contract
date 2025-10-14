@@ -1,0 +1,174 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.25;
+
+
+import {ERC6551Registry} from "../../account/ERC6551Registry.sol";
+import {AccountV3Simplified} from "../../account/AccountV3.sol";
+import {LighterTicket} from "../../token/LighterTicket.sol";
+import {Test} from "forge-std/Test.sol";
+import {MockUSDC} from "../../utils/TokenMock.sol";
+import {IEscrow} from "../../interfaces/IEscrow.sol";
+import {MainnetUserTxn} from "./UserTxn.sol";
+import {Escrow} from "../../Escrow.sol";
+import {IERC20} from "forge-std/interfaces/IERC20.sol";
+import {ParamsHash} from "../../utils/ParamsHash.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {LighterAccount} from "../../account/LighterAccount.sol";
+import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
+import {ISettlerBase} from "../../interfaces/ISettlerBase.sol";
+
+contract UserTxnTest is Test {
+
+    using ParamsHash for ISettlerBase.IntentParams;
+    using ParamsHash for ISettlerBase.EscrowParams;
+
+  address buyer;
+  address seller;
+  uint256 relayerPrivKey = 0x123;
+  address relayer;
+  address tbaBuyer;
+  uint256 sellerPrivKey = 0x456;
+  uint256 rentPrice;
+
+  MockUSDC usdc;
+
+  LighterAccount lighterAccount;
+  LighterTicket lighterTicket;
+  MainnetUserTxn userTxn;
+  uint256 deadline = block.timestamp + 7 days;
+
+  bytes32 private constant TYPE_HASH =
+        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+string public constant _PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB =
+        "PermitWitnessTransferFrom(TokenPermissions permitted,address spender,uint256 nonce,uint256 deadline,";
+bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermissions(address token,uint256 amount)");
+
+  function setUp() public {
+    init();
+  }
+
+  function init() internal {
+    buyer = makeAddr("buyer");
+    seller = vm.addr(sellerPrivKey);
+    relayer = vm.addr(relayerPrivKey);
+    vm.deal(buyer, 1 ether);
+    vm.deal(seller, 1 ether);
+
+    usdc = new MockUSDC();
+    usdc.mint(seller, 10 ether);
+    lighterTicket = new LighterTicket("LighterTicket", "LTKT", "https://lighter.im/ticket/");
+
+    ERC6551Registry registry = new ERC6551Registry();
+    AccountV3Simplified accountImpl = new AccountV3Simplified();
+    rentPrice = 0.00001 ether;
+
+    lighterAccount = new LighterAccount(address(lighterTicket), address(registry), address(accountImpl), rentPrice);
+    lighterTicket.transferOwnership(address(lighterAccount));
+
+    
+    vm.prank(buyer);
+    (,tbaBuyer) = lighterAccount.createAccount{value: rentPrice}(buyer, 0x0000000000000000000000000000000000000000000000000000000000000000);
+    
+
+    IEscrow escrow = new Escrow(relayer);
+    userTxn = new MainnetUserTxn(relayer, escrow, lighterAccount);
+  }
+
+
+  function test_takeSellerIntent() public {
+    
+    (ISignatureTransfer.PermitTransferFrom memory permit, ISignatureTransfer.SignatureTransferDetails memory transferDetails, ISettlerBase.IntentParams memory intentParams, ISettlerBase.EscrowParams memory escrowParams, bytes memory permitSig, bytes memory escrowSig) = getParams();
+    vm.prank(buyer);
+    userTxn.takeSellerIntent(permit, transferDetails, intentParams, escrowParams, permitSig, escrowSig);
+    
+    assertEq(uint256(1), uint256(1));
+  }
+
+  function getParams() public view returns (
+    ISignatureTransfer.PermitTransferFrom memory permit, 
+    ISignatureTransfer.SignatureTransferDetails memory transferDetails,
+    ISettlerBase.IntentParams memory intentParams, 
+    ISettlerBase.EscrowParams memory escrowParams, 
+    bytes memory permitSig, 
+    bytes memory escrowSig) {
+    intentParams = getIntentParams();
+    escrowParams = getEscrowParams();
+    bytes32 intentHash = intentParams.hash();
+    bytes32 escrowHash = escrowParams.hash();
+
+    bytes32 escrowTypeDataHash = MessageHashUtils.toTypedDataHash(_buildDomainSeparator(), escrowHash);
+    (uint8 v_escrow, bytes32 r_escrow, bytes32 s_escrow) = vm.sign(relayerPrivKey, escrowTypeDataHash);
+    escrowSig = abi.encodePacked(r_escrow, s_escrow, v_escrow);
+
+    (permit, transferDetails) = getTransferWithWitness();
+    bytes32 permitHash = _hashPermitTransferWithWitness(permit, intentHash, address(userTxn));
+    (uint8 v_permit, bytes32 r_permit, bytes32 s_permit) = vm.sign(sellerPrivKey, permitHash);
+    permitSig = abi.encodePacked(r_permit, s_permit, v_permit);
+  }
+
+  function getTransferWithWitness() public view returns (
+    ISignatureTransfer.PermitTransferFrom memory permit,
+    ISignatureTransfer.SignatureTransferDetails memory transferDetails
+    ) {
+    permit = ISignatureTransfer.PermitTransferFrom({
+            permitted: ISignatureTransfer.TokenPermissions({ token: address(usdc), amount: 1 ether }),
+            nonce: 0,
+            deadline: deadline
+        });
+    transferDetails = ISignatureTransfer.SignatureTransferDetails({
+        to: address(userTxn),
+        requestedAmount: 1 ether
+    });
+  }
+  
+
+  function getIntentParams() public view returns (ISettlerBase.IntentParams memory intentParams) {
+    intentParams = ISettlerBase.IntentParams({
+            token: IERC20(address(usdc)),
+            range: ISettlerBase.Range({ min: 1 * 1e18, max: 2 * 1e18 }),
+            expiryTime: uint64(deadline),
+            currency: bytes32(0), 
+            paymentMethod: bytes32(0), 
+            payeeDetails: bytes32(0), 
+            price: 1_000
+        });
+  }
+
+  function getEscrowParams() public view returns (ISettlerBase.EscrowParams memory escrowParams) {
+    escrowParams = ISettlerBase.EscrowParams({
+            id: 1,
+            token: IERC20(address(usdc)),
+            volume: 1 ether,
+            price: 1_000,
+            usdRate: 1_000,
+            seller: seller,
+            sellerFeeRate: 1_000,
+            paymentMethod: bytes32(0),
+            currency: bytes32(0),
+            payeeId: bytes32(0),
+            payeeAccount: bytes32(0),
+            buyer: buyer,
+            buyerFeeRate: 1_000
+        });
+  }
+
+  function _buildDomainSeparator() internal view returns (bytes32) {
+    return keccak256(abi.encode(TYPE_HASH, "MainnetUserTxn", "1", block.chainid, address(userTxn)));
+  }
+
+
+  function _hashPermitTransferWithWitness(
+    ISignatureTransfer.PermitTransferFrom memory permit,
+        bytes32 witness,
+        address spender
+        ) internal pure returns (bytes32) {
+    
+        bytes32 typeHash = keccak256(abi.encodePacked(_PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB, ParamsHash._INTENT_WITNESS_TYPE_STRING));
+
+        bytes32 tokenPermissionsHash = keccak256(abi.encode(_TOKEN_PERMISSIONS_TYPEHASH, permit.permitted));
+        return keccak256(abi.encode(typeHash, tokenPermissionsHash, spender, permit.nonce, permit.deadline, witness));
+    
+  }
+
+
+}

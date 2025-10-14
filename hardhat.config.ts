@@ -5,6 +5,9 @@ import { configVariable } from "hardhat/config";
 
 const config: HardhatUserConfig = {
   plugins: [hardhatToolboxViemPlugin],
+  paths: {
+    cache: "./cache",
+  },
   remappings: [
     "@uniswap/permit2/=lib/permit2/src/", 
     "forge-std/=npm/forge-std@1.9.4/src",
@@ -17,13 +20,13 @@ const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
-        version: "0.8.28", // Your primary version
+        version: "0.8.29", // Using 0.8.29 (0.8.28 has WASM compiler bug with Cancun features)
         settings: {
-          // This settings block applies to all files compiled with 0.8.28
           optimizer: {
             enabled: true,
             runs: 200,
           },
+          evmVersion: "cancun",  // Required for mcopy, tload, tstore instructions
         },
       },
       {

@@ -8,15 +8,22 @@ import {ISettlerBase} from "../interfaces/ISettlerBase.sol";
 
 library ParamsHash {
 
-    bytes32 public constant _INTENT_PARAMS_TYPEHASH = keccak256(
-        "IntentParams(address token,Range range,uint64 expiryTime,bytes32 currency,bytes32 paymentMethod,bytes32 payeeDetails,uint256 price)Range(uint256 min,uint256 max)"
+    string public constant _RANGE_TYPE = "Range(uint256 min,uint256 max)";
+    string public constant _INTENT_PARAMS_TYPE = string(
+        abi.encodePacked(
+            "IntentParams(address token,Range range,uint64 expiryTime,bytes32 currency,bytes32 paymentMethod,bytes32 payeeDetails,uint256 price)",
+            _RANGE_TYPE
+        )
     );
-    
-    bytes32 public constant _RANGE_TYPEHASH = keccak256("Range(uint256 min,uint256 max)");
+
+    bytes32 public constant _INTENT_PARAMS_TYPEHASH = keccak256(abi.encodePacked(_INTENT_PARAMS_TYPE));
+    bytes32 public constant _RANGE_TYPEHASH = keccak256(abi.encodePacked(_RANGE_TYPE));
 
     bytes32 public constant _ESCROW_PARAMS_TYPEHASH = keccak256(
         "EscrowParams(uint256 id,address token,uint256 volume,uint256 price,uint256 usdRate,address seller,uint256 sellerFeeRate,bytes32 paymentMethod,bytes32 currency,bytes32 payeeId,bytes32 payeeAccount,address buyer,uint256 buyerFeeRate)"
     );
+
+
 
     /*
     bytes32 public constant _PERMIT_DETAILS_TYPEHASH =
@@ -40,14 +47,25 @@ library ParamsHash {
         "PermitBatchTransferFrom(TokenPermissions[] permitted,address spender,uint256 nonce,uint256 deadline)TokenPermissions(address token,uint256 amount)"
     );
 
-    string public constant _TOKEN_PERMISSIONS_TYPESTRING = "TokenPermissions(address token,uint256 amount)";
+    */
+    string public constant _TOKEN_PERMISSIONS_TYPE_STRING = "TokenPermissions(address token,uint256 amount)";
 
     string public constant _PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB =
         "PermitWitnessTransferFrom(TokenPermissions permitted,address spender,uint256 nonce,uint256 deadline,";
+    
+    string public constant _INTENT_WITNESS_TYPE_STRING = string(
+        abi.encodePacked("IntentParams intentParams)",
+        _INTENT_PARAMS_TYPE,
+        _TOKEN_PERMISSIONS_TYPE_STRING
+        )
+    );
 
-    string public constant _PERMIT_BATCH_WITNESS_TRANSFER_FROM_TYPEHASH_STUB =
-        "PermitBatchWitnessTransferFrom(TokenPermissions[] permitted,address spender,uint256 nonce,uint256 deadline,";
-        */
+    // string public constant _PERMIT_BATCH_WITNESS_TRANSFER_FROM_TYPEHASH_STUB =
+    //     "PermitBatchWitnessTransferFrom(TokenPermissions[] permitted,address spender,uint256 nonce,uint256 deadline,";
+    function hashWithWitness(ISettlerBase.IntentParams memory intentParams) internal pure returns (bytes32) {
+        bytes32 rangeHash = keccak256(abi.encode(_RANGE_TYPEHASH, intentParams.range));
+        return keccak256(abi.encode(_INTENT_PARAMS_TYPEHASH, intentParams.token, rangeHash, intentParams.expiryTime, intentParams.currency, intentParams.paymentMethod, intentParams.payeeDetails, intentParams.price));
+    }
     
     function hash(ISettlerBase.IntentParams memory intentParams) internal pure returns (bytes32) {
         bytes32 rangeHash = keccak256(abi.encode(_RANGE_TYPEHASH, intentParams.range));

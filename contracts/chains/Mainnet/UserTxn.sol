@@ -23,6 +23,7 @@ contract MainnetUserTxn is EIP712 {
     using ParamsHash for ISettlerBase.EscrowParams;
     
     IAllowanceTransfer internal constant _PERMIT2_ALLOWANCE = IAllowanceTransfer(0x000000000022D473030F116dDEE9F6B43aC78BA3);
+    ISignatureTransfer internal constant _PERMIT2_SIGNATURE = ISignatureTransfer(0x000000000022D473030F116dDEE9F6B43aC78BA3);
     IAllowanceHolder internal constant _ALLOWANCE_HOLDER = IAllowanceHolder(0x0000000000001fF3684f28c67538d4D072C22734);
 
     address internal lighterRelayer;
@@ -104,6 +105,50 @@ contract MainnetUserTxn is EIP712 {
         _makeEscrow(escrowTypedHash, escrowParams, 0, 0);
     }
 
+    /**
+     *  买家确认卖家意图。买家在确认卖家意图时，
+     * 1. 使用permit&transferDetails授权买家从卖家账户中转出指定数量的代币。
+     * 2. 验证escrowParams的签名。
+     * 3. 创建escrow交易。
+     * @param permit ISignatureTransfer.PermitTransferFrom(
+     * @param transferDetails ISignatureTransfer.SignatureTransferDetails(
+     * @param intentParams ISettlerBase.IntentParams(
+     * @param escrowParams ISettlerBase.EscrowParams(
+     * @param permitSig bytes
+     * @param sig bytes 
+     */
+    function takeSellerIntent(
+        ISignatureTransfer.PermitTransferFrom memory permit, 
+        ISignatureTransfer.SignatureTransferDetails memory transferDetails,
+        ISettlerBase.IntentParams memory intentParams, 
+        ISettlerBase.EscrowParams memory escrowParams, 
+        bytes memory permitSig, 
+        bytes memory sig
+    ) external {
+        if (permit.deadline < block.timestamp) revert SignatureExpired(permit.deadline);
+        if(transferDetails.to != address(this)) revert InvalidSpender();
+
+        address tokenAddress = address(permit.permitted.token);
+        if (address(escrowParams.token) != address(intentParams.token) || tokenAddress != address(escrowParams.token)) revert InvalidToken();
+        if (
+            permit.permitted.amount < escrowParams.volume 
+            || (intentParams.range.min > 0 && escrowParams.volume < intentParams.range.min)
+            || (intentParams.range.max > 0 && escrowParams.volume > intentParams.range.max)
+            || transferDetails.requestedAmount != escrowParams.volume
+        ) revert InvalidAmount();
+        
+
+        bytes32 escrowParamsHash = escrowParams.hash();
+        bytes32 escrowTypedDataHash = _hashTypedDataV4(escrowParamsHash);
+        if (!SignatureChecker.isValidSignatureNow(lighterRelayer, escrowTypedDataHash, sig)) revert InvalidSignature();
+
+        bytes32 intentParamsHash = intentParams.hash(); 
+        bytes32 typedDataHash = _hashTypedDataV4(intentParamsHash);
+        _transferFromIKnowWhatImDoing(permit, transferDetails, escrowParams.seller, typedDataHash, ParamsHash._INTENT_WITNESS_TYPE_STRING, permitSig);
+
+        _makeEscrow(escrowTypedDataHash, escrowParams, 0, 0);
+    }
+
     function paid(ISettlerBase.EscrowParams calldata escrowParams, bytes memory sig) external {
         if(escrowParams.buyer != msg.sender) revert InvalidSender();
 
@@ -161,6 +206,102 @@ contract MainnetUserTxn is EIP712 {
         internal
     {
        _PERMIT2_ALLOWANCE.transferFrom(owner, recipient, uint160(amount), token);
+    }
+
+    function _transferFromIKnowWhatImDoing(
+        ISignatureTransfer.PermitTransferFrom memory permit,
+        ISignatureTransfer.SignatureTransferDetails memory transferDetails,
+        address from,
+        bytes32 witnessHash,
+        string memory witnessTypeString,
+        bytes memory sig,
+        bool isForwarded
+    ) internal {
+        if (isForwarded) {
+            assembly ("memory-safe") {
+                mstore(0x00, 0x1c500e5c) // selector for `ForwarderNotAllowed()`
+                revert(0x1c, 0x04)
+            }
+        }
+
+        // This is effectively
+        /*
+        _PERMIT2.permitWitnessTransferFrom(permit, transferDetails, from, witnessHash, witnessTypeString, sig);
+        */
+        // but it's written in assembly for contract size reasons. This produces a non-strict ABI
+        // encoding (https://docs.soliditylang.org/en/v0.8.25/abi-spec.html#strict-encoding-mode),
+        // but it's fine because Solidity's ABI *decoder* will handle anything that is validly
+        // encoded, strict or not.
+
+        // Solidity won't let us reference the constant `_PERMIT2` in assembly, but this compiles
+        // down to just a single PUSH opcode just before the CALL, with optimization turned on.
+        ISignatureTransfer __PERMIT2 = _PERMIT2_SIGNATURE;
+        assembly ("memory-safe") {
+            let ptr := mload(0x40)
+            /* selector for `permitWitnessTransferFrom(
+             ((address,uint256),uint256,uint256), //PermitTransferFrom:{TokenPermissions:{token, amount}, nonce, deadline}
+             (address,uint256), //SignatureTransferDetails:{to, requestedAmount}
+             address, // owner
+             bytes32, // witness hash
+             string, // witness type string
+             bytes //signature
+             )` => 0x137c29fe
+            */
+            mstore(ptr, 0x137c29fe) 
+
+            // The layout of nested structs in memory is different from that in calldata. We have to
+            // chase the pointer to `permit.permitted`.
+            mcopy(add(0x20, ptr), mload(permit), 0x40) 
+            // The rest of the members of `permit` are laid out linearly,
+            mcopy(add(0x60, ptr), add(0x20, permit), 0x40)
+            // as are the members of `transferDetails.
+            mcopy(add(0xa0, ptr), transferDetails, 0x40)
+            // Because we're passing `from` on the stack, it must be cleaned.
+            mstore(add(0xe0, ptr), and(0xffffffffffffffffffffffffffffffffffffffff, from))
+            mstore(add(0x100, ptr), witnessHash)
+            mstore(add(0x120, ptr), 0x140) // Offset to `witnessTypeString` (the end of of the non-dynamic types)
+            let witnessTypeStringLength := mload(witnessTypeString)
+            mstore(add(0x140, ptr), add(0x160, witnessTypeStringLength)) // Offset to `sig` (past the end of `witnessTypeString`)
+
+            // Now we encode the 2 dynamic objects, `witnessTypeString` and `sig`.
+            mcopy(add(0x160, ptr), witnessTypeString, add(0x20, witnessTypeStringLength))
+            let sigLength := mload(sig)
+            mcopy(add(0x180, add(ptr, witnessTypeStringLength)), sig, add(0x20, sigLength))
+
+            // We don't need to check that Permit2 has code, and it always signals failure by
+            // reverting.
+            if iszero(
+                call(
+                    gas(),
+                    __PERMIT2,
+                    0x00,
+                    add(0x1c, ptr),
+                    add(0x184, add(witnessTypeStringLength, sigLength)),
+                    0x00,
+                    0x00
+                )
+            ) {
+                let ptr_ := mload(0x40)
+                returndatacopy(ptr_, 0x00, returndatasize())
+                revert(ptr_, returndatasize())
+            }
+        }
+    }
+
+    // See comment in above overload; don't use this function
+    function _transferFromIKnowWhatImDoing(
+        ISignatureTransfer.PermitTransferFrom memory permit,
+        ISignatureTransfer.SignatureTransferDetails memory transferDetails,
+        address from,
+        bytes32 witnessHash,
+        string memory witnessTypeString,
+        bytes memory sig
+    ) internal {
+        _transferFromIKnowWhatImDoing(permit, transferDetails, from, witnessHash, witnessTypeString, sig, _isForwarded());
+    }
+
+    function _isForwarded() internal pure returns (bool) {
+        return false;
     }
 
 }
