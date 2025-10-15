@@ -153,7 +153,53 @@ contract MainnetUserTxn is EIP712 {
         
         _transferFromIKnowWhatImDoing(permit, transferDetails, escrowParams.seller, intentParamsHash, ParamsHash._INTENT_WITNESS_TYPE_STRING, permitSig);
         //TODO: 这里需要修改，使用permit2的transferFrom, only for unit test
-        IERC20(address(intentParams.token)).transferFrom(escrowParams.seller, address(escrow), escrowParams.volume);
+        // IERC20(address(intentParams.token)).transferFrom(escrowParams.seller, address(escrow), escrowParams.volume);
+
+        _makeEscrow(escrowTypedDataHash, escrowParams, 0, 0);
+    }
+
+    /**
+     * 卖家确认买家购买意图。
+     * 1. 验证买家意图及其签名。
+     * 2. 验证担保交易参数及其签名。
+     * 3. 从卖家账户中转出代币，基于ISignatureTransfer（PermitTransferFrom, SignatureTransferDetails）。
+     * 4. 创建担保交易。
+     * @param permit 卖家授权转出代币的permit
+     * @param transferDetails 合约接收代币的详细信息
+     * @param intentParams 买家购买意图参数
+     * @param escrowParams 担保交易参数
+     * @param permitSig 卖家授权转出代币的签名
+     * @param intentSig 买家购买意图参数的签名
+     * @param sig 担保交易参数的签名
+     */
+    function takeBuyerIntent(
+        ISignatureTransfer.PermitTransferFrom memory permit, 
+        ISignatureTransfer.SignatureTransferDetails memory transferDetails,
+        ISettlerBase.IntentParams memory intentParams, 
+        ISettlerBase.EscrowParams memory escrowParams, 
+        bytes memory permitSig, 
+        bytes memory intentSig, 
+        bytes memory sig
+    ) external {
+        if(permit.deadline < block.timestamp || intentParams.expiryTime < block.timestamp) revert SignatureExpired(permit.deadline);
+        if(escrowParams.seller != msg.sender) revert InvalidSender();
+        if(address(permit.permitted.token) != address(intentParams.token)) revert InvalidToken();
+        if(transferDetails.to != address(this)) revert InvalidSpender();
+        if(
+            transferDetails.requestedAmount != escrowParams.volume
+            || intentParams.range.min > 0 && escrowParams.volume < intentParams.range.min
+            || intentParams.range.max > 0 && escrowParams.volume > intentParams.range.max
+        ) revert InvalidAmount();
+
+        bytes32 escrowParamsHash = escrowParams.hash();
+        bytes32 escrowTypedDataHash = _hashTypedDataV4(escrowParamsHash);
+        SignatureChecker.isValidSignatureNow(lighterRelayer, escrowTypedDataHash, sig);
+
+        bytes32 intentParamsHash = intentParams.hash();
+        bytes32 intentTypedDataHash = _hashTypedDataV4(intentParamsHash);
+        SignatureChecker.isValidSignatureNow(escrowParams.seller, intentTypedDataHash, intentSig);
+        
+        _transferFrom(permit, transferDetails, permitSig, _isForwarded());
 
         _makeEscrow(escrowTypedDataHash, escrowParams, 0, 0);
     }
@@ -233,13 +279,13 @@ contract MainnetUserTxn is EIP712 {
             }
         }
 
-        bytes32 typeHash = keccak256(abi.encodePacked(PermitHash._PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB, witnessTypeString));
-        console.logBytes32(typeHash);
-        bytes32 tokenPermissionsHash = keccak256(abi.encode(PermitHash._TOKEN_PERMISSIONS_TYPEHASH, permit.permitted));
-        console.logBytes32(tokenPermissionsHash);
-        bytes32 permitHash = keccak256(abi.encode(typeHash, tokenPermissionsHash, address(this), permit.nonce, permit.deadline, witnessHash));
-        console.logBytes32(permitHash);
-        console.logBytes(sig);
+        // bytes32 typeHash = keccak256(abi.encodePacked(PermitHash._PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB, witnessTypeString));
+        // console.logBytes32(typeHash);
+        // bytes32 tokenPermissionsHash = keccak256(abi.encode(PermitHash._TOKEN_PERMISSIONS_TYPEHASH, permit.permitted));
+        // console.logBytes32(tokenPermissionsHash);
+        // bytes32 permitHash = keccak256(abi.encode(typeHash, tokenPermissionsHash, address(this), permit.nonce, permit.deadline, witnessHash));
+        // console.logBytes32(permitHash);
+        // console.logBytes(sig);
 
         // This is effectively
         /*
@@ -317,8 +363,83 @@ contract MainnetUserTxn is EIP712 {
         _transferFromIKnowWhatImDoing(permit, transferDetails, from, witnessHash, witnessTypeString, sig, _isForwarded());
     }
 
+    function _transferFrom(
+        ISignatureTransfer.PermitTransferFrom memory permit,
+        ISignatureTransfer.SignatureTransferDetails memory transferDetails,
+        bytes memory sig,
+        bool isForwarded
+    ) internal {
+        if (isForwarded) {
+            if (sig.length != 0) {
+                assembly ("memory-safe") {
+                    mstore(0x00, 0xc321526c) // selector for `InvalidSignatureLen()`
+                    revert(0x1c, 0x04)
+                }
+            }
+            // if (permit.nonce != 0) Panic.panic(Panic.ARITHMETIC_OVERFLOW);
+            if (block.timestamp > permit.deadline) {
+                assembly ("memory-safe") {
+                    mstore(0x00, 0xcd21db4f) // selector for `SignatureExpired(uint256)`
+                    mstore(0x20, mload(add(0x40, permit)))
+                    revert(0x1c, 0x24)
+                }
+            }
+            // we don't check `requestedAmount` because it's checked by AllowanceHolder itself
+            _allowanceHolderTransferFrom(
+                permit.permitted.token, _msgSender(), transferDetails.to, transferDetails.requestedAmount
+            );
+        } else {
+            // This is effectively
+            /*
+            _PERMIT2.permitTransferFrom(permit, transferDetails, _msgSender(), sig);
+            */
+            // but it's written in assembly for contract size reasons. This produces a non-strict
+            // ABI encoding
+            // (https://docs.soliditylang.org/en/v0.8.25/abi-spec.html#strict-encoding-mode), but
+            // it's fine because Solidity's ABI *decoder* will handle anything that is validly
+            // encoded, strict or not.
+
+            // Solidity won't let us reference the constant `_PERMIT2` in assembly, but this
+            // compiles down to just a single PUSH opcode just before the CALL, with optimization
+            // turned on.
+            ISignatureTransfer __PERMIT2 = _PERMIT2_SIGNATURE;
+            address from = _msgSender();
+            assembly ("memory-safe") {
+                let ptr := mload(0x40)
+                mstore(ptr, 0x30f28b7a) // selector for `permitTransferFrom(((address,uint256),uint256,uint256),(address,uint256),address,bytes)`
+
+                // The layout of nested structs in memory is different from that in calldata. We
+                // have to chase the pointer to `permit.permitted`.
+                mcopy(add(0x20, ptr), mload(permit), 0x40)
+                // The rest of the members of `permit` are laid out linearly,
+                mcopy(add(0x60, ptr), add(0x20, permit), 0x40)
+                // as are the members of `transferDetails.
+                mcopy(add(0xa0, ptr), transferDetails, 0x40)
+                // Because we're passing `from` on the stack, it must be cleaned.
+                mstore(add(0xe0, ptr), and(0xffffffffffffffffffffffffffffffffffffffff, from))
+                mstore(add(0x100, ptr), 0x100) // Offset to `sig` (the end of the non-dynamic types)
+
+                // Encode the dynamic object `sig`
+                let sigLength := mload(sig)
+                mcopy(add(0x120, ptr), sig, add(0x20, sigLength))
+
+                // We don't need to check that Permit2 has code, and it always signals failure by
+                // reverting.
+                if iszero(call(gas(), __PERMIT2, 0x00, add(0x1c, ptr), add(0x124, sigLength), 0x00, 0x00)) {
+                    let ptr_ := mload(0x40)
+                    returndatacopy(ptr_, 0x00, returndatasize())
+                    revert(ptr_, returndatasize())
+                }
+            }
+        }
+    }
+
     function _isForwarded() internal pure returns (bool) {
         return false;
+    }
+
+    function _msgSender() internal view returns (address) {
+        return msg.sender;
     }
 
 }

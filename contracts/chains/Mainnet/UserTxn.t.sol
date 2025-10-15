@@ -15,6 +15,7 @@ import {ParamsHash} from "../../utils/ParamsHash.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {LighterAccount} from "../../account/LighterAccount.sol";
 import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
+import {PermitHash} from "@uniswap/permit2/libraries/PermitHash.sol";
 import {ISettlerBase} from "../../interfaces/ISettlerBase.sol";
 import {console} from "forge-std/console.sol";
 
@@ -22,6 +23,7 @@ contract UserTxnTest is Test {
 
     using ParamsHash for ISettlerBase.IntentParams;
     using ParamsHash for ISettlerBase.EscrowParams;
+    using PermitHash for ISignatureTransfer.PermitTransferFrom;
 
   address buyer;
   address seller;
@@ -41,6 +43,9 @@ contract UserTxnTest is Test {
 
   bytes32 private constant TYPE_HASH =
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+  bytes32 private constant _HASHED_NAME_SIGNATURE_TRANSFER = keccak256("Permit2");
+    bytes32 private constant _TYPE_HASH_SIGNATURE_TRANSFER =
+        keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
 string public constant _PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB =
         "PermitWitnessTransferFrom(TokenPermissions permitted,address spender,uint256 nonce,uint256 deadline,";
 bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermissions(address token,uint256 amount)");
@@ -93,6 +98,60 @@ bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermission
     
   }
 
+  function test_takeBuyerIntent() public {
+    vm.prank(seller);
+    usdc.approve(address(userTxn), 1 ether);
+    
+    
+    (ISignatureTransfer.PermitTransferFrom memory permit, ISignatureTransfer.SignatureTransferDetails memory transferDetails, ISettlerBase.IntentParams memory intentParams, ISettlerBase.EscrowParams memory escrowParams, bytes memory permitSig, bytes memory intentSig, bytes memory escrowSig) = getTakeBuyerParams();
+    vm.prank(seller);
+    userTxn.takeBuyerIntent(permit, transferDetails, intentParams, escrowParams, permitSig, intentSig, escrowSig);
+    
+    // assertEq(usdc.balanceOf(seller), 9 ether);
+    // assertEq(usdc.balanceOf(address(escrow)), 1 ether);
+    
+  }
+
+  function getTakeBuyerParams() public view returns (
+    ISignatureTransfer.PermitTransferFrom memory permit,
+    ISignatureTransfer.SignatureTransferDetails memory transferDetails,
+    ISettlerBase.IntentParams memory intentParams,
+    ISettlerBase.EscrowParams memory escrowParams,
+    bytes memory permitSig,
+    bytes memory intentSig,
+    bytes memory escrowSig
+  ) {
+    
+    (permit, transferDetails) = getSignatureTransferPermit();
+    bytes32 permitHash = permit.hash();
+    bytes32 permitTypeDataHash = _hashTypedData(permitHash);
+    (uint8 v_permit, bytes32 r_permit, bytes32 s_permit) = vm.sign(sellerPrivKey, permitTypeDataHash);
+    permitSig = abi.encodePacked(r_permit, s_permit, v_permit);
+
+    intentParams = getIntentParams();
+    bytes32 intentHash = intentParams.hash();
+    bytes32 intentTypeDataHash = MessageHashUtils.toTypedDataHash(_buildDomainSeparator(), intentHash);
+    (uint8 v_intent, bytes32 r_intent, bytes32 s_intent) = vm.sign(sellerPrivKey, intentTypeDataHash);
+    intentSig = abi.encodePacked(r_intent, s_intent, v_intent);
+    
+    escrowParams = getEscrowParams();
+    bytes32 escrowHash = escrowParams.hash();
+    bytes32 escrowTypeDataHash = MessageHashUtils.toTypedDataHash(_buildDomainSeparator(), escrowHash);
+    (uint8 v_escrow, bytes32 r_escrow, bytes32 s_escrow) = vm.sign(relayerPrivKey, escrowTypeDataHash);
+    escrowSig = abi.encodePacked(r_escrow, s_escrow, v_escrow);
+
+    
+  }
+
+  function _buildDomainSeparator0(bytes32 typeHash, bytes32 nameHash) private view returns (bytes32) {
+        return keccak256(abi.encode(typeHash, nameHash, block.chainid, address(0x000000000022D473030F116dDEE9F6B43aC78BA3)));
+    }
+
+    /// @notice Creates an EIP-712 typed data hash
+    function _hashTypedData(bytes32 dataHash) internal view returns (bytes32) {
+        return keccak256(abi.encodePacked("\x19\x01", _buildDomainSeparator0(_TYPE_HASH_SIGNATURE_TRANSFER, _HASHED_NAME_SIGNATURE_TRANSFER), dataHash));
+    }
+
   function getParams() public view returns (
     ISignatureTransfer.PermitTransferFrom memory permit, 
     ISignatureTransfer.SignatureTransferDetails memory transferDetails,
@@ -136,6 +195,22 @@ bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermission
         to: address(userTxn),
         requestedAmount: 1 ether
     });
+  }
+
+  function getSignatureTransferPermit() public view returns (
+    ISignatureTransfer.PermitTransferFrom memory permit,
+    ISignatureTransfer.SignatureTransferDetails memory transferDetails
+  ) {
+    permit = ISignatureTransfer.PermitTransferFrom({
+            permitted: ISignatureTransfer.TokenPermissions({ token: address(usdc), amount: 1 ether }),
+            nonce: uint256(1347343934330335),
+            deadline: deadline
+        });
+    transferDetails = ISignatureTransfer.SignatureTransferDetails({
+        to: address(userTxn),
+        requestedAmount: 1 ether
+    });
+    
   }
   
 
