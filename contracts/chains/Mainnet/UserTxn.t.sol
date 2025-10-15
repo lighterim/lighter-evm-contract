@@ -33,6 +33,7 @@ contract UserTxnTest is Test {
 
   MockUSDC usdc;
 
+  IEscrow escrow;
   LighterAccount lighterAccount;
   LighterTicket lighterTicket;
   MainnetUserTxn userTxn;
@@ -57,6 +58,8 @@ bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermission
 
     usdc = new MockUSDC();
     usdc.mint(seller, 10 ether);
+    
+
     lighterTicket = new LighterTicket("LighterTicket", "LTKT", "https://lighter.im/ticket/");
 
     ERC6551Registry registry = new ERC6551Registry();
@@ -66,23 +69,28 @@ bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermission
     lighterAccount = new LighterAccount(address(lighterTicket), address(registry), address(accountImpl), rentPrice);
     lighterTicket.transferOwnership(address(lighterAccount));
 
-    
     vm.prank(buyer);
     (,tbaBuyer) = lighterAccount.createAccount{value: rentPrice}(buyer, 0x0000000000000000000000000000000000000000000000000000000000000000);
     
 
-    IEscrow escrow = new Escrow(relayer);
+    escrow = new Escrow(relayer);
     userTxn = new MainnetUserTxn(relayer, escrow, lighterAccount);
   }
 
 
   function test_takeSellerIntent() public {
     
+    vm.startPrank(seller);
+    usdc.approve(address(userTxn), 1 ether);
+    vm.stopPrank();
+
     (ISignatureTransfer.PermitTransferFrom memory permit, ISignatureTransfer.SignatureTransferDetails memory transferDetails, ISettlerBase.IntentParams memory intentParams, ISettlerBase.EscrowParams memory escrowParams, bytes memory permitSig, bytes memory escrowSig) = getParams();
     vm.prank(buyer);
     userTxn.takeSellerIntent(permit, transferDetails, intentParams, escrowParams, permitSig, escrowSig);
     
-    assertEq(uint256(1), uint256(1));
+    assertEq(usdc.balanceOf(seller), 9 ether);
+    assertEq(usdc.balanceOf(address(escrow)), 1 ether);
+    
   }
 
   function getParams() public view returns (
@@ -107,9 +115,12 @@ bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermission
     console.logBytes(escrowSig);
 
     (permit, transferDetails) = getTransferWithWitness();
+    console.logBytes32(intentHash);
     bytes32 permitHash = _hashPermitTransferWithWitness(permit, intentHash, address(userTxn));
+    console.logBytes32(permitHash);
     (uint8 v_permit, bytes32 r_permit, bytes32 s_permit) = vm.sign(sellerPrivKey, permitHash);
     permitSig = abi.encodePacked(r_permit, s_permit, v_permit);
+    console.logBytes(permitSig);
   }
 
   function getTransferWithWitness() public view returns (
@@ -118,7 +129,7 @@ bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermission
     ) {
     permit = ISignatureTransfer.PermitTransferFrom({
             permitted: ISignatureTransfer.TokenPermissions({ token: address(usdc), amount: 1 ether }),
-            nonce: 0,
+            nonce: uint256(1347343934330334),
             deadline: deadline
         });
     transferDetails = ISignatureTransfer.SignatureTransferDetails({
@@ -170,8 +181,9 @@ bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermission
         ) internal pure returns (bytes32) {
     
         bytes32 typeHash = keccak256(abi.encodePacked(_PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB, ParamsHash._INTENT_WITNESS_TYPE_STRING));
-
+        console.logBytes32(typeHash);
         bytes32 tokenPermissionsHash = keccak256(abi.encode(_TOKEN_PERMISSIONS_TYPEHASH, permit.permitted));
+        console.logBytes32(tokenPermissionsHash);
         return keccak256(abi.encode(typeHash, tokenPermissionsHash, spender, permit.nonce, permit.deadline, witness));
     
   }

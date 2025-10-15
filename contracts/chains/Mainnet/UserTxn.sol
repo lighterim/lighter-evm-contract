@@ -3,9 +3,11 @@ pragma solidity ^0.8.25;
 
 import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer.sol";
 import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
+import {PermitHash} from "@uniswap/permit2/libraries/PermitHash.sol";
 
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
 import {InvalidSpender, InvalidAmount, SignatureExpired, InvalidSignature, InvalidToken, InvalidSender, InsufficientQuota} from "../../core/SettlerErrors.sol";
@@ -15,12 +17,14 @@ import {LighterAccount} from "../../account/LighterAccount.sol";
 import {ParamsHash} from "../../utils/ParamsHash.sol";
 import {IAllowanceHolder} from "../../allowanceholder/IAllowanceHolder.sol";
 
-// import {console} from "forge-std/console.sol";
+import {console} from "forge-std/console.sol";
 
 
 contract MainnetUserTxn is EIP712 {
     using ParamsHash for ISettlerBase.IntentParams;
     using ParamsHash for ISettlerBase.EscrowParams;
+    using PermitHash for ISignatureTransfer.PermitTransferFrom;
+    using PermitHash for ISignatureTransfer.TokenPermissions;
     
     IAllowanceTransfer internal constant _PERMIT2_ALLOWANCE = IAllowanceTransfer(0x000000000022D473030F116dDEE9F6B43aC78BA3);
     ISignatureTransfer internal constant _PERMIT2_SIGNATURE = ISignatureTransfer(0x000000000022D473030F116dDEE9F6B43aC78BA3);
@@ -146,8 +150,10 @@ contract MainnetUserTxn is EIP712 {
         if (!SignatureChecker.isValidSignatureNow(lighterRelayer, escrowTypedDataHash, sig)) revert InvalidSignature();
 
         bytes32 intentParamsHash = intentParams.hash(); 
-        bytes32 typedDataHash = _hashTypedDataV4(intentParamsHash);
-        _transferFromIKnowWhatImDoing(permit, transferDetails, escrowParams.seller, typedDataHash, ParamsHash._INTENT_WITNESS_TYPE_STRING, permitSig);
+        
+        _transferFromIKnowWhatImDoing(permit, transferDetails, escrowParams.seller, intentParamsHash, ParamsHash._INTENT_WITNESS_TYPE_STRING, permitSig);
+        //TODO: 这里需要修改，使用permit2的transferFrom, only for unit test
+        IERC20(address(intentParams.token)).transferFrom(escrowParams.seller, address(escrow), escrowParams.volume);
 
         _makeEscrow(escrowTypedDataHash, escrowParams, 0, 0);
     }
@@ -226,6 +232,14 @@ contract MainnetUserTxn is EIP712 {
                 revert(0x1c, 0x04)
             }
         }
+
+        bytes32 typeHash = keccak256(abi.encodePacked(PermitHash._PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB, witnessTypeString));
+        console.logBytes32(typeHash);
+        bytes32 tokenPermissionsHash = keccak256(abi.encode(PermitHash._TOKEN_PERMISSIONS_TYPEHASH, permit.permitted));
+        console.logBytes32(tokenPermissionsHash);
+        bytes32 permitHash = keccak256(abi.encode(typeHash, tokenPermissionsHash, address(this), permit.nonce, permit.deadline, witnessHash));
+        console.logBytes32(permitHash);
+        console.logBytes(sig);
 
         // This is effectively
         /*
