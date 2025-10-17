@@ -1,22 +1,18 @@
 import type { HardhatUserConfig } from "hardhat/config";
+import hardhatVerify from "@nomicfoundation/hardhat-verify";
+import * as dotenv from "dotenv";
 
 import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
 import { configVariable } from "hardhat/config";
 
+// Load environment variables from .env file
+dotenv.config();
+
 const config: HardhatUserConfig = {
-  plugins: [hardhatToolboxViemPlugin],
+  plugins: [hardhatToolboxViemPlugin, hardhatVerify],
   paths: {
     cache: "./cache",
   },
-  remappings: [
-    "@uniswap/permit2/=lib/permit2/src/", 
-    "forge-std/=npm/forge-std@1.9.4/src",
-    "@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/",
-    "lib/openzeppelin-contracts/contracts/=node_modules/@openzeppelin/contracts/",
-    "@tokenbound/=lib/tokenbound/src/",
-    "erc6551/=lib/tokenbound/lib/erc6551/",
-    "solady/=node_modules/solady/"
-  ],
   solidity: {
     compilers: [
       {
@@ -42,6 +38,11 @@ const config: HardhatUserConfig = {
         version: "0.8.10",
       },
     ]
+  },
+  verify: {
+    etherscan: {
+      apiKey: configVariable("ETHERSCAN_API_KEY"),
+    },
   },
   networks: {
     hardhatMainnet: {

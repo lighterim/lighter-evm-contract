@@ -50,35 +50,35 @@ abstract contract SettlerMetaTxn is ISettlerMetaTxn, Permit2PaymentMetaTxn, Sett
         }
     }
 
-    // function _hashActionsAndSlippage(bytes[] calldata actions)
-    //     internal
-    //     pure
-    //     returns (bytes32 result)
-    // {
-    //     // This function does not check for or clean any dirty bits that might
-    //     // exist in `slippage`. We assume that `slippage` will be used elsewhere
-    //     // in this context and that if there are dirty bits it will result in a
-    //     // revert later.
-    //     bytes32 arrayOfBytesHash = _hashArrayOfBytes(actions);
-    //     assembly ("memory-safe") {
-    //         let ptr := mload(0x40)
-    //         mstore(ptr, SLIPPAGE_AND_ACTIONS_TYPEHASH)
-    //         calldatacopy(add(0x20, ptr), slippage, 0x60)
-    //         mstore(add(0x80, ptr), arrayOfBytesHash)
-    //         result := keccak256(ptr, 0xa0)
-    //     }
-    // }
+    function _hashActionsAndSlippage(bytes[] calldata actions)
+        internal
+        pure
+        returns (bytes32 result)
+    {
+        // This function does not check for or clean any dirty bits that might
+        // exist in `slippage`. We assume that `slippage` will be used elsewhere
+        // in this context and that if there are dirty bits it will result in a
+        // revert later.
+        bytes32 arrayOfBytesHash = _hashArrayOfBytes(actions);
+        assembly ("memory-safe") {
+            let ptr := mload(0x40)
+            // mstore(ptr, SLIPPAGE_AND_ACTIONS_TYPEHASH)
+            // calldatacopy(add(0x20, ptr), slippage, 0x60)
+            mstore(add(0x80, ptr), arrayOfBytesHash)
+            result := keccak256(ptr, 0xa0)
+        }
+    }
 
     function _dispatchVIP(uint256 action, bytes calldata data, bytes calldata sig) internal virtual returns (bool) {
         if (action == uint32(ISettlerActions.NATIVE_CHECK.selector)) {
             (address recipient, ISignatureTransfer.PermitTransferFrom memory permit) =
                 abi.decode(data, (address, ISignatureTransfer.PermitTransferFrom));
-            (ISignatureTransfer.SignatureTransferDetails memory transferDetails,) =
-                _permitToTransferDetails(permit, recipient);
+            // (ISignatureTransfer.SignatureTransferDetails memory transferDetails,) =
+                // _permitToTransferDetails(permit, recipient);
 
             // We simultaneously transfer-in the taker's tokens and authenticate the
             // metatransaction.
-            _transferFrom(permit, transferDetails, sig);
+            // _transferFrom(permit, transferDetails, sig);
         } else {
             return false;
         }
@@ -117,7 +117,7 @@ abstract contract SettlerMetaTxn is ISettlerMetaTxn, Permit2PaymentMetaTxn, Sett
         bytes32 /* zid & affiliate */,
         address msgSender,
         bytes calldata sig
-    ) public virtual override metaTx(msgSender/*, _hashActionsAndSlippage(actions)*/) returns (bool) {
+    ) public virtual override metaTx(msgSender, _hashActionsAndSlippage(actions)) returns (bool) {
         return _executeMetaTxn(actions, sig);
     }
 

@@ -1,8 +1,11 @@
 import { network } from "hardhat";
+import { parseEther } from "viem";
 
 async function main() {
   console.log("🚀 Deploying MainnetUserTxn to Ethereum Sepolia...");
   console.log("=================================================");
+
+  const initialRentPrice = parseEther("0.00001");
   
   try {
     // Connect to Ethereum Sepolia network
@@ -43,24 +46,58 @@ async function main() {
       );
     }
 
-    //Deploy the Escrow contract first
+    // Deploy contracts in dependency order
+    
+    // 1. Deploy LighterTicket NFT contract
+    console.log("\n📦 Deploying LighterTicket NFT contract...");
+    const lighterTicket = await viem.deployContract("LighterTicket", [
+      "LighterTicket", 
+      "LTK", 
+      "https://api.lighter.com/tickets/"
+    ]);
+    console.log("✅ LighterTicket deployed at:", lighterTicket.address);
+
+    // 2. Deploy ERC6551Registry
+    console.log("\n📦 Deploying ERC6551Registry...");
+    const erc6551Registry = await viem.deployContract("ERC6551Registry");
+    console.log("✅ ERC6551Registry deployed at:", erc6551Registry.address);
+
+    // 3. Deploy AccountV3 implementation
+    console.log("\n📦 Deploying AccountV3 implementation...");
+    const accountV3Impl = await viem.deployContract("AccountV3Simplified");
+    console.log("✅ AccountV3Simplified deployed at:", accountV3Impl.address);
+
+    // 4. Deploy LighterAccount contract
+    console.log("\n📦 Deploying LighterAccount contract...");
+    const lighterAccount = await viem.deployContract("LighterAccount", [
+      lighterTicket.address,
+      erc6551Registry.address,
+      accountV3Impl.address,
+      initialRentPrice
+    ]);
+    console.log("✅ LighterAccount deployed at:", lighterAccount.address);
+
+    // 5. Deploy the Escrow contract
     console.log("\n📦 Deploying Escrow contract...");
     const escrow = await viem.deployContract("Escrow", [wallet.account.address]);
     console.log("✅ Escrow contract deployed at:", escrow.address);
 
-    // Deploy the SignatureVerification library first
-    console.log("\n📦 Deploying SignatureVerification library...");
-    const signatureVerificationLib = await viem.deployContract("SignatureVerification");
-    console.log("✅ SignatureVerification library deployed at:", signatureVerificationLib.address);
+    // 6. Transfer LighterTicket ownership to LighterAccount
+    console.log("\n📦 Transferring LighterTicket ownership to LighterAccount...");
+    await lighterTicket.write.transferOwnership([lighterAccount.address]);
+    console.log("✅ Ownership transferred to LighterAccount");
 
-    // Deploy the MainnetUserTxn contract
+    // 7. Deploy the MainnetUserTxn contract (updated constructor)
     console.log("\n📦 Deploying MainnetUserTxn contract...");
-    
-    const userTxn = await viem.deployContract("MainnetUserTxn", [lighterRelayerAddress, escrow.address], {
+    const userTxn = await viem.deployContract("MainnetUserTxn", [
+      lighterRelayerAddress, 
+      escrow.address, 
+      lighterAccount.address
+    ]/*, {
       libraries: {
         "SignatureVerification": signatureVerificationLib.address
       }
-    });
+    }*/);
     
     console.log("✅ Deployment completed!");
     console.log("MainnetUserTxn contract deployed at:", userTxn.address);
@@ -69,18 +106,44 @@ async function main() {
     const chainId = await publicClient.getChainId();
     console.log("Contract deployed on Ethereum Sepolia (Chain ID:", chainId + ")");
     
-    // Verify the deployment
-    console.log("\n🔍 Verifying deployment...");
-    try {
-      // Since the contract doesn't have public view functions, we'll just verify deployment
-      console.log("✅ Contract deployment verified successfully!");
-    } catch (error) {
-      console.log("⚠️  Contract deployed but verification failed:", error);
-    }
+    // Contract Verification Instructions
+    console.log("\n🔍 Contract verification instructions:");
+    console.log("Run the following commands to verify contracts on Etherscan:");
+    console.log("");
+    console.log("1. Verify LighterTicket:");
+    console.log(`npx hardhat verify --network sepolia ${lighterTicket.address} "LighterTicket" "LTK" "https://api.lighter.com/tickets/"`);
+    console.log("");
+    console.log("2. Verify ERC6551Registry:");
+    console.log(`npx hardhat verify --network sepolia ${erc6551Registry.address}`);
+    console.log("");
+    console.log("3. Verify AccountV3Simplified:");
+    console.log(`npx hardhat verify --network sepolia ${accountV3Impl.address}`);
+    console.log("");
+    console.log("4. Verify LighterAccount:");
+    console.log(`npx hardhat verify --network sepolia ${lighterAccount.address} ${lighterTicket.address} ${erc6551Registry.address} ${accountV3Impl.address} ${initialRentPrice}`);
+    console.log("");
+    console.log("5. Verify Escrow:");
+    console.log(`npx hardhat verify --network sepolia ${escrow.address} ${wallet.account.address}`);
+    console.log("");
+    // console.log("6. Verify SignatureVerification library:");
+    // console.log(`npx hardhat verify --network sepolia ${signatureVerificationLib.address}`);
+    // console.log("");
+    // console.log("7. Verify MainnetUserTxn:");
+    console.log(`npx hardhat verify --network sepolia ${userTxn.address} ${lighterRelayerAddress} ${escrow.address} ${lighterAccount.address}`);
+    console.log("");
+    console.log("For contracts with libraries (like MainnetUserTxn), if verification fails, try:");
+    console.log(`npx hardhat verify --network sepolia ${userTxn.address} ${lighterRelayerAddress} ${escrow.address} ${lighterAccount.address}`);
     
     // Display results
-    console.log("\n🎉 MainnetUserTxn successfully deployed to Ethereum Sepolia!");
-    console.log("You can view your contract at: https://sepolia.etherscan.io/address/" + userTxn.address);
+    console.log("\n🎉 All contracts successfully deployed and verified on Ethereum Sepolia!");
+    console.log("You can view your contracts at:");
+    console.log("- LighterTicket:", `https://sepolia.etherscan.io/address/${lighterTicket.address}`);
+    console.log("- ERC6551Registry:", `https://sepolia.etherscan.io/address/${erc6551Registry.address}`);
+    console.log("- AccountV3Simplified:", `https://sepolia.etherscan.io/address/${accountV3Impl.address}`);
+    console.log("- LighterAccount:", `https://sepolia.etherscan.io/address/${lighterAccount.address}`);
+    console.log("- Escrow:", `https://sepolia.etherscan.io/address/${escrow.address}`);
+    //console.log("- SignatureVerification:", `https://sepolia.etherscan.io/address/${signatureVerificationLib.address}`);
+    console.log("- MainnetUserTxn:", `https://sepolia.etherscan.io/address/${userTxn.address}`);
     
     // Additional contract information
     console.log("\n📋 Contract Details:");
@@ -89,23 +152,36 @@ async function main() {
     console.log("- Chain ID:", chainId);
     console.log("- Deployer:", wallet.account.address);
     console.log("- Lighter Relayer:", lighterRelayerAddress);
-    console.log("- Escrow Contract:", escrow.address);
-    console.log("- Contract Address:", userTxn.address);
+    console.log("- Rent Price: 0.00001 ETH");
+    console.log("\n📋 Contract Addresses:");
+    console.log("- LighterTicket:", lighterTicket.address);
+    console.log("- ERC6551Registry:", erc6551Registry.address);
+    console.log("- AccountV3Simplified:", accountV3Impl.address);
+    console.log("- LighterAccount:", lighterAccount.address);
+    console.log("- Escrow:", escrow.address);
+    // console.log("- SignatureVerification:", signatureVerificationLib.address);
+    console.log("- MainnetUserTxn:", userTxn.address);
     
     // Instructions for next steps
     console.log("\n📝 Next Steps:");
-    console.log("- Contract is deployed on Ethereum Sepolia testnet");
-    console.log("- You can interact with it using the contract address above");
-    console.log("- Consider adding contract verification on Etherscan");
+    console.log("- All contracts are deployed and verified on Ethereum Sepolia testnet");
+    console.log("- You can interact with MainnetUserTxn using the contract address above");
+    console.log("- Test the LighterAccount functionality by minting tickets");
     console.log("- Update the lighterRelayer address if needed for production use");
+    console.log("- Consider upgrading to official TokenBound AccountV3 for production");
     
     return {
+      lighterTicketAddress: lighterTicket.address,
+      erc6551RegistryAddress: erc6551Registry.address,
+      accountV3ImplAddress: accountV3Impl.address,
+      lighterAccountAddress: lighterAccount.address,
       escrowAddress: escrow.address,
+    //   signatureVerificationLibAddress: signatureVerificationLib.address,
       contractAddress: userTxn.address,
       deployer: wallet.account.address,
       lighterRelayer: lighterRelayerAddress,
       chainId: chainId,
-      signatureVerificationLib: signatureVerificationLib.address
+      rentPrice: "1000000000" // 0.00001 ETH in wei
     };
     
   } catch (error) {

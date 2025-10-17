@@ -3,6 +3,7 @@ pragma solidity ^0.8.25;
 
 import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer.sol";
 import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
+import {IPermit2} from "@uniswap/permit2/interfaces/IPermit2.sol";
 import {PermitHash} from "@uniswap/permit2/libraries/PermitHash.sol";
 
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -26,8 +27,7 @@ contract MainnetUserTxn is EIP712 {
     using PermitHash for ISignatureTransfer.PermitTransferFrom;
     using PermitHash for ISignatureTransfer.TokenPermissions;
     
-    IAllowanceTransfer internal constant _PERMIT2_ALLOWANCE = IAllowanceTransfer(0x000000000022D473030F116dDEE9F6B43aC78BA3);
-    ISignatureTransfer internal constant _PERMIT2_SIGNATURE = ISignatureTransfer(0x000000000022D473030F116dDEE9F6B43aC78BA3);
+    IPermit2 internal constant _PERMIT2 = IPermit2(0x000000000022D473030F116dDEE9F6B43aC78BA3);
     IAllowanceHolder internal constant _ALLOWANCE_HOLDER = IAllowanceHolder(0x0000000000001fF3684f28c67538d4D072C22734);
 
     address internal lighterRelayer;
@@ -58,19 +58,18 @@ contract MainnetUserTxn is EIP712 {
         bytes memory sig
         ) external  
     {
+        if (permitSingle.spender != address(_ALLOWANCE_HOLDER)) revert InvalidSpender();
+        // sigDeadline check in permit2
+        _PERMIT2.permit(msg.sender, permitSingle, permitSig);
+
         if(address(permitSingle.details.token) != address(intentParams.token)) revert InvalidToken();
         if(permitSingle.details.amount < intentParams.range.min || permitSingle.details.amount > intentParams.range.max) revert InvalidAmount();
-        // if(permitSingle.sigDeadline > block.timestamp) revert SignatureExpired(permitSingle.sigDeadline);
-        if (permitSingle.spender != address(this)) revert InvalidSpender(); 
         
         // EIP-712 signature verification for intentParams
         bytes32 intentParamsHash = intentParams.hash();
         bytes32 typedDataHash = _hashTypedDataV4(intentParamsHash);
         // sig.verify(typedDataHash, msg.sender);
         SignatureChecker.isValidSignatureNow(msg.sender, typedDataHash, sig);
-
-        _permit(msg.sender, permitSingle, permitSig); 
-
     }
 
     /**
@@ -103,8 +102,7 @@ contract MainnetUserTxn is EIP712 {
         bytes32 escrowTypedHash = _hashTypedDataV4(escrowHash);
         SignatureChecker.isValidSignatureNow(lighterRelayer, escrowTypedHash, sig);
         
-        // _allowanceHolderTransferFrom(tokenAddress, escrowParams.seller, address(escrow), escrowParams.volume);
-        _PERMIT2_ALLOWANCE.transferFrom(escrowParams.seller, address(escrow), uint160(escrowParams.volume), tokenAddress);
+        _ALLOWANCE_HOLDER.transferFrom(tokenAddress, escrowParams.seller, address(escrow), uint160(escrowParams.volume));
 
         _makeEscrow(escrowTypedHash, escrowParams, 0, 0);
     }
@@ -253,16 +251,6 @@ contract MainnetUserTxn is EIP712 {
     }
 
 
-    function _permit(address owner, IAllowanceTransfer.PermitSingle memory permitSingle, bytes memory signature) internal {
-        _PERMIT2_ALLOWANCE.permit(owner, permitSingle, signature);
-    }
-
-    function _allowanceHolderTransferFrom(address token, address owner, address recipient, uint256 amount)
-        internal
-    {
-       _PERMIT2_ALLOWANCE.transferFrom(owner, recipient, uint160(amount), token);
-    }
-
     function _transferFromIKnowWhatImDoing(
         ISignatureTransfer.PermitTransferFrom memory permit,
         ISignatureTransfer.SignatureTransferDetails memory transferDetails,
@@ -298,7 +286,7 @@ contract MainnetUserTxn is EIP712 {
 
         // Solidity won't let us reference the constant `_PERMIT2` in assembly, but this compiles
         // down to just a single PUSH opcode just before the CALL, with optimization turned on.
-        ISignatureTransfer __PERMIT2 = _PERMIT2_SIGNATURE;
+        ISignatureTransfer __PERMIT2 = _PERMIT2;
         assembly ("memory-safe") {
             let ptr := mload(0x40)
             /* selector for `permitWitnessTransferFrom(
@@ -385,9 +373,8 @@ contract MainnetUserTxn is EIP712 {
                 }
             }
             // we don't check `requestedAmount` because it's checked by AllowanceHolder itself
-            _allowanceHolderTransferFrom(
-                permit.permitted.token, _msgSender(), transferDetails.to, transferDetails.requestedAmount
-            );
+            // TODO: 转发，使用_ALLOWANCE_HOLDER.transferFrom
+            _ALLOWANCE_HOLDER.transferFrom(permit.permitted.token, _msgSender(), transferDetails.to, uint160(transferDetails.requestedAmount));
         } else {
             // This is effectively
             /*
@@ -402,7 +389,7 @@ contract MainnetUserTxn is EIP712 {
             // Solidity won't let us reference the constant `_PERMIT2` in assembly, but this
             // compiles down to just a single PUSH opcode just before the CALL, with optimization
             // turned on.
-            ISignatureTransfer __PERMIT2 = _PERMIT2_SIGNATURE;
+            ISignatureTransfer __PERMIT2 = _PERMIT2;
             address from = _msgSender();
             assembly ("memory-safe") {
                 let ptr := mload(0x40)

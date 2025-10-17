@@ -20,6 +20,8 @@ import {AbstractContext} from "../../Context.sol";
 import {ParamsHash} from "../../utils/ParamsHash.sol";
 import {Permit2PaymentAbstract} from "../../core/Permit2PaymentAbstract.sol";
 import {FreeMemory} from "../../utils/FreeMemory.sol";
+import {Permit2PaymentTakerSubmitted} from "../../core/Permit2Payment.sol";
+import {IAllowanceHolder} from "../../allowanceholder/IAllowanceHolder.sol";
 
 contract MainnetSettler is Settler, MainnetMixin, FreeMemory, EIP712 {
 
@@ -27,8 +29,9 @@ contract MainnetSettler is Settler, MainnetMixin, FreeMemory, EIP712 {
     using ParamsHash for ISettlerBase.EscrowParams;
     
     
-    constructor(address lighterRelayer, bytes20 gitCommit) 
+    constructor(address lighterRelayer, bytes20 gitCommit, IAllowanceHolder allowanceHolder) 
         MainnetMixin(lighterRelayer, gitCommit)
+        Permit2PaymentTakerSubmitted(allowanceHolder)
         EIP712("MainnetSettler", "1") 
     {
 
@@ -40,7 +43,7 @@ contract MainnetSettler is Settler, MainnetMixin, FreeMemory, EIP712 {
     function _domainSeparator() internal view override returns (bytes32) {
         return keccak256(
             abi.encode(
-                EIP712_DOMAIN_TYPEHASH,
+                ParamsHash.EIP712_DOMAIN_TYPEHASH,
                 keccak256(bytes("MainnetSettler")),
                 keccak256(bytes("1")),
                 block.chainid,
@@ -156,7 +159,7 @@ contract MainnetSettler is Settler, MainnetMixin, FreeMemory, EIP712 {
 
         bytes32 intentParamsHash = intentParams.hash(); 
         bytes32 typedDataHash = _hashTypedDataV4(intentParamsHash);
-        _transferFromIKnowWhatImDoing(permit, transferDetails, escrowParams.seller, typedDataHash, INTENT_WITNESS_TYPE_STRING, permitSig);
+        _transferFromIKnowWhatImDoing(permit, transferDetails, escrowParams.seller, typedDataHash, ParamsHash._INTENT_WITNESS_TYPE_STRING, permitSig);
 
         _makeEscrow(escrowTypedDataHash, escrowParams, 0, 0);
     }

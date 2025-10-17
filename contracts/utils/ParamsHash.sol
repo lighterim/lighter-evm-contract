@@ -8,6 +8,10 @@ import {ISettlerBase} from "../interfaces/ISettlerBase.sol";
 
 library ParamsHash {
 
+    bytes32 public constant EIP712_DOMAIN_TYPEHASH = keccak256(
+        "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+    );
+
     string public constant _RANGE_TYPE = "Range(uint256 min,uint256 max)";
     string public constant _INTENT_PARAMS_TYPE = string(
         abi.encodePacked(

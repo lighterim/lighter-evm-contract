@@ -7,8 +7,8 @@ import {Permit2PaymentAbstract} from "./core/Permit2PaymentAbstract.sol";
 import {uint512} from "./utils/512Math.sol";
 
 abstract contract SettlerAbstract is Permit2PaymentAbstract {
+    
 
-    uint256 internal constant BASIS = 10_000;
     IERC20 internal constant ETH_ADDRESS = IERC20(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 
     function _hasMetaTxn() internal pure virtual returns (bool);
