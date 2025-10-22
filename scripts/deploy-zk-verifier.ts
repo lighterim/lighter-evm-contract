@@ -6,7 +6,7 @@ async function main() {
 
   // 从命令行参数获取 zkVerify 地址，如果没有提供则使用默认值
   // 支持通过 --zk-verify 参数传递，例如: --zk-verify 0x123...
-  let zkVerifyAddress = "0x5a3c35CCC5c05fDeFe5Ecafc15F4B1aC8eF71481"; // 默认值
+  let zkVerifyAddress = "0xEA0A0f1EfB1088F4ff0Def03741Cb2C64F89361E"; // 默认值
   
   // 检查命令行参数
   const args = process.argv.slice(2);

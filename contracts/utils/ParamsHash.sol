@@ -12,6 +12,7 @@ library ParamsHash {
         "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
     );
 
+    string public constant _TOKEN_PERMISSIONS_TYPE_STRING = "TokenPermissions(address token,uint256 amount)";
     string public constant _RANGE_TYPE = "Range(uint256 min,uint256 max)";
     string public constant _INTENT_PARAMS_TYPE = string(
         abi.encodePacked(
@@ -19,13 +20,26 @@ library ParamsHash {
             _RANGE_TYPE
         )
     );
+    string public constant _PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB =
+        "PermitWitnessTransferFrom(TokenPermissions permitted,address spender,uint256 nonce,uint256 deadline,";
+    
+    string public constant _INTENT_WITNESS_TYPE_STRING = string(
+        abi.encodePacked("IntentParams witness)",
+        _INTENT_PARAMS_TYPE,
+        _TOKEN_PERMISSIONS_TYPE_STRING
+        )
+    );
 
     bytes32 public constant _INTENT_PARAMS_TYPEHASH = keccak256(abi.encodePacked(_INTENT_PARAMS_TYPE));
     bytes32 public constant _RANGE_TYPEHASH = keccak256(abi.encodePacked(_RANGE_TYPE));
 
     bytes32 public constant _ESCROW_PARAMS_TYPEHASH = keccak256(
-        "EscrowParams(uint256 id,address token,uint256 volume,uint256 price,uint256 usdRate,address seller,uint256 sellerFeeRate,bytes32 paymentMethod,bytes32 currency,bytes32 payeeId,bytes32 payeeAccount,address buyer,uint256 buyerFeeRate)"
+        "EscrowParams(uint256 id,address token,uint256 volume,uint256 price,uint256 usdRate,address payer,address seller,uint256 sellerFeeRate,bytes32 paymentMethod,bytes32 currency,bytes32 payeeDetails,address buyer,uint256 buyerFeeRate)"
     );
+
+    // _test = keccak256(abi.encodePacked("account","qrCode", "memo"));
+    bytes32 public constant _test = keccak256(abi.encodePacked("account","qrCode", "memo"));
+
 
 
 
@@ -52,17 +66,6 @@ library ParamsHash {
     );
 
     */
-    string public constant _TOKEN_PERMISSIONS_TYPE_STRING = "TokenPermissions(address token,uint256 amount)";
-
-    string public constant _PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB =
-        "PermitWitnessTransferFrom(TokenPermissions permitted,address spender,uint256 nonce,uint256 deadline,";
-    
-    string public constant _INTENT_WITNESS_TYPE_STRING = string(
-        abi.encodePacked("IntentParams intentParams)",
-        _INTENT_PARAMS_TYPE,
-        _TOKEN_PERMISSIONS_TYPE_STRING
-        )
-    );
 
     // string public constant _PERMIT_BATCH_WITNESS_TRANSFER_FROM_TYPEHASH_STUB =
     //     "PermitBatchWitnessTransferFrom(TokenPermissions[] permitted,address spender,uint256 nonce,uint256 deadline,";
@@ -81,7 +84,7 @@ library ParamsHash {
     }
 
     function hash(ISettlerBase.EscrowParams memory escrowParams) internal pure returns (bytes32) {
-        return keccak256(abi.encode(_ESCROW_PARAMS_TYPEHASH, escrowParams.id, escrowParams.token, escrowParams.volume, escrowParams.price, escrowParams.usdRate, escrowParams.seller, escrowParams.sellerFeeRate, escrowParams.paymentMethod, escrowParams.currency, escrowParams.payeeId, escrowParams.payeeAccount, escrowParams.buyer, escrowParams.buyerFeeRate));
+        return keccak256(abi.encode(_ESCROW_PARAMS_TYPEHASH, escrowParams.id, escrowParams.token, escrowParams.volume, escrowParams.price, escrowParams.usdRate, escrowParams.payer, escrowParams.seller, escrowParams.sellerFeeRate, escrowParams.paymentMethod, escrowParams.currency, escrowParams.payeeDetails, escrowParams.buyer, escrowParams.buyerFeeRate));
     }
 
     /*

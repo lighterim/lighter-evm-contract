@@ -56,7 +56,7 @@ export const LighterAccountInteraction: React.FC<LighterAccountInteractionProps>
     if (userAddress && !refundRecipient) {
       setRefundRecipient(userAddress);
     }
-  }, [userAddress]);
+  }, [userAddress, recipient, refundRecipient]);
 
   // 处理成功
   useEffect(() => {

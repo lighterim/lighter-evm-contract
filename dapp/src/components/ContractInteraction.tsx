@@ -8,7 +8,7 @@ interface ContractInteractionProps {
   userAddress: string;
 }
 
-// const ESCROW_ADDRESS = '0x1568e4a51fcfe538844b3b198689c79c026e5900';
+const ALLOWANCE_ADDRESS = '0xe3afe266962f5a02983f42b7a33f47ec22b716ab';
 
 // MainnetUserTxn 合约 ABI (包含错误定义)
 const CONTRACT_ABI = [
@@ -73,12 +73,12 @@ const CONTRACT_ABI = [
           {"name": "volume", "type": "uint256"},
           {"name": "price", "type": "uint256"},
           {"name": "usdRate", "type": "uint256"},
+          {"name": "payer", "type": "address"},
           {"name": "seller", "type": "address"},
           {"name": "sellerFeeRate", "type": "uint256"},
           {"name": "paymentMethod", "type": "bytes32"},
           {"name": "currency", "type": "bytes32"},
-          {"name": "payeeId", "type": "bytes32"},
-          {"name": "payeeAccount", "type": "bytes32"},
+          {"name": "payeeDetails", "type": "bytes32"},
           {"name": "buyer", "type": "address"},
           {"name": "buyerFeeRate", "type": "uint256"}
         ]
@@ -157,7 +157,7 @@ export const ContractInteraction: React.FC<ContractInteractionProps> = ({
   const [price, setPrice] = useState<string>('');
   
   const publicClient = usePublicClient();
-  const { writeContract, isPending, error: writeError, data: writeData } = useWriteContract();
+  const { writeContract, error: writeError, data: writeData } = useWriteContract();
   const { data: walletClient } = useWalletClient();
   const { address: accountAddress, isConnected } = useAccount();
   
@@ -175,7 +175,6 @@ export const ContractInteraction: React.FC<ContractInteractionProps> = ({
   const [escrowPaymentMethod, setEscrowPaymentMethod] = useState<string>('0x0000000000000000000000000000000000000000000000000000000000000000');
   const [escrowCurrency, setEscrowCurrency] = useState<string>('0x0000000000000000000000000000000000000000000000000000000000000000');
   const [escrowPayeeId, setEscrowPayeeId] = useState<string>('0x0000000000000000000000000000000000000000000000000000000000000000');
-  const [escrowPayeeAccount, setEscrowPayeeAccount] = useState<string>('0x0000000000000000000000000000000000000000000000000000000000000000');
   const [escrowBuyer, setEscrowBuyer] = useState<string>('');
   const [escrowBuyerFeeRate, setEscrowBuyerFeeRate] = useState<string>('0');
   const [escrowSignature, setEscrowSignature] = useState<string>('');
@@ -368,7 +367,7 @@ export const ContractInteraction: React.FC<ContractInteractionProps> = ({
           }
         ],
         functionName: 'allowance',
-        args: [owner, tokenAddress as `0x${string}`, contractAddress as `0x${string}`]
+        args: [owner, tokenAddress as `0x${string}`, ALLOWANCE_ADDRESS as `0x${string}`]
       });
 
       // 使用当前存储的 nonce（存储的 nonce = 签名 nonce + 1）
@@ -393,7 +392,7 @@ export const ContractInteraction: React.FC<ContractInteractionProps> = ({
           expiration: newExpiryTime,
           nonce: newNonce
         },
-        spender: contractAddress,
+        spender: ALLOWANCE_ADDRESS,
         sigDeadline: newExpiryTime
       };
 
@@ -418,7 +417,7 @@ export const ContractInteraction: React.FC<ContractInteractionProps> = ({
       });
 
       setPermitSignature(signature);
-      setResult(`✅ Permit2 签名生成成功！\n\n签名: ${signature}\n\n📋 签名参数:\n- 签名者: ${owner}\n- 代币: ${tokenAddress}\n- Token Decimals: ${tokenDecimals}\n- 数量: ${amount} Token 单位\n- 过期时间: ${new Date(permitData.details.expiration * 1000).toLocaleString()}\n- 当前存储 Nonce: ${currentAllowance[2]}\n- 签名使用 Nonce: ${permitData.details.nonce} (等于当前存储值)\n- Spender: ${contractAddress}\n\n🔍 当前授权状态:\n- 授权金额: ${formatEther(currentAllowance[0])} ETH\n- 授权过期: ${currentAllowance[1] === 0 ? '永不过期' : new Date(Number(currentAllowance[1]) * 1000).toLocaleString()}`);
+      setResult(`✅ Permit2 签名生成成功！\n\n签名: ${signature}\n\n📋 签名参数:\n- 签名者: ${owner}\n- 代币: ${tokenAddress}\n- Token Decimals: ${tokenDecimals}\n- 数量: ${amount} Token 单位\n- 过期时间: ${new Date(permitData.details.expiration * 1000).toLocaleString()}\n- 当前存储 Nonce: ${currentAllowance[2]}\n- 签名使用 Nonce: ${permitData.details.nonce} (等于当前存储值)\n- Spender: ${ALLOWANCE_ADDRESS}\n\n🔍 当前授权状态:\n- 授权金额: ${formatEther(currentAllowance[0])} ETH\n- 授权过期: ${currentAllowance[1] === 0 ? '永不过期' : new Date(Number(currentAllowance[1]) * 1000).toLocaleString()}`);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : '签名生成失败');
@@ -543,7 +542,7 @@ export const ContractInteraction: React.FC<ContractInteractionProps> = ({
           expiration: globalExpiryTime,
           nonce: globalNonce
         },
-        spender: contractAddress as `0x${string}`,
+        spender: ALLOWANCE_ADDRESS as `0x${string}`,
         sigDeadline: BigInt(globalExpiryTime)
       };
 
@@ -575,12 +574,12 @@ export const ContractInteraction: React.FC<ContractInteractionProps> = ({
         permitSingle.details.amount >= intentParams.range.min && 
         permitSingle.details.amount <= intentParams.range.max
       );
-      console.log('- spender 匹配:', permitSingle.spender === contractAddress);
+      console.log('- spender 匹配:', permitSingle.spender === ALLOWANCE_ADDRESS);
       console.log('- 调用者地址:', accountAddress);
       console.log('- 合约地址:', contractAddress);
       console.log('- msg.sender (合约调用者):', accountAddress);
       console.log('- Permit2 签名者 (owner):', accountAddress);
-      console.log('- msg.sender === Permit2 owner:', accountAddress === accountAddress);
+
 
       // 先模拟合约调用以获取详细错误信息
       console.log('🔄 模拟合约调用...');
@@ -687,12 +686,12 @@ export const ContractInteraction: React.FC<ContractInteractionProps> = ({
         volume: parseUnits(escrowVolume, tokenDecimals),
         price: parseEther(escrowPrice),
         usdRate: parseEther(escrowUsdRate),
+        payer: escrowSeller as `0x${string}`,
         seller: escrowSeller as `0x${string}`,
         sellerFeeRate: BigInt(escrowSellerFeeRate),
         paymentMethod: escrowPaymentMethod as `0x${string}`,
         currency: escrowCurrency as `0x${string}`,
-        payeeId: escrowPayeeId as `0x${string}`,
-        payeeAccount: escrowPayeeAccount as `0x${string}`,
+        payeeDetails: escrowPayeeId as `0x${string}`,
         buyer: escrowBuyer as `0x${string}`,
         buyerFeeRate: BigInt(escrowBuyerFeeRate)
       };
@@ -1084,17 +1083,6 @@ export const ContractInteraction: React.FC<ContractInteractionProps> = ({
             className="form-input"
           />
         </div>
-        
-        <div className="form-group">
-          <label>收款人账户:</label>
-          <input
-            type="text"
-            value={escrowPayeeAccount}
-            onChange={(e) => setEscrowPayeeAccount(e.target.value)}
-            className="form-input"
-          />
-        </div>
-        
         <div className="form-group">
           <label>EscrowParams 签名 (由 lighterRelayer 提供):</label>
           <textarea

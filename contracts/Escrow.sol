@@ -27,16 +27,16 @@ contract Escrow is Ownable, Pausable, IEscrow{
     constructor(address _owner) Ownable(_owner) {
     }
 
-    function create(address token, address buyer, address seller, uint256 amount, bytes32 escrowHash, ISettlerBase.EscrowData memory escrowData) external{
+    function create(address token, address buyer, address seller, uint256 amount, bytes32 escrowHash, uint256 id, ISettlerBase.EscrowData memory escrowData) external{
         if(allEscrow[escrowHash].lastActionTs > 0) revert EscrowAlreadyExists(escrowHash);
         
         allEscrow[escrowHash] = escrowData;
         sellerEscrow[token][seller] += amount;
 
-        emit Created(token, buyer, seller, escrowHash, amount);
+        emit Created(token, buyer, seller, escrowHash, id, amount);
     }
 
-    function paid(bytes32 escrowHash, address token, address buyer) external{
+    function paid(bytes32 escrowHash, uint256 id, address token, address buyer) external{
         if(allEscrow[escrowHash].lastActionTs == 0) revert EscrowNotExists(escrowHash);
         if(allEscrow[escrowHash].status != ISettlerBase.EscrowStatus.Escrowed && allEscrow[escrowHash].status != ISettlerBase.EscrowStatus.SellerRequestCancel) revert EscrowStatusError(escrowHash, ISettlerBase.EscrowStatus.Escrowed, allEscrow[escrowHash].status);
         
@@ -46,10 +46,10 @@ contract Escrow is Ownable, Pausable, IEscrow{
         allEscrow[escrowHash].lastActionTs = timestamp;
         allEscrow[escrowHash].status = ISettlerBase.EscrowStatus.Paid;
 
-        emit Paid(token, buyer, escrowHash, paidSeconds);
+        emit Paid(token, buyer, escrowHash, paidSeconds, id);
     }
 
-    function release(address token, address buyer, address seller, uint256 amount, bytes32 escrowHash, ISettlerBase.EscrowStatus status) external{
+    function release( bytes32 escrowHash, uint256 id, address token, address buyer, address seller, uint256 amount, ISettlerBase.EscrowStatus status) external{
         // if(allEscrow[escrowHash].status != ISettlerBase.EscrowStatus.Escrowed) revert EscrowNotEscrowed(escrowHash);
         // if(allEscrow[escrowHash].lastActionTs > 0) revert EscrowAlreadyReleased(escrowHash);
         // if(allEscrow[escrowHash].lastActionTs + allEscrow[escrowHash].releaseSeconds < block.timestamp) revert EscrowReleased(escrowHash);
@@ -62,10 +62,10 @@ contract Escrow is Ownable, Pausable, IEscrow{
         sellerEscrow[token][seller] -= amount;
         userCredit[token][buyer] += amount;
 
-        emit Released(token, buyer, seller, escrowHash, amount, status);
+        emit Released(token, buyer, seller, escrowHash, id, amount, status);
     }
 
-    function cancel(address token, address buyer, address seller, uint256 amount, bytes32 escrowHash, ISettlerBase.EscrowStatus status) external{
+    function cancel(bytes32 escrowHash, uint256 id, address token, address buyer, address seller, uint256 amount, ISettlerBase.EscrowStatus status) external{
         if(allEscrow[escrowHash].lastActionTs == 0) revert EscrowNotExists(escrowHash);
         if(allEscrow[escrowHash].status != ISettlerBase.EscrowStatus.BuyerCancelled && allEscrow[escrowHash].status != ISettlerBase.EscrowStatus.SellerRequestCancel) revert EscrowStatusError(escrowHash, ISettlerBase.EscrowStatus.SellerRequestCancel, allEscrow[escrowHash].status);
         
@@ -74,7 +74,7 @@ contract Escrow is Ownable, Pausable, IEscrow{
 
         sellerEscrow[token][seller] -= amount;
 
-        emit Cancelled(token, buyer, seller, escrowHash, amount, status);
+        emit Cancelled(token, buyer, seller, escrowHash, id, amount, status);
     }
 
     function claim(address token, address to, uint256 amount) external{

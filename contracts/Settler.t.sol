@@ -10,7 +10,7 @@ import {Test} from "forge-std/Test.sol";
 import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 
 import {LighterAccount} from "./account/LighterAccount.sol";
-
+import {console} from "forge-std/console.sol";
 contract SettlerTest is Test {
   address buyer;
   address seller;
@@ -55,6 +55,8 @@ contract SettlerTest is Test {
     vm.prank(seller);
     (tbaSellerTokenId, tbaSeller) = lighterAccount.createAccount{value: rentPrice}(seller, 0x0000000000000000000000000000000000000000000000000000000000000001);
     // vm.stopPrank();
+    
+    console.logBytes32(keccak256(abi.encodePacked("oren","wxp://f2f0cFGOsdaOtU3SQfpyBcl_0u0UCU9AIIVaTEmmVDgvN-Q","wechat")));
   }
 
 

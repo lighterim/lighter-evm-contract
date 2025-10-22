@@ -18,7 +18,7 @@ import {LighterAccount} from "../../account/LighterAccount.sol";
 import {ParamsHash} from "../../utils/ParamsHash.sol";
 import {IAllowanceHolder} from "../../allowanceholder/IAllowanceHolder.sol";
 
-import {console} from "forge-std/console.sol";
+// import {console} from "forge-std/console.sol";
 
 
 contract MainnetUserTxn is EIP712 {
@@ -27,18 +27,23 @@ contract MainnetUserTxn is EIP712 {
     using PermitHash for ISignatureTransfer.PermitTransferFrom;
     using PermitHash for ISignatureTransfer.TokenPermissions;
     
-    IPermit2 internal constant _PERMIT2 = IPermit2(0x000000000022D473030F116dDEE9F6B43aC78BA3);
-    IAllowanceHolder internal constant _ALLOWANCE_HOLDER = IAllowanceHolder(0x0000000000001fF3684f28c67538d4D072C22734);
+    IPermit2 public constant _PERMIT2 = IPermit2(0x000000000022D473030F116dDEE9F6B43aC78BA3);
 
-    address internal lighterRelayer;
+    address public lighterRelayer;
     IEscrow internal escrow;
     LighterAccount internal lighterAccount;
+    IAllowanceHolder public _ALLOWANCE_HOLDER;
 
-    constructor(address lighterRelayer_, IEscrow escrow_, LighterAccount lighterAccount_) EIP712("MainnetUserTxn", "1") {
+    constructor(address lighterRelayer_, IEscrow escrow_, LighterAccount lighterAccount_, IAllowanceHolder allowanceHolder_) EIP712("MainnetUserTxn", "1") {
         lighterRelayer = lighterRelayer_;
         // assert(block.chainid == 1 || block.chainid == 31337);
         escrow = escrow_;
         lighterAccount = lighterAccount_;
+        _ALLOWANCE_HOLDER = allowanceHolder_;
+    }
+
+    function setLighterRelayer(address lighterRelayer_) external {
+        lighterRelayer = lighterRelayer_;
     }
 
 
@@ -86,8 +91,8 @@ contract MainnetUserTxn is EIP712 {
         bytes memory intentSig
     ) external {
         if(escrowParams.buyer != msg.sender) revert InvalidSender();
-        if(!lighterAccount.hasAvailableQuota(escrowParams.buyer)) revert InsufficientQuota();
-        if(!lighterAccount.hasAvailableQuota(escrowParams.seller)) revert InsufficientQuota();
+        // if(!lighterAccount.hasAvailableQuota(escrowParams.buyer)) revert InsufficientQuota();
+        // if(!lighterAccount.hasAvailableQuota(escrowParams.seller)) revert InsufficientQuota();
         address tokenAddress = address(escrowParams.token);
         if(tokenAddress != address(intentParams.token)) revert InvalidToken();
         if(escrowParams.volume < intentParams.range.min || (intentParams.range.max > 0 && escrowParams.volume > intentParams.range.max)) revert InvalidAmount();
@@ -133,13 +138,13 @@ contract MainnetUserTxn is EIP712 {
         address tokenAddress = address(permit.permitted.token);
         if (address(escrowParams.token) != address(intentParams.token) || tokenAddress != address(escrowParams.token)) revert InvalidToken();
         if (
-            permit.permitted.amount < escrowParams.volume 
-            || (intentParams.range.min > 0 && escrowParams.volume < intentParams.range.min)
+            /*permit.permitted.amount < escrowParams.volume // check in permit2
+            ||*/ (intentParams.range.min > 0 && escrowParams.volume < intentParams.range.min)
             || (intentParams.range.max > 0 && escrowParams.volume > intentParams.range.max)
             || transferDetails.requestedAmount != escrowParams.volume
         ) revert InvalidAmount();
         
-
+        // console.logString("--------------------------------");
         bytes32 escrowParamsHash = escrowParams.hash();
         // console.logBytes32(escrowParamsHash);
         bytes32 escrowTypedDataHash = _hashTypedDataV4(escrowParamsHash);
@@ -148,9 +153,10 @@ contract MainnetUserTxn is EIP712 {
         if (!SignatureChecker.isValidSignatureNow(lighterRelayer, escrowTypedDataHash, sig)) revert InvalidSignature();
 
         bytes32 intentParamsHash = intentParams.hash(); 
-        
+        // console.logBytes32(intentParamsHash);
+        // console.logString("#########################");
         _transferFromIKnowWhatImDoing(permit, transferDetails, escrowParams.seller, intentParamsHash, ParamsHash._INTENT_WITNESS_TYPE_STRING, permitSig);
-        //TODO: 这里需要修改，使用permit2的transferFrom, only for unit test
+        // TODO: 这里需要修改，使用permit2的transferFrom, only for unit test
         // IERC20(address(intentParams.token)).transferFrom(escrowParams.seller, address(escrow), escrowParams.volume);
 
         _makeEscrow(escrowTypedDataHash, escrowParams, 0, 0);
@@ -209,7 +215,7 @@ contract MainnetUserTxn is EIP712 {
         bytes32 escrowTypedHash = _hashTypedDataV4(escrowHash);
         SignatureChecker.isValidSignatureNow(lighterRelayer, escrowTypedHash, sig);
 
-        escrow.paid(escrowTypedHash, address(escrowParams.token), escrowParams.buyer);
+        escrow.paid(escrowTypedHash, escrowParams.id, address(escrowParams.token), escrowParams.buyer);
     }
 
     function release(ISettlerBase.EscrowParams calldata escrowParams, bytes calldata sig) external {
@@ -219,7 +225,7 @@ contract MainnetUserTxn is EIP712 {
         bytes32 escrowTypedHash = _hashTypedDataV4(escrowHash);
         SignatureChecker.isValidSignatureNow(lighterRelayer, escrowTypedHash, sig);
 
-        escrow.release(address(escrowParams.token), escrowParams.buyer, escrowParams.seller, escrowParams.volume, escrowTypedHash, ISettlerBase.EscrowStatus.SellerReleased);
+        escrow.release(escrowTypedHash, escrowParams.id, address(escrowParams.token), escrowParams.buyer, escrowParams.seller, escrowParams.volume,  ISettlerBase.EscrowStatus.SellerReleased);
         
         lighterAccount.removePendingTx(escrowParams.buyer);
         lighterAccount.removePendingTx(escrowParams.seller);
@@ -235,6 +241,7 @@ contract MainnetUserTxn is EIP712 {
             escrowParams.seller, 
             escrowParams.volume, 
             escrowTypedDataHash, 
+            escrowParams.id,
             ISettlerBase.EscrowData({
             status: ISettlerBase.EscrowStatus.Escrowed,
             paidSeconds: 0,

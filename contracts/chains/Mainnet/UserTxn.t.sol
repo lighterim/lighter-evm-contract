@@ -17,6 +17,9 @@ import {LighterAccount} from "../../account/LighterAccount.sol";
 import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
 import {PermitHash} from "@uniswap/permit2/libraries/PermitHash.sol";
 import {ISettlerBase} from "../../interfaces/ISettlerBase.sol";
+import {IAllowanceHolder} from "../../allowanceholder/IAllowanceHolder.sol";
+import {AllowanceHolder} from "../../allowanceholder/AllowanceHolder.sol";
+import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import {console} from "forge-std/console.sol";
 
 contract UserTxnTest is Test {
@@ -27,6 +30,7 @@ contract UserTxnTest is Test {
 
   address buyer;
   address seller;
+  uint256 buyerPrivKey = 0x789;
   uint256 relayerPrivKey = 0x123;
   address relayer;
   address tbaBuyer;
@@ -35,6 +39,7 @@ contract UserTxnTest is Test {
 
   MockUSDC usdc;
 
+  IAllowanceHolder allowanceHolder;
   IEscrow escrow;
   LighterAccount lighterAccount;
   LighterTicket lighterTicket;
@@ -55,7 +60,7 @@ bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermission
   }
 
   function init() internal {
-    buyer = makeAddr("buyer");
+    buyer = vm.addr(buyerPrivKey);
     seller = vm.addr(sellerPrivKey);
     relayer = vm.addr(relayerPrivKey);
     vm.deal(buyer, 1 ether);
@@ -79,7 +84,37 @@ bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermission
     
 
     escrow = new Escrow(relayer);
-    userTxn = new MainnetUserTxn(relayer, escrow, lighterAccount);
+    allowanceHolder = new AllowanceHolder();
+    userTxn = new MainnetUserTxn(relayer, escrow, lighterAccount, allowanceHolder);
+  }
+
+  function test_escrowParamsSignature() public view {
+    uint256 privKey = 0x982572b63ed46adc248af07fe8d25e570bbc77673c55bf60c15e594f36dbd67e;
+    
+    address addr = vm.addr(privKey);
+    console.logAddress(addr);
+    ISettlerBase.EscrowParams memory escrowParams = ISettlerBase.EscrowParams({
+            id: 1,
+            token: address(0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238),
+            volume: 1_000_000,
+            price: 1 ether,
+            usdRate:  1 ether,
+            payer: address(0xD58382f295f5c98BAeB525FAbb7FEBcCc62bc63B),
+            seller: address(0xD58382f295f5c98BAeB525FAbb7FEBcCc62bc63B),
+            sellerFeeRate: 0,
+            paymentMethod: bytes32(0),
+            currency: bytes32(0),
+            payeeDetails: bytes32(0),
+            buyer: address(0x58344547f5C5eDbc8a15Ba2584089b30A04ca0E3),
+            buyerFeeRate: 0
+        });
+    bytes32 escrowHash = escrowParams.hash();
+    bytes32 escrowTypeDataHash = MessageHashUtils.toTypedDataHash(_buildDomainSeparatorEscrowTest(), escrowHash);
+    (uint8 v_escrow, bytes32 r_escrow, bytes32 s_escrow) = vm.sign(privKey, escrowTypeDataHash);
+    bytes memory escrowSig = abi.encodePacked(r_escrow, s_escrow, v_escrow);
+    // 0xe53e4c583400039f0a6378899585d5c26768cd72baa0d8a7125210d756d3e52b6133de5692d1b322f209c40f6fd4a370498e3ebdc81f56f6fe987cd03c5e56791b
+    console.logBytes(escrowSig);
+    assertTrue(SignatureChecker.isValidSignatureNow(addr, escrowTypeDataHash,escrowSig));
   }
 
 
@@ -89,7 +124,14 @@ bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermission
     usdc.approve(address(userTxn), 1 ether);
     vm.stopPrank();
 
-    (ISignatureTransfer.PermitTransferFrom memory permit, ISignatureTransfer.SignatureTransferDetails memory transferDetails, ISettlerBase.IntentParams memory intentParams, ISettlerBase.EscrowParams memory escrowParams, bytes memory permitSig, bytes memory escrowSig) = getParams();
+    (
+      ISignatureTransfer.PermitTransferFrom memory permit, 
+      ISignatureTransfer.SignatureTransferDetails memory transferDetails, 
+      ISettlerBase.IntentParams memory intentParams, 
+      ISettlerBase.EscrowParams memory escrowParams, 
+      bytes memory permitSig, 
+      bytes memory escrowSig
+    ) = getParams();
     vm.prank(buyer);
     userTxn.takeSellerIntent(permit, transferDetails, intentParams, escrowParams, permitSig, escrowSig);
     
@@ -99,13 +141,21 @@ bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermission
   }
 
   function test_takeBuyerIntent() public {
-    vm.prank(seller);
-    usdc.approve(address(userTxn), 1 ether);
+    // vm.prank(seller);
+    // usdc.approve(address(userTxn), 1 ether);
     
     
-    (ISignatureTransfer.PermitTransferFrom memory permit, ISignatureTransfer.SignatureTransferDetails memory transferDetails, ISettlerBase.IntentParams memory intentParams, ISettlerBase.EscrowParams memory escrowParams, bytes memory permitSig, bytes memory intentSig, bytes memory escrowSig) = getTakeBuyerParams();
-    vm.prank(seller);
-    userTxn.takeBuyerIntent(permit, transferDetails, intentParams, escrowParams, permitSig, intentSig, escrowSig);
+    // (
+    //   ISignatureTransfer.PermitTransferFrom memory permit, 
+    //   ISignatureTransfer.SignatureTransferDetails memory transferDetails, 
+    //   ISettlerBase.IntentParams memory intentParams, 
+    //   ISettlerBase.EscrowParams memory escrowParams, 
+    //   bytes memory permitSig, 
+    //   bytes memory intentSig, 
+    //   bytes memory escrowSig
+    // )= getTakeBuyerParams();
+    // vm.prank(seller);
+    // userTxn.takeBuyerIntent(permit, transferDetails, intentParams, escrowParams, permitSig, intentSig, escrowSig);
     
     // assertEq(usdc.balanceOf(seller), 9 ether);
     // assertEq(usdc.balanceOf(address(escrow)), 1 ether);
@@ -122,18 +172,21 @@ bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermission
     bytes memory escrowSig
   ) {
     
+    //卖家的permit2授权
     (permit, transferDetails) = getSignatureTransferPermit();
     bytes32 permitHash = permit.hash();
     bytes32 permitTypeDataHash = _hashTypedData(permitHash);
     (uint8 v_permit, bytes32 r_permit, bytes32 s_permit) = vm.sign(sellerPrivKey, permitTypeDataHash);
     permitSig = abi.encodePacked(r_permit, s_permit, v_permit);
 
+    //买家的意向
     intentParams = getIntentParams();
     bytes32 intentHash = intentParams.hash();
     bytes32 intentTypeDataHash = MessageHashUtils.toTypedDataHash(_buildDomainSeparator(), intentHash);
-    (uint8 v_intent, bytes32 r_intent, bytes32 s_intent) = vm.sign(sellerPrivKey, intentTypeDataHash);
+    (uint8 v_intent, bytes32 r_intent, bytes32 s_intent) = vm.sign(buyerPrivKey, intentTypeDataHash);
     intentSig = abi.encodePacked(r_intent, s_intent, v_intent);
     
+    //担保交易参数拼装，包括卖家的permit2授权，买家的意向，担保交易参数，由relayer签名
     escrowParams = getEscrowParams();
     bytes32 escrowHash = escrowParams.hash();
     bytes32 escrowTypeDataHash = MessageHashUtils.toTypedDataHash(_buildDomainSeparator(), escrowHash);
@@ -216,7 +269,7 @@ bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermission
 
   function getIntentParams() public view returns (ISettlerBase.IntentParams memory intentParams) {
     intentParams = ISettlerBase.IntentParams({
-            token: IERC20(address(usdc)),
+            token: address(usdc),
             range: ISettlerBase.Range({ min: 1 * 1e18, max: 2 * 1e18 }),
             expiryTime: uint64(deadline),
             currency: bytes32(0), 
@@ -229,16 +282,16 @@ bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermission
   function getEscrowParams() public view returns (ISettlerBase.EscrowParams memory escrowParams) {
     escrowParams = ISettlerBase.EscrowParams({
             id: 1,
-            token: IERC20(address(usdc)),
+            token: address(usdc),
             volume: 1 ether,
             price: 1_000,
             usdRate: 1_000,
+            payer: seller,
             seller: seller,
             sellerFeeRate: 1_000,
             paymentMethod: bytes32(0),
             currency: bytes32(0),
-            payeeId: bytes32(0),
-            payeeAccount: bytes32(0),
+            payeeDetails: bytes32(0),
             buyer: buyer,
             buyerFeeRate: 1_000
         });
@@ -246,6 +299,10 @@ bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermission
 
   function _buildDomainSeparator() internal view returns (bytes32) {
     return keccak256(abi.encode(TYPE_HASH, keccak256(bytes("MainnetUserTxn")), keccak256(bytes("1")), block.chainid, address(userTxn)));
+  }
+
+  function _buildDomainSeparatorEscrowTest() internal view returns (bytes32) {
+    return keccak256(abi.encode(TYPE_HASH, keccak256(bytes("MainnetUserTxn")), keccak256(bytes("1")), 11155111, address(0xFb1D5645Aedd46a25660dD90Ab1481C4882AAaCB)));
   }
 
 

@@ -16,5 +16,10 @@
   },
   "dependencies": {
     "dotenv": "^17.2.3"
+  },
+  "scripts": {
+    "compile": "npx hardhat compile",
+    "sync-abis": "npx ts-node scripts/sync-abis.ts",
+    "build-and-sync": "npm run compile && npm run sync-abis"
   }
 }

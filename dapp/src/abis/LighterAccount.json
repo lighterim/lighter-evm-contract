@@ -151,15 +151,15 @@
       },
       {
         "indexed": false,
-        "internalType": "string",
-        "name": "hexNostrPubKey",
-        "type": "string"
-      },
-      {
-        "indexed": false,
         "internalType": "uint256",
         "name": "rent",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "hexNostrPubKey",
+        "type": "string"
       }
     ],
     "name": "QuotaUpgraded",
@@ -207,15 +207,15 @@
       },
       {
         "indexed": false,
-        "internalType": "string",
-        "name": "hexNostrPubKey",
-        "type": "string"
-      },
-      {
-        "indexed": false,
         "internalType": "uint256",
         "name": "amount",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "hexNostrPubKey",
+        "type": "string"
       }
     ],
     "name": "TicketDestroyed",
@@ -244,15 +244,15 @@
       },
       {
         "indexed": false,
-        "internalType": "bytes32",
-        "name": "nostrPubKey",
-        "type": "bytes32"
-      },
-      {
-        "indexed": false,
         "internalType": "uint256",
         "name": "rent",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "nostrPubKey",
+        "type": "bytes32"
       }
     ],
     "name": "TicketRentedWithTBA",
@@ -336,7 +336,7 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "tokenId",
+        "name": "nftId",
         "type": "uint256"
       },
       {
@@ -506,6 +506,19 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "newBaseURI",
+        "type": "string"
+      }
+    ],
+    "name": "setTicketBaseURI",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "ticketContract",
     "outputs": [
@@ -526,8 +539,37 @@
         "type": "address"
       }
     ],
-    "name": "ticketReceipts",
+    "name": "ticketRents",
     "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "tbaAddress",
+        "type": "address"
+      }
+    ],
+    "name": "token",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      },
       {
         "internalType": "uint256",
         "name": "",
@@ -567,7 +609,7 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "tokenId",
+        "name": "nftId",
         "type": "uint256"
       }
     ],

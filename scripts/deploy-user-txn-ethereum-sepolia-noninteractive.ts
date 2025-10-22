@@ -82,17 +82,24 @@ async function main() {
     const escrow = await viem.deployContract("Escrow", [wallet.account.address]);
     console.log("✅ Escrow contract deployed at:", escrow.address);
 
-    // 6. Transfer LighterTicket ownership to LighterAccount
+    // 6. Deploy AllowanceHolder contract
+    console.log("\n📦 Deploying AllowanceHolder contract...");
+    // const allowanceHolder = await viem.deployContract("AllowanceHolder");
+    // console.log("✅ AllowanceHolder deployed at:", allowanceHolder.address);
+    const allowanceHolderAddress = "0xe3aFe266962F5A02983f42B7a33f47ec22b716aB";
+
+    // 7. Transfer LighterTicket ownership to LighterAccount
     console.log("\n📦 Transferring LighterTicket ownership to LighterAccount...");
     await lighterTicket.write.transferOwnership([lighterAccount.address]);
     console.log("✅ Ownership transferred to LighterAccount");
 
-    // 7. Deploy the MainnetUserTxn contract (updated constructor)
+    // 8. Deploy the MainnetUserTxn contract (updated constructor with AllowanceHolder)
     console.log("\n📦 Deploying MainnetUserTxn contract...");
     const userTxn = await viem.deployContract("MainnetUserTxn", [
       lighterRelayerAddress, 
       escrow.address, 
-      lighterAccount.address
+      lighterAccount.address,
+      allowanceHolderAddress
     ]/*, {
       libraries: {
         "SignatureVerification": signatureVerificationLib.address
@@ -125,14 +132,17 @@ async function main() {
     console.log("5. Verify Escrow:");
     console.log(`npx hardhat verify --network sepolia ${escrow.address} ${wallet.account.address}`);
     console.log("");
-    // console.log("6. Verify SignatureVerification library:");
+    console.log("6. Verify AllowanceHolder:");
+    console.log(`npx hardhat verify --network sepolia ${allowanceHolderAddress}`);
+    console.log("");
+    // console.log("7. Verify SignatureVerification library:");
     // console.log(`npx hardhat verify --network sepolia ${signatureVerificationLib.address}`);
     // console.log("");
-    // console.log("7. Verify MainnetUserTxn:");
-    console.log(`npx hardhat verify --network sepolia ${userTxn.address} ${lighterRelayerAddress} ${escrow.address} ${lighterAccount.address}`);
+    // console.log("8. Verify MainnetUserTxn:");
+    console.log(`npx hardhat verify --network sepolia ${userTxn.address} ${lighterRelayerAddress} ${escrow.address} ${lighterAccount.address} ${allowanceHolderAddress}`);
     console.log("");
     console.log("For contracts with libraries (like MainnetUserTxn), if verification fails, try:");
-    console.log(`npx hardhat verify --network sepolia ${userTxn.address} ${lighterRelayerAddress} ${escrow.address} ${lighterAccount.address}`);
+    console.log(`npx hardhat verify --network sepolia ${userTxn.address} ${lighterRelayerAddress} ${escrow.address} ${lighterAccount.address} ${allowanceHolderAddress}`);
     
     // Display results
     console.log("\n🎉 All contracts successfully deployed and verified on Ethereum Sepolia!");
@@ -142,6 +152,7 @@ async function main() {
     console.log("- AccountV3Simplified:", `https://sepolia.etherscan.io/address/${accountV3Impl.address}`);
     console.log("- LighterAccount:", `https://sepolia.etherscan.io/address/${lighterAccount.address}`);
     console.log("- Escrow:", `https://sepolia.etherscan.io/address/${escrow.address}`);
+    console.log("- AllowanceHolder:", `https://sepolia.etherscan.io/address/${allowanceHolderAddress}`);
     //console.log("- SignatureVerification:", `https://sepolia.etherscan.io/address/${signatureVerificationLib.address}`);
     console.log("- MainnetUserTxn:", `https://sepolia.etherscan.io/address/${userTxn.address}`);
     
@@ -159,6 +170,7 @@ async function main() {
     console.log("- AccountV3Simplified:", accountV3Impl.address);
     console.log("- LighterAccount:", lighterAccount.address);
     console.log("- Escrow:", escrow.address);
+    console.log("- AllowanceHolder:", allowanceHolderAddress);
     // console.log("- SignatureVerification:", signatureVerificationLib.address);
     console.log("- MainnetUserTxn:", userTxn.address);
     
@@ -176,6 +188,7 @@ async function main() {
       accountV3ImplAddress: accountV3Impl.address,
       lighterAccountAddress: lighterAccount.address,
       escrowAddress: escrow.address,
+      allowanceHolderAddress: allowanceHolderAddress,
     //   signatureVerificationLibAddress: signatureVerificationLib.address,
       contractAddress: userTxn.address,
       deployer: wallet.account.address,

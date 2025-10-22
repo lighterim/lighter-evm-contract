@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAccount, usePublicClient, useWalletClient, useWriteContract } from 'wagmi';
-import { parseUnits, parseEther, formatUnits, decodeErrorResult } from 'viem';
-import { AllowanceTransfer } from '@uniswap/permit2-sdk';
+import { parseUnits, parseEther, decodeErrorResult } from 'viem';
 
 // 合约 ABI
 const CONTRACT_ABI = [
@@ -18,12 +17,12 @@ const CONTRACT_ABI = [
           {"name": "volume", "type": "uint256"},
           {"name": "price", "type": "uint256"},
           {"name": "usdRate", "type": "uint256"},
+          {"name": "payer", "type": "address"},
           {"name": "seller", "type": "address"},
           {"name": "sellerFeeRate", "type": "uint256"},
           {"name": "paymentMethod", "type": "bytes32"},
           {"name": "currency", "type": "bytes32"},
-          {"name": "payeeId", "type": "bytes32"},
-          {"name": "payeeAccount", "type": "bytes32"},
+          {"name": "payeeDetails", "type": "bytes32"},
           {"name": "buyer", "type": "address"},
           {"name": "buyerFeeRate", "type": "uint256"}
         ]
@@ -67,12 +66,12 @@ const CONTRACT_ABI = [
           {"name": "volume", "type": "uint256"},
           {"name": "price", "type": "uint256"},
           {"name": "usdRate", "type": "uint256"},
+          {"name": "payer", "type": "address"},
           {"name": "seller", "type": "address"},
           {"name": "sellerFeeRate", "type": "uint256"},
           {"name": "paymentMethod", "type": "bytes32"},
           {"name": "currency", "type": "bytes32"},
-          {"name": "payeeId", "type": "bytes32"},
-          {"name": "payeeAccount", "type": "bytes32"},
+          {"name": "payeeDetails", "type": "bytes32"},
           {"name": "buyer", "type": "address"},
           {"name": "buyerFeeRate", "type": "uint256"}
         ]
@@ -116,7 +115,6 @@ const CONTRACT_ABI = [
 ] as const;
 
 // Permit2 地址
-const PERMIT2_ADDRESS = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
 
 const BuyerInteraction: React.FC = () => {
   const { address, isConnected } = useAccount();
@@ -148,8 +146,7 @@ const BuyerInteraction: React.FC = () => {
   const [escrowSellerFeeRate, setEscrowSellerFeeRate] = useState<string>('0');
   const [escrowPaymentMethod, setEscrowPaymentMethod] = useState<string>('0x0000000000000000000000000000000000000000000000000000000000000000');
   const [escrowCurrency, setEscrowCurrency] = useState<string>('0x0000000000000000000000000000000000000000000000000000000000000000');
-  const [escrowPayeeId, setEscrowPayeeId] = useState<string>('0x0000000000000000000000000000000000000000000000000000000000000000');
-  const [escrowPayeeAccount, setEscrowPayeeAccount] = useState<string>('0x0000000000000000000000000000000000000000000000000000000000000000');
+  const [escrowPayeeDetails, setEscrowPayeeDetails] = useState<string>('0x0000000000000000000000000000000000000000000000000000000000000000');
   const [escrowBuyer, setEscrowBuyer] = useState<string>('');
   const [escrowBuyerFeeRate, setEscrowBuyerFeeRate] = useState<string>('0');
 
@@ -161,7 +158,7 @@ const BuyerInteraction: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // 全局时间戳管理
-  const [globalExpiryTime, setGlobalExpiryTime] = useState<number>(0);
+  const [globalExpiryTime] = useState<number>(0);
 
   // 监听交易状态变化
   useEffect(() => {
@@ -217,12 +214,12 @@ const BuyerInteraction: React.FC = () => {
         volume: parseUnits(escrowVolume, tokenDecimals),
         price: parseEther(escrowPrice),
         usdRate: parseEther(escrowUsdRate),
+        payer: escrowSeller as `0x${string}`, // payer 等于 seller
         seller: escrowSeller as `0x${string}`,
         sellerFeeRate: BigInt(escrowSellerFeeRate),
         paymentMethod: escrowPaymentMethod as `0x${string}`,
         currency: escrowCurrency as `0x${string}`,
-        payeeId: escrowPayeeId as `0x${string}`,
-        payeeAccount: escrowPayeeAccount as `0x${string}`,
+        payeeDetails: escrowPayeeDetails as `0x${string}`,
         buyer: escrowBuyer as `0x${string}`,
         buyerFeeRate: BigInt(escrowBuyerFeeRate)
       };
@@ -243,12 +240,12 @@ const BuyerInteraction: React.FC = () => {
           { name: 'volume', type: 'uint256' },
           { name: 'price', type: 'uint256' },
           { name: 'usdRate', type: 'uint256' },
+          { name: 'payer', type: 'address' },
           { name: 'seller', type: 'address' },
           { name: 'sellerFeeRate', type: 'uint256' },
           { name: 'paymentMethod', type: 'bytes32' },
           { name: 'currency', type: 'bytes32' },
-          { name: 'payeeId', type: 'bytes32' },
-          { name: 'payeeAccount', type: 'bytes32' },
+          { name: 'payeeDetails', type: 'bytes32' },
           { name: 'buyer', type: 'address' },
           { name: 'buyerFeeRate', type: 'uint256' }
         ]
@@ -308,12 +305,12 @@ const BuyerInteraction: React.FC = () => {
         volume: parseUnits(escrowVolume, tokenDecimals),
         price: parseEther(escrowPrice),
         usdRate: parseEther(escrowUsdRate),
+        payer: escrowSeller as `0x${string}`,
         seller: escrowSeller as `0x${string}`,
         sellerFeeRate: BigInt(escrowSellerFeeRate),
         paymentMethod: escrowPaymentMethod as `0x${string}`,
         currency: escrowCurrency as `0x${string}`,
-        payeeId: escrowPayeeId as `0x${string}`,
-        payeeAccount: escrowPayeeAccount as `0x${string}`,
+        payeeDetails: escrowPayeeDetails as `0x${string}`,
         buyer: escrowBuyer as `0x${string}`,
         buyerFeeRate: BigInt(escrowBuyerFeeRate)
       };
@@ -427,12 +424,12 @@ const BuyerInteraction: React.FC = () => {
         volume: parseUnits(escrowVolume, tokenDecimals),
         price: parseEther(escrowPrice),
         usdRate: parseEther(escrowUsdRate),
+        payer: escrowSeller as `0x${string}`,
         seller: escrowSeller as `0x${string}`,
         sellerFeeRate: BigInt(escrowSellerFeeRate),
         paymentMethod: escrowPaymentMethod as `0x${string}`,
         currency: escrowCurrency as `0x${string}`,
-        payeeId: escrowPayeeId as `0x${string}`,
-        payeeAccount: escrowPayeeAccount as `0x${string}`,
+        payeeDetails: escrowPayeeDetails as `0x${string}`,
         buyer: escrowBuyer as `0x${string}`,
         buyerFeeRate: BigInt(escrowBuyerFeeRate)
       };
@@ -708,19 +705,11 @@ const BuyerInteraction: React.FC = () => {
         </div>
         <div className="form-row">
           <div className="form-group">
-            <label>收款人 ID:</label>
+            <label>收款人详情:</label>
             <input
               type="text"
-              value={escrowPayeeId}
-              onChange={(e) => setEscrowPayeeId(e.target.value)}
-            />
-          </div>
-          <div className="form-group">
-            <label>收款人账户:</label>
-            <input
-              type="text"
-              value={escrowPayeeAccount}
-              onChange={(e) => setEscrowPayeeAccount(e.target.value)}
+              value={escrowPayeeDetails}
+              onChange={(e) => setEscrowPayeeDetails(e.target.value)}
             />
           </div>
         </div>

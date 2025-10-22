@@ -5,6 +5,8 @@ import { WalletConnectButton } from './components/WalletConnectButton';
 import { ContractInteraction } from './components/ContractInteraction';
 import BuyerInteraction from './components/BuyerInteraction';
 import LighterAccountInteraction from './components/LighterAccountInteraction';
+import SellerIntentForm from './components/SellerIntentForm';
+import BuyerIntentForm from './components/BuyerIntentForm';
 import './App.css';
 
 function App() {
@@ -13,7 +15,7 @@ function App() {
   const { disconnect } = useDisconnect();
   const [contractAddress, setContractAddress] = useState<string>('');
   const [lighterAccountAddress, setLighterAccountAddress] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'seller' | 'buyer' | 'lighter'>('lighter');
+  const [activeTab, setActiveTab] = useState<'seller' | 'buyer' | 'lighter' | 'sellerIntent' | 'buyerIntent'>('lighter');
 
   const handleConnectWallet = () => {
     connect({ connector: injected() });
@@ -78,6 +80,18 @@ function App() {
                 >
                   🛒 买家业务 (_takeBulkSellIntent, paid)
                 </button>
+                <button 
+                  className={`tab-button ${activeTab === 'sellerIntent' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('sellerIntent')}
+                >
+                  🔄 卖家签名生成 (takeSellerIntent)
+                </button>
+                <button 
+                  className={`tab-button ${activeTab === 'buyerIntent' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('buyerIntent')}
+                >
+                  🛒 买家调用 (takeSellerIntent)
+                </button>
               </div>
               
               <div className="tab-content">
@@ -107,6 +121,12 @@ function App() {
                 )}
                 {activeTab === 'buyer' && (
                   <BuyerInteraction />
+                )}
+                {activeTab === 'sellerIntent' && contractAddress && (
+                  <SellerIntentForm />
+                )}
+                {activeTab === 'buyerIntent' && (
+                  <BuyerIntentForm />
                 )}
               </div>
             </div>
