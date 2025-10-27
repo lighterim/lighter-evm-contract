@@ -46,6 +46,15 @@ contract MainnetUserTxn is EIP712 {
         lighterRelayer = lighterRelayer_;
     }
 
+    function hashEscrowParams(ISettlerBase.EscrowParams memory escrowParams) public view returns (bytes32) {
+        bytes32 escrowHash = escrowParams.hash();
+        return _hashTypedDataV4(escrowHash);
+    }
+
+    function hashIntentParams(ISettlerBase.IntentParams memory intentParams) public view returns (bytes32) {
+        bytes32 intentHash = intentParams.hash();
+        return _hashTypedDataV4(intentHash);
+    }
 
 
     /**

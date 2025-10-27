@@ -8,8 +8,9 @@ import {IAllowanceHolder} from "../../allowanceholder/IAllowanceHolder.sol";
 import {Permit2PaymentMetaTxn} from "../../core/Permit2Payment.sol";
 import {MainnetMixin} from "./Common.sol";
 import {SettlerMetaTxn} from "../../SettlerMetaTxn.sol";
-
+import {AbstractContext} from "../../Context.sol";
 import {ISettlerActions} from "../../ISettlerActions.sol";
+import {EscrowAbstract} from "../../core/EscrowAbstract.sol";
 
 import {SettlerAbstract} from "../../SettlerAbstract.sol";
 import {SettlerBase} from "../../SettlerBase.sol";
@@ -24,14 +25,11 @@ contract MainnetSettlerMetaTxn is MainnetMixin, SettlerMetaTxn {
 
       }
 
-    function _dispatch(uint256 index, uint256 action, bytes calldata data) internal virtual override returns (bool) {
-        // return super._dispatch(index, action, data);
-        return true;
-    }
-
     
 
-    function _msgSender() internal view virtual override(SettlerMetaTxn) returns (address) {
+
+    
+    function _msgSender() internal view virtual override(SettlerMetaTxn, AbstractContext) returns (address) {
         return super._msgSender();
     }
 }

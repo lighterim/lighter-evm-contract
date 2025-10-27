@@ -94,7 +94,7 @@ abstract contract Settler is ISettlerTakerSubmitted, Permit2PaymentTakerSubmitte
         internal
         view
         virtual
-        override(Permit2PaymentTakerSubmitted)
+        override(Permit2PaymentTakerSubmitted, AbstractContext)
         returns (address)
     {
         return super._msgSender();
@@ -104,7 +104,7 @@ abstract contract Settler is ISettlerTakerSubmitted, Permit2PaymentTakerSubmitte
         internal
         pure
         virtual
-        override(Permit2PaymentTakerSubmitted)
+        override(Permit2PaymentTakerSubmitted, Permit2PaymentAbstract)
         returns (bool)
     {
         return super._isRestrictedTarget(target);

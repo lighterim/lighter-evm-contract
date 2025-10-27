@@ -8,6 +8,7 @@ import {uint512} from "./utils/512Math.sol";
 
 import {ISettlerActions} from "./ISettlerActions.sol";
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
+import {EscrowAbstract} from "./core/EscrowAbstract.sol";
 
 import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
 import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer.sol";
@@ -45,8 +46,7 @@ library CalldataDecoder {
     }
 }
 
-// abstract contract SettlerBase is ISettlerBase, Basic, RfqOrderSettlement, UniswapV3Fork, UniswapV2, Velodrome {
-abstract contract SettlerBase is ISettlerBase {
+abstract contract SettlerBase is ISettlerBase, EscrowAbstract {
     using SafeTransferLib for IERC20;
     using SafeTransferLib for address payable;
 
@@ -128,6 +128,8 @@ abstract contract SettlerBase is ISettlerBase {
     //     }
     //     return true;
     // }
+
+    // function _checkWitnessAndPayer(bytes32 witness, address payer) internal view virtual;
 
     
 }

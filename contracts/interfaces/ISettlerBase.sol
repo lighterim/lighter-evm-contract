@@ -3,6 +3,15 @@ pragma solidity ^0.8.25;
 
 interface ISettlerBase {
 
+    enum Stage{
+        MANUAL,
+        ZK_TLS,
+        ZK_MAIL,
+        OPT1,
+        OPT2,
+        OPT3
+    }
+
     struct Range {
         uint256 min;                                // Minimum value
         uint256 max;                                // Maximum value
@@ -58,5 +67,10 @@ interface ISettlerBase {
         uint256 gasSpentForBuyer;
         uint256 gasSpentForSeller;
     } 
+
+    struct PaymentMethodConfig {
+        uint32 windowSeconds;
+        bool isEnabled;
+    }
 
 }

@@ -122,7 +122,7 @@ abstract contract SettlerMetaTxn is ISettlerMetaTxn, Permit2PaymentMetaTxn, Sett
     }
 
     // Solidity inheritance is stupid
-    function _msgSender() internal view virtual override(Permit2PaymentMetaTxn) returns (address) {
+    function _msgSender() internal view virtual override(Permit2PaymentMetaTxn, AbstractContext) returns (address) {
         return super._msgSender();
     }
 }
