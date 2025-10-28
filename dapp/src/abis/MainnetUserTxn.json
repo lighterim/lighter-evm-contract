@@ -26,8 +26,39 @@
     "type": "constructor"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "expiryTime",
+        "type": "uint256"
+      }
+    ],
+    "name": "IntentExpired",
+    "type": "error"
+  },
+  {
     "inputs": [],
     "name": "InvalidAmount",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidEscrowSignature",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidIntentSignature",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidPayment",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidPrice",
     "type": "error"
   },
   {
@@ -84,6 +115,32 @@
     "type": "event"
   },
   {
+    "inputs": [],
+    "name": "_ALLOWANCE_HOLDER",
+    "outputs": [
+      {
+        "internalType": "contract IAllowanceHolder",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "_PERMIT2",
+    "outputs": [
+      {
+        "internalType": "contract IPermit2",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "components": [
@@ -132,7 +189,7 @@
       {
         "components": [
           {
-            "internalType": "contract IERC20",
+            "internalType": "address",
             "name": "token",
             "type": "address"
           },
@@ -209,7 +266,7 @@
             "type": "uint256"
           },
           {
-            "internalType": "contract IERC20",
+            "internalType": "address",
             "name": "token",
             "type": "address"
           },
@@ -387,6 +444,459 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "getDomainSeparator",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "lighterRelayer",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "id",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "token",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "volume",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "price",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "usdRate",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "payer",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "seller",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "sellerFeeRate",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "paymentMethod",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "currency",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "payeeDetails",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "address",
+            "name": "buyer",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "buyerFeeRate",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct ISettlerBase.EscrowParams",
+        "name": "params",
+        "type": "tuple"
+      },
+      {
+        "internalType": "bytes",
+        "name": "sig",
+        "type": "bytes"
+      }
+    ],
+    "name": "makesureEscrowParams",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "escrowTypedHash",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "token",
+            "type": "address"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint256",
+                "name": "min",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "max",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct ISettlerBase.Range",
+            "name": "range",
+            "type": "tuple"
+          },
+          {
+            "internalType": "uint64",
+            "name": "expiryTime",
+            "type": "uint64"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "currency",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "paymentMethod",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "payeeDetails",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "uint256",
+            "name": "price",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct ISettlerBase.IntentParams",
+        "name": "params",
+        "type": "tuple"
+      },
+      {
+        "internalType": "bytes",
+        "name": "sig",
+        "type": "bytes"
+      }
+    ],
+    "name": "makesureIntentParams",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "intentTypedHash",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "id",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "token",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "volume",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "price",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "usdRate",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "payer",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "seller",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "sellerFeeRate",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "paymentMethod",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "currency",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "payeeDetails",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "address",
+            "name": "buyer",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "buyerFeeRate",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct ISettlerBase.EscrowParams",
+        "name": "escrowParams",
+        "type": "tuple"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "token",
+            "type": "address"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint256",
+                "name": "min",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "max",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct ISettlerBase.Range",
+            "name": "range",
+            "type": "tuple"
+          },
+          {
+            "internalType": "uint64",
+            "name": "expiryTime",
+            "type": "uint64"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "currency",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "paymentMethod",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "payeeDetails",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "uint256",
+            "name": "price",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct ISettlerBase.IntentParams",
+        "name": "intentParams",
+        "type": "tuple"
+      }
+    ],
+    "name": "makesureTradeValidation",
+    "outputs": [],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "components": [
+          {
+            "components": [
+              {
+                "internalType": "address",
+                "name": "token",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct ISignatureTransfer.TokenPermissions",
+            "name": "permitted",
+            "type": "tuple"
+          },
+          {
+            "internalType": "uint256",
+            "name": "nonce",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "deadline",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct ISignatureTransfer.PermitTransferFrom",
+        "name": "permit",
+        "type": "tuple"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "to",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "requestedAmount",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct ISignatureTransfer.SignatureTransferDetails",
+        "name": "transferDetails",
+        "type": "tuple"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "token",
+            "type": "address"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint256",
+                "name": "min",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "max",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct ISettlerBase.Range",
+            "name": "range",
+            "type": "tuple"
+          },
+          {
+            "internalType": "uint64",
+            "name": "expiryTime",
+            "type": "uint64"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "currency",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "paymentMethod",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "payeeDetails",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "uint256",
+            "name": "price",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct ISettlerBase.IntentParams",
+        "name": "intentParams",
+        "type": "tuple"
+      },
+      {
+        "internalType": "bytes",
+        "name": "sig",
+        "type": "bytes"
+      }
+    ],
+    "name": "makesureTransferWithWitness",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "witnessHash",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "components": [
@@ -481,7 +991,7 @@
             "type": "uint256"
           },
           {
-            "internalType": "contract IERC20",
+            "internalType": "address",
             "name": "token",
             "type": "address"
           },
@@ -559,6 +1069,19 @@
   {
     "inputs": [
       {
+        "internalType": "address",
+        "name": "lighterRelayer_",
+        "type": "address"
+      }
+    ],
+    "name": "setLighterRelayer",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "components": [
           {
             "components": [
@@ -612,7 +1135,7 @@
       {
         "components": [
           {
-            "internalType": "contract IERC20",
+            "internalType": "address",
             "name": "token",
             "type": "address"
           },
@@ -671,7 +1194,7 @@
             "type": "uint256"
           },
           {
-            "internalType": "contract IERC20",
+            "internalType": "address",
             "name": "token",
             "type": "address"
           },
@@ -812,7 +1335,7 @@
       {
         "components": [
           {
-            "internalType": "contract IERC20",
+            "internalType": "address",
             "name": "token",
             "type": "address"
           },
@@ -871,7 +1394,7 @@
             "type": "uint256"
           },
           {
-            "internalType": "contract IERC20",
+            "internalType": "address",
             "name": "token",
             "type": "address"
           },

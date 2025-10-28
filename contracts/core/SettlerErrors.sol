@@ -30,6 +30,7 @@ error InvalidSender();
 
 error InvalidSpender();
 
+
 error HasPendingTx(address account);
 
 error PendingTxExists(address account, bytes32 escrowHash);
@@ -56,11 +57,16 @@ error InvalidSignature();
 
 error InvalidEscrowSignature();
 
-error intentExpired(uint256 expiryTime);
 error InvalidIntentSignature();
+
 error InvalidPayment();
-error InvalidPaymentMethod();
+
 error InvalidPrice();
+
+error IntentExpired(uint256 expiryTime);
+
+error InvalidPaymentMethod();
+
 
 /// @notice Thrown when a slippage limit is exceeded
 error TooMuchSlippage(IERC20 token, uint256 expected, uint256 actual);

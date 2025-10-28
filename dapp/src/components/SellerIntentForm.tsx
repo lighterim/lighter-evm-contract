@@ -20,23 +20,23 @@ const SellerIntentForm: React.FC = () => {
   const [amount, setAmount] = useState<string>('1');
   const [nonce, setNonce] = useState<string>('1347343934330334');
   const [deadline, setDeadline] = useState<string>('');
-  const [minAmount, setMinAmount] = useState<string>('0.9');
-  const [maxAmount, setMaxAmount] = useState<string>('1.1');
+  const [minAmount, setMinAmount] = useState<string>('1');
+  const [maxAmount, setMaxAmount] = useState<string>('1');
   const [price, setPrice] = useState<string>('1');
-  const [currency, setCurrency] = useState<string>('0x0000000000000000000000000000000000000000000000000000000000000000');
-  const [paymentMethod, setPaymentMethod] = useState<string>('0x0000000000000000000000000000000000000000000000000000000000000000');
-  const [payeeDetails, setPayeeDetails] = useState<string>('0x0000000000000000000000000000000000000000000000000000000000000000');
+  const [currency, setCurrency] = useState<string>('0xc4ae21aac0c6549d71dd96035b7e0bdb6c79ebdba8891b666115bc976d16a29e');
+  const [paymentMethod, setPaymentMethod] = useState<string>('0xa87f59463aa7edfb0cc3cc39e28ba98c83fda1a3b5c6c9d10219c02669eb8a19');
+  const [payeeDetails, setPayeeDetails] = useState<string>('0x157a30e0353a95e0152bb1cf546ffbc81ae0983338d4f84307fb58604e42367e');
 
   // EscrowParams 参数状态
   const [escrowId, setEscrowId] = useState<string>('1');
-  const [escrowVolume, setEscrowVolume] = useState<string>('1.5');
+  const [escrowVolume, setEscrowVolume] = useState<string>('1');
   const [escrowPrice, setEscrowPrice] = useState<string>('1');
   const [escrowUsdRate, setEscrowUsdRate] = useState<string>('1');
   const [escrowSeller, setEscrowSeller] = useState<string>('');
   const [escrowSellerFeeRate, setEscrowSellerFeeRate] = useState<string>('0');
-  const [escrowPaymentMethod, setEscrowPaymentMethod] = useState<string>('0x0000000000000000000000000000000000000000000000000000000000000000');
-  const [escrowCurrency, setEscrowCurrency] = useState<string>('0x0000000000000000000000000000000000000000000000000000000000000000');
-  const [escrowPayeeDetails, setEscrowPayeeDetails] = useState<string>('0x0000000000000000000000000000000000000000000000000000000000000000');
+  const [escrowPaymentMethod, setEscrowPaymentMethod] = useState<string>('0xa87f59463aa7edfb0cc3cc39e28ba98c83fda1a3b5c6c9d10219c02669eb8a19');
+  const [escrowCurrency, setEscrowCurrency] = useState<string>('0xc4ae21aac0c6549d71dd96035b7e0bdb6c79ebdba8891b666115bc976d16a29e');
+  const [escrowPayeeDetails, setEscrowPayeeDetails] = useState<string>('0x157a30e0353a95e0152bb1cf546ffbc81ae0983338d4f84307fb58604e42367e');
   const [escrowBuyer, setEscrowBuyer] = useState<string>('');
   const [escrowBuyerFeeRate, setEscrowBuyerFeeRate] = useState<string>('0');
 
@@ -87,7 +87,7 @@ const SellerIntentForm: React.FC = () => {
           min: parseUnits(minAmount, tokenDecimals),
           max: parseUnits(maxAmount, tokenDecimals)
         },
-        expiryTime: globalDeadline,
+        expiryTime: BigInt(globalDeadline),
         currency: currency as `0x${string}`,
         paymentMethod: paymentMethod as `0x${string}`,
         payeeDetails: payeeDetails as `0x${string}`,
