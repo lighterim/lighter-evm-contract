@@ -10,8 +10,12 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
-import {InvalidSpender, InvalidAmount, SignatureExpired, InvalidSignature, InvalidToken, InvalidSender, InsufficientQuota} from "../../core/SettlerErrors.sol";
+import {InvalidSpender, InvalidAmount, SignatureExpired, InvalidSignature, InvalidToken, IntentExpired,
+InvalidSender, InsufficientQuota, InvalidEscrowSignature, InvalidIntentSignature, InvalidPayment, InvalidPrice,
+InvalidRecipient
+} from "../../core/SettlerErrors.sol";
 import {ISettlerBase} from "../../interfaces/ISettlerBase.sol";
 import {IEscrow} from "../../interfaces/IEscrow.sol";
 import {LighterAccount} from "../../account/LighterAccount.sol";
@@ -90,7 +94,7 @@ contract MainnetUserTxn is EIP712 {
         bytes memory sig, 
         bytes memory intentSig
     ) external {
-        if(escrowParams.buyer != msg.sender) revert InvalidSender();
+        // if(escrowParams.buyer != msg.sender) revert InvalidSender();
         // if(!lighterAccount.hasAvailableQuota(escrowParams.buyer)) revert InsufficientQuota();
         // if(!lighterAccount.hasAvailableQuota(escrowParams.seller)) revert InsufficientQuota();
         address tokenAddress = address(escrowParams.token);
@@ -133,7 +137,7 @@ contract MainnetUserTxn is EIP712 {
         bytes memory sig
     ) external {
         if (permit.deadline < block.timestamp) revert SignatureExpired(permit.deadline);
-        if(transferDetails.to != address(this)) revert InvalidSpender();
+        if(transferDetails.to != address(escrow)) revert InvalidRecipient();
 
         address tokenAddress = address(permit.permitted.token);
         if (address(escrowParams.token) != address(intentParams.token) || tokenAddress != address(escrowParams.token)) revert InvalidToken();
@@ -155,7 +159,7 @@ contract MainnetUserTxn is EIP712 {
         bytes32 intentParamsHash = intentParams.hash(); 
         // console.logBytes32(intentParamsHash);
         // console.logString("#########################");
-        _transferFromIKnowWhatImDoing(permit, transferDetails, escrowParams.seller, intentParamsHash, ParamsHash._INTENT_WITNESS_TYPE_STRING, permitSig);
+        _transferFromIKnowWhatImDoing(permit, transferDetails, escrowParams.payer, intentParamsHash, ParamsHash._INTENT_WITNESS_TYPE_STRING, permitSig);
         // TODO: 这里需要修改，使用permit2的transferFrom, only for unit test
         // IERC20(address(intentParams.token)).transferFrom(escrowParams.seller, address(escrow), escrowParams.volume);
 
@@ -186,9 +190,9 @@ contract MainnetUserTxn is EIP712 {
         bytes memory sig
     ) external {
         if(permit.deadline < block.timestamp || intentParams.expiryTime < block.timestamp) revert SignatureExpired(permit.deadline);
-        if(escrowParams.seller != msg.sender) revert InvalidSender();
+        // if(escrowParams.payer != msg.sender) revert InvalidSender();
         if(address(permit.permitted.token) != address(intentParams.token)) revert InvalidToken();
-        if(transferDetails.to != address(this)) revert InvalidSpender();
+        if(transferDetails.to != address(escrow)) revert InvalidSpender();
         if(
             transferDetails.requestedAmount != escrowParams.volume
             || intentParams.range.min > 0 && escrowParams.volume < intentParams.range.min
@@ -434,6 +438,53 @@ contract MainnetUserTxn is EIP712 {
 
     function _msgSender() internal view returns (address) {
         return msg.sender;
+    }
+
+    function getDomainSeparator() public view virtual returns (bytes32){
+        return _domainSeparatorV4();
+    }
+
+    function makesureTransferWithWitness(
+        address owner, 
+        ISignatureTransfer.PermitTransferFrom memory permit, 
+        ISignatureTransfer.SignatureTransferDetails memory transferDetails, 
+        ISettlerBase.IntentParams memory intentParams, bytes memory sig) public view virtual returns (bytes32 witnessHash) {
+        if(transferDetails.to != address(escrow)) revert InvalidSpender();
+        bytes32 intentParamsHash = intentParams.hash(); 
+        witnessHash = _hashWithWitness(permit, intentParamsHash);
+        if(!isValidSignature(owner, witnessHash, sig)) revert InvalidSignature();
+    }
+
+    function _hashWithWitness(ISignatureTransfer.PermitTransferFrom memory permit, bytes32 witness) internal view returns (bytes32) {
+        string memory witnessTypeString = ParamsHash._INTENT_WITNESS_TYPE_STRING;
+        bytes32 typeHash = keccak256(abi.encodePacked(PermitHash._PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB, witnessTypeString));
+        bytes32 tokenPermissionsHash = keccak256(abi.encode(PermitHash._TOKEN_PERMISSIONS_TYPEHASH, permit.permitted));
+        return keccak256(abi.encode(typeHash, tokenPermissionsHash, address(this), permit.nonce, permit.deadline, witness));
+    }
+
+    function makesureEscrowParams(ISettlerBase.EscrowParams memory params, bytes memory sig) public view virtual returns (bytes32 escrowTypedHash){
+        bytes32 escrowHash = params.hash();
+        escrowTypedHash = MessageHashUtils.toTypedDataHash(getDomainSeparator(), escrowHash);
+        if(!isValidSignature(lighterRelayer, escrowTypedHash, sig)) revert InvalidEscrowSignature();
+    }
+
+    function makesureIntentParams(ISettlerBase.IntentParams memory params, bytes memory sig) public view virtual returns (bytes32 intentTypedHash){
+        if(block.timestamp > params.expiryTime) revert IntentExpired(params.expiryTime);
+        bytes32 intentHash = params.hash();
+        intentTypedHash = MessageHashUtils.toTypedDataHash(getDomainSeparator(), intentHash);
+        if(!isValidSignature(lighterRelayer, intentTypedHash, sig)) revert InvalidIntentSignature();
+    }
+
+    function makesureTradeValidation(ISettlerBase.EscrowParams memory escrowParams, ISettlerBase.IntentParams memory intentParams) public view virtual{
+        if(block.timestamp > intentParams.expiryTime) revert IntentExpired(intentParams.expiryTime);
+        if(escrowParams.token != intentParams.token) revert InvalidToken();
+        if(escrowParams.volume < intentParams.range.min || (intentParams.range.max > 0 && escrowParams.volume > intentParams.range.max)) revert InvalidAmount();
+        if(escrowParams.currency != intentParams.currency || escrowParams.paymentMethod != intentParams.paymentMethod || escrowParams.payeeDetails != intentParams.payeeDetails) revert InvalidPayment();
+        if(intentParams.price > 0 &&escrowParams.price != intentParams.price) revert InvalidPrice();
+    }
+
+    function isValidSignature(address signer, bytes32 hash, bytes memory sig) internal view returns (bool){
+        return SignatureChecker.isValidSignatureNow(signer, hash, sig);
     }
 
 }

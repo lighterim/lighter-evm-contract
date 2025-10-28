@@ -201,9 +201,9 @@ const BuyerIntentForm: React.FC = () => {
   const [intentMaxAmount, setIntentMaxAmount] = useState<string>('1.1');
   const [intentPrice, setIntentPrice] = useState<string>('1');
   const [intentExpiryTime, setIntentExpiryTime] = useState<string>('');
-  const [intentCurrency, setIntentCurrency] = useState<string>('0x0000000000000000000000000000000000000000000000000000000000000000');
-  const [intentPaymentMethod, setIntentPaymentMethod] = useState<string>('0x0000000000000000000000000000000000000000000000000000000000000000');
-  const [intentPayeeDetails, setIntentPayeeDetails] = useState<string>('0x0000000000000000000000000000000000000000000000000000000000000000');
+  const [intentCurrency, setIntentCurrency] = useState<string>('0xc4ae21aac0c6549d71dd96035b7e0bdb6c79ebdba8891b666115bc976d16a29e');
+  const [intentPaymentMethod, setIntentPaymentMethod] = useState<string>('0xa87f59463aa7edfb0cc3cc39e28ba98c83fda1a3b5c6c9d10219c02669eb8a19');
+  const [intentPayeeDetails, setIntentPayeeDetails] = useState<string>('0x157a30e0353a95e0152bb1cf546ffbc81ae0983338d4f84307fb58604e42367e');
 
   // EscrowParams 参数状态
   const [escrowId, setEscrowId] = useState<string>('1');
@@ -212,9 +212,9 @@ const BuyerIntentForm: React.FC = () => {
   const [escrowUsdRate, setEscrowUsdRate] = useState<string>('1');
   const [escrowSeller, setEscrowSeller] = useState<string>('');
   const [escrowSellerFeeRate, setEscrowSellerFeeRate] = useState<string>('0');
-  const [escrowPaymentMethod, setEscrowPaymentMethod] = useState<string>('0x0000000000000000000000000000000000000000000000000000000000000000');
-  const [escrowCurrency, setEscrowCurrency] = useState<string>('0x0000000000000000000000000000000000000000000000000000000000000000');
-  const [escrowPayeeDetails, setEscrowPayeeDetails] = useState<string>('0x0000000000000000000000000000000000000000000000000000000000000000');
+  const [escrowPaymentMethod, setEscrowPaymentMethod] = useState<string>('0xa87f59463aa7edfb0cc3cc39e28ba98c83fda1a3b5c6c9d10219c02669eb8a19');
+  const [escrowCurrency, setEscrowCurrency] = useState<string>('0xc4ae21aac0c6549d71dd96035b7e0bdb6c79ebdba8891b666115bc976d16a29e');
+  const [escrowPayeeDetails, setEscrowPayeeDetails] = useState<string>('0x157a30e0353a95e0152bb1cf546ffbc81ae0983338d4f84307fb58604e42367e');
   const [escrowBuyer, setEscrowBuyer] = useState<string>('');
   const [escrowBuyerFeeRate, setEscrowBuyerFeeRate] = useState<string>('0');
 
@@ -389,7 +389,7 @@ const BuyerIntentForm: React.FC = () => {
 
       // 构造 transferDetails 参数
       const transferDetails = {
-        to: (transferTo || contractAddress) as `0x${string}`,
+        to: transferTo  as `0x${string}`,
         requestedAmount: parseUnits(requestedAmount, tokenDecimals)
       };
 
