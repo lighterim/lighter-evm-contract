@@ -73,4 +73,12 @@ interface ISettlerBase {
         bool isEnabled;
     }
 
+    struct PaymentDetails {
+        bytes32 paymentId;
+        bytes32 method;
+        bytes32 currency;
+        bytes32 payeeDetails;
+        uint256 amount;
+    }
+
 }

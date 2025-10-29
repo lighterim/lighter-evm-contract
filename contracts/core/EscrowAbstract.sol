@@ -9,7 +9,7 @@ import {SettlerAbstract} from "../SettlerAbstract.sol";
 import {ParamsHash} from "../utils/ParamsHash.sol";
 
 import {
-    InvalidEscrowSignature, InvalidIntentSignature, InvalidAmount, intentExpired, InvalidToken,
+    InvalidEscrowSignature, InvalidIntentSignature, InvalidAmount, IntentExpired, InvalidToken,
     InvalidPayment, InvalidPrice
     } from "./SettlerErrors.sol";
 
@@ -26,14 +26,14 @@ abstract contract EscrowAbstract is SettlerAbstract {
     }
 
     function makesureIntentParams(address relayer, bytes32 domainSeparator, ISettlerBase.IntentParams memory params, bytes memory sig) internal view virtual returns (bytes32 intentTypedHash){
-        if(block.timestamp > params.expiryTime) revert intentExpired(params.expiryTime);
+        if(block.timestamp > params.expiryTime) revert IntentExpired(params.expiryTime);
         bytes32 intentHash = params.hash();
         intentTypedHash = MessageHashUtils.toTypedDataHash(domainSeparator, intentHash);
         if(!isValidSignature(relayer, intentTypedHash, sig)) revert InvalidIntentSignature();
     }
 
     function makesureTradeValidation(ISettlerBase.EscrowParams memory escrowParams, ISettlerBase.IntentParams memory intentParams) internal view virtual{
-        if(block.timestamp > intentParams.expiryTime) revert intentExpired(intentParams.expiryTime);
+        if(block.timestamp > intentParams.expiryTime) revert IntentExpired(intentParams.expiryTime);
         if(escrowParams.token != intentParams.token) revert InvalidToken();
         if(escrowParams.volume < intentParams.range.min || (intentParams.range.max > 0 && escrowParams.volume > intentParams.range.max)) revert InvalidAmount();
         if(escrowParams.currency != intentParams.currency || escrowParams.paymentMethod != intentParams.paymentMethod || escrowParams.payeeDetails != intentParams.payeeDetails) revert InvalidPayment();

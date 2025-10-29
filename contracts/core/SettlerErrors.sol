@@ -30,6 +30,7 @@ error InvalidSender();
 
 error InvalidSpender();
 
+error InvalidZkProof();
 
 error HasPendingTx(address account);
 
@@ -60,6 +61,8 @@ error InvalidEscrowSignature();
 error InvalidIntentSignature();
 
 error InvalidPayment();
+
+error InvalidPaymentId();
 
 error InvalidPrice();
 

@@ -105,6 +105,11 @@ async function main() {
         "SignatureVerification": signatureVerificationLib.address
       }
     }*/);
+
+    // 9. Deploy the ZkVerifyProofVerifier contract 
+    console.log("\n📦 Deploying ZkVerifyProofVerifier contract...");
+    
+
     
     console.log("✅ Deployment completed!");
     console.log("MainnetUserTxn contract deployed at:", userTxn.address);

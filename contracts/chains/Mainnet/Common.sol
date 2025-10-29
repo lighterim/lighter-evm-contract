@@ -23,6 +23,10 @@ abstract contract MainnetMixin is SettlerBase {
         lighterRelayer = lighterRelayer_;
     }
 
+    function _dispatch(uint256, uint256 action, bytes calldata data) internal virtual override(SettlerAbstract) returns (bool) {
+        return true;
+    }
+
     function _makeEscrow(bytes32 escrowTypedDataHash, ISettlerBase.EscrowParams memory escrowParams, uint256 gasSpentForBuyer, uint256 gasSpentForSeller) internal {
         
     }

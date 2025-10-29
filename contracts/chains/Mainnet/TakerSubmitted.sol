@@ -52,7 +52,7 @@ contract MainnetSettler is Settler, MainnetMixin, FreeMemory, EIP712 {
         );
     }
 
-    function _dispatch(uint256 index, uint256 action, bytes calldata data) internal virtual override returns (bool) {
+    function _dispatch(uint256 index, uint256 action, bytes calldata data) internal virtual override(MainnetMixin, SettlerAbstract) returns (bool) {
         return true;
     }
 
@@ -274,7 +274,7 @@ contract MainnetSettler is Settler, MainnetMixin, FreeMemory, EIP712 {
     function _isRestrictedTarget(address target)
         internal
         pure
-        override(Settler)
+        override(Permit2PaymentAbstract, Settler)
         returns (bool)
     {
         return super._isRestrictedTarget(target);
@@ -288,7 +288,7 @@ contract MainnetSettler is Settler, MainnetMixin, FreeMemory, EIP712 {
     //     return super._dispatch(i, action, data);
     // }
 
-    function _msgSender() internal view override(Settler) returns (address) {
+    function _msgSender() internal view override(Settler, AbstractContext) returns (address) {
         return super._msgSender();
     }
 }
