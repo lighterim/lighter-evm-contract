@@ -7,6 +7,7 @@ import BuyerInteraction from './components/BuyerInteraction';
 import LighterAccountInteraction from './components/LighterAccountInteraction';
 import SellerIntentForm from './components/SellerIntentForm';
 import BuyerIntentForm from './components/BuyerIntentForm';
+import ZkVerifyProofVerifierInteraction from './components/ZkVerifyProofVerifierInteraction';
 import './App.css';
 
 function App() {
@@ -15,7 +16,7 @@ function App() {
   const { disconnect } = useDisconnect();
   const [contractAddress, setContractAddress] = useState<string>('');
   const [lighterAccountAddress, setLighterAccountAddress] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'seller' | 'buyer' | 'lighter' | 'sellerIntent' | 'buyerIntent'>('lighter');
+  const [activeTab, setActiveTab] = useState<'seller' | 'buyer' | 'lighter' | 'sellerIntent' | 'buyerIntent' | 'zkVerify'>('lighter');
 
   const handleConnectWallet = () => {
     connect({ connector: injected() });
@@ -92,6 +93,12 @@ function App() {
                 >
                   🛒 买家调用 (takeSellerIntent)
                 </button>
+                <button 
+                  className={`tab-button ${activeTab === 'zkVerify' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('zkVerify')}
+                >
+                  🧩 ZK 验证释放 (releaseAfterProofVerify)
+                </button>
               </div>
               
               <div className="tab-content">
@@ -127,6 +134,9 @@ function App() {
                 )}
                 {activeTab === 'buyerIntent' && (
                   <BuyerIntentForm />
+                )}
+                {activeTab === 'zkVerify' && (
+                  <ZkVerifyProofVerifierInteraction />
                 )}
               </div>
             </div>

@@ -10,7 +10,8 @@ async function main() {
   try {
     // Connect to Ethereum Sepolia network
     console.log("\n📡 Connecting to Ethereum Sepolia network...");
-    const { viem } = await network.connect({ network: "sepolia", chainType: "l1" });
+    // const { viem } = await network.connect({ network: "sepolia", chainType: "l1" });
+    const { viem } = await network.connect({ network: "horizen", chainType: "generic" });
     
     // Get wallet clients
     const walletClients = await viem.getWalletClients();
@@ -108,7 +109,11 @@ async function main() {
 
     // 9. Deploy the ZkVerifyProofVerifier contract 
     console.log("\n📦 Deploying ZkVerifyProofVerifier contract...");
-    
+    // const zkVerifyProofVerifier = await viem.deployContract("ZkVerifyProofVerifier", [
+    //   escrow.address,
+    //   userTxn.address
+    // ]);
+    // console.log("✅ ZkVerifyProofVerifier deployed at:", zkVerifyProofVerifier.address);
 
     
     console.log("✅ Deployment completed!");

@@ -4,6 +4,7 @@ async function main() {
   console.log("Deploying Counter to Ethereum Sepolia...");
   
   try {
+    console.log(process.argv[2], process.argv[3], process.argv[4]) 
     // Connect to Sepolia network
     const { viem } = await network.connect({ network: "sepolia", chainType: "l1" });
     
@@ -35,26 +36,26 @@ async function main() {
       );
     }
     
-    // Deploy the Counter contract
-    console.log("Deploying Counter contract...");
-    const counter = await viem.deployContract("Counter");
+    // // Deploy the Counter contract
+    // console.log("Deploying Counter contract...");
+    // const counter = await viem.deployContract("Counter");
     
-    console.log("✅ Deployment completed!");
-    console.log("Counter contract deployed at:", counter.address);
+    // console.log("✅ Deployment completed!");
+    // console.log("Counter contract deployed at:", counter.address);
     
-    // Verify the deployment by calling a function
-    const currentValue = await counter.read.x();
-    console.log("Initial counter value:", currentValue.toString());
+    // // Verify the deployment by calling a function
+    // const currentValue = await counter.read.x();
+    // console.log("Initial counter value:", currentValue.toString());
     
-    // Call incBy function to test the contract
-    console.log("Calling incBy(5)...");
-    await counter.write.incBy([5n]);
+    // // Call incBy function to test the contract
+    // console.log("Calling incBy(5)...");
+    // await counter.write.incBy([5n]);
     
-    const newValue = await counter.read.x();
-    console.log("Counter value after incBy(5):", newValue.toString());
+    // const newValue = await counter.read.x();
+    // console.log("Counter value after incBy(5):", newValue.toString());
     
-    console.log("\n🎉 Contract successfully deployed and tested!");
-    console.log("You can view your contract at: https://sepolia.etherscan.io/address/" + counter.address);
+    // console.log("\n🎉 Contract successfully deployed and tested!");
+    // console.log("You can view your contract at: https://sepolia.etherscan.io/address/" + counter.address);
     
   } catch (error) {
     console.error("❌ Deployment failed:", error);
