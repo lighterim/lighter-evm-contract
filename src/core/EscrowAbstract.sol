@@ -19,6 +19,11 @@ abstract contract EscrowAbstract is SettlerAbstract {
     using ParamsHash for ISettlerBase.EscrowParams;
     using ParamsHash for ISettlerBase.IntentParams;
 
+    function getEscrowTypedHash(ISettlerBase.EscrowParams memory params, bytes32 domainSeparator) internal pure returns (bytes32 escrowTypedHash) {
+        bytes32 escrowHash = params.hash();
+        escrowTypedHash = MessageHashUtils.toTypedDataHash(domainSeparator, escrowHash);
+    }
+
     function makesureEscrowParams(address relayer, bytes32 domainSeparator, ISettlerBase.EscrowParams memory params, bytes memory sig) internal view virtual returns (bytes32 escrowTypedHash){
         bytes32 escrowHash = params.hash();
         escrowTypedHash = MessageHashUtils.toTypedDataHash(domainSeparator, escrowHash);

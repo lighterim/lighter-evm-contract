@@ -26,7 +26,9 @@ contract MainnetSettlerMetaTxn is MainnetMixin, SettlerMetaTxn {
       }
 
     
-
+    function _dispatch(uint256 i, uint256 action, bytes calldata data) internal virtual override(SettlerAbstract, SettlerBase, MainnetMixin) returns (bool) {
+        return super._dispatch(i, action, data);
+    }
 
     
     function _msgSender() internal view virtual override(SettlerMetaTxn, AbstractContext) returns (address) {

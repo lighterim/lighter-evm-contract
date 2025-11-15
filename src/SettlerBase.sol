@@ -7,8 +7,10 @@ import {SafeTransferLib} from "./vendor/SafeTransferLib.sol";
 import {uint512} from "./utils/512Math.sol";
 
 import {ISettlerActions} from "./ISettlerActions.sol";
+import {revertRelayerNotAuthorized} from "./core/SettlerErrors.sol";
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
 import {EscrowAbstract} from "./core/EscrowAbstract.sol";
+import {SettlerAbstract} from "./SettlerAbstract.sol";
 
 import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
 import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer.sol";
@@ -66,70 +68,26 @@ abstract contract SettlerBase is ISettlerBase, EscrowAbstract {
         }
     }
 
+    function _hasPayerCheck() internal pure virtual returns (bool){
+        return true;
+    }
 
-    // function _dispatch(uint256, uint256 action, bytes calldata data) internal virtual override returns (bool) {
-    //     //// NOTICE: This function has been largely copy/paste'd into
-    //     //// `src/chains/Mainnet/Common.sol:MainnetMixin._dispatch`. If you make changes here, you
-    //     //// need to make sure that corresponding changes are made to that function.
+    function _checkWitnessAndPayer(bytes32 witness, address payer) internal {
+        // if(witness == bytes32(0)){
+        //     revertRelayerNotAuthorized();
+        // }
 
-    //     if (action == uint32(ISettlerActions.BULK_SELL_PREMIT)) {
-    //         // ISignatureTransfer.PermitTransferFrom memory permit;
-    //         // (address recipient, permit) = CalldataDecoder.decodeCall(data, 0);
-    //         // ISettlerActions(msg.sender).TRANSFER_FROM(recipient, permit, data[4:]);
-    //         (
-    //             IAllowanceTransfer.PermitSingle memory permitSingle, 
-    //             ISettlerBase.IntentParams memory intentParams,
-    //             bytes memory permitSig,
-    //             bytes memory intentSig
-    //         ) = abi.decode(data, (IAllowanceTransfer.PermitSingle, ISettlerBase.IntentParams, bytes, bytes));
-    //         _bulkSellPermit(permitSingle, intentParams, permitSig, intentSig);
-    //     } else if (action == uint32(ISettlerActions.BULK_SELL_INTENT)) {
-    //         (
-    //             ISettlerBase.IntentParams memory intentParams, 
-    //             bytes memory intentSig
-    //         ) = abi.decode(data, (ISettlerBase.IntentParams, bytes));
 
-    //         _validateBulkSellIntent(intentParams, intentSig);
-    //     } else if (action == uint32(ISettlerActions.TAKE_SELLER_INTENT)) {
-    //         // ISignatureTransfer.PermitTransferFrom memory permit;
-    //         // (address recipient, permit) = CalldataDecoder.decodeCall(data, 0);
-    //         // ISettlerActions(msg.sender).METATXN_TRANSFER_FROM(recipient, permit);
-    //         (
-    //             ISettlerBase.EscrowParams memory escrowParams,
-    //             bytes memory sig
-    //         ) = abi.decode(data, (ISettlerBase.EscrowParams, bytes));
-    //         _makeEscrowByBuyer(escrowParams, sig);
 
-    //     } else if (action == uint32(ISettlerActions.TAKE_BUYER_INTENT0)) {
-    //         (
-    //             ISettlerBase.IntentParams memory intentParams,
-    //             bytes memory sig
-    //         ) = abi.decode(data, (ISettlerBase.IntentParams, bytes));
-    //         _validatorBuyerIntent(intentParams, sig);
-    //     } else if (action == uint32(ISettlerActions.TAKE_BUYER_INTENT1)) {
-    //         (
-    //             ISettlerBase.EscrowParams memory escrowParams,
-    //             bytes memory sig
-    //         ) = abi.decode(data, (ISettlerBase.EscrowParams, bytes));
-    //         _makeEscrowBySerller(escrowParams, sig);
-    //     } else if (action == uint32(ISettlerActions.SIGNATURE_TRANSFER_FROM_WITH_WITNESS)) {
-    //         (
-    //             address owner,
-    //             address recipient,
-    //             ISignatureTransfer.PermitTransferFrom memory permit,
-    //             ISettlerBase.IntentParams memory witness,
-    //             bytes memory sig
-    //         ) = abi.decode(data, (address, address, ISignatureTransfer.PermitTransferFrom, ISettlerBase.IntentParams, bytes));
+        // if(_hasPayerCheck()){
 
-    //         _signatureTransferFromWithWitness(owner, recipient, permit, witness, sig);
+        // }
+    }
 
-    //     } else {
-    //         revert("Unknown action");
-    //     }
-    //     return true;
-    // }
+    function _dispatch(uint256, uint256 action, bytes calldata data) internal virtual override returns (bool) {
+        return false;
+    }
 
-    // function _checkWitnessAndPayer(bytes32 witness, address payer) internal view virtual;
+    function _getRelayer() internal view virtual returns (address);
 
-    
 }

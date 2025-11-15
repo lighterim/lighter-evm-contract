@@ -17,10 +17,21 @@ function revertConfusedDeputy() pure {
     }
 }
 
+// error RelayerNotAuthorized();
+
+function revertRelayerNotAuthorized() pure {
+    assembly ("memory-safe") {
+        mstore(0x00, 0x1c500e5c) // selector for `RelayerNotAuthorized()`
+        revert(0x1c, 0x04)
+    }
+}
+
 error InsufficientPayment(uint256 required, uint256 provided);
 error InvalidCount();
 error InvalidRecipient();
 error WithdrawalFailed();
+
+error InvalidWitness();
 
 /// @notice Thrown when a target contract is invalid given the context
 error InvalidTarget();

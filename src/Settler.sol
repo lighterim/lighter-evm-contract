@@ -4,8 +4,8 @@ pragma solidity ^0.8.25;
 
 import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {ISettlerTakerSubmitted} from "./interfaces/ISettlerTakerSubmitted.sol";
-import {Permit2PaymentTakerSubmitted} from "./core/Permit2Payment.sol";
+import {ISettlerTakeIntent} from "./interfaces/ISettlerTakeIntent.sol";
+import {Permit2PaymentTakeIntent} from "./core/Permit2Payment.sol";
 import {Permit2PaymentAbstract} from "./core/Permit2PaymentAbstract.sol";
 
 import {AbstractContext} from "./Context.sol";
@@ -14,14 +14,18 @@ import {UnsafeMath} from "./utils/UnsafeMath.sol";
 
 import {ISettlerActions} from "./ISettlerActions.sol";
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
-import {revertActionInvalid, SignatureExpired, MsgValueMismatch} from "./core/SettlerErrors.sol";
+import {ParamsHash} from "./utils/ParamsHash.sol";
+import {revertActionInvalid, SignatureExpired, MsgValueMismatch, InvalidWitness} from "./core/SettlerErrors.sol";
 import {SettlerAbstract} from "./SettlerAbstract.sol";
 
 
-abstract contract Settler is ISettlerTakerSubmitted, Permit2PaymentTakerSubmitted, SettlerBase {
+abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, SettlerBase {
 
     using UnsafeMath for uint256;
     using CalldataDecoder for bytes[];
+    using ParamsHash for ISettlerBase.IntentParams;
+    using ParamsHash for ISettlerBase.EscrowParams;
+    
 
     function _tokenId() internal pure override returns (uint256) {
         return 2;
@@ -33,41 +37,64 @@ abstract contract Settler is ISettlerTakerSubmitted, Permit2PaymentTakerSubmitte
 
     function _domainSeparator() internal view virtual returns (bytes32);
 
-    // function _dispatch(uint256 index, uint256 action, bytes calldata data) internal virtual override(SettlerAbstract/*, SettlerBase*/) returns (bool) {
-    //     if(super._dispatch(index, action, data)) {
-    //         return true;
-    //     }
-    //     else if(action == uint32(ISettlerActions.NATIVE_CHECK.selector)) {
-    //         (uint256 deadline, uint256 msgValue) = abi.decode(data, (uint256, uint256));
-    //         if (block.timestamp > deadline) {
-    //             assembly ("memory-safe") {
-    //                 mstore(0x00, 0xcd21db4f) // selector for `SignatureExpired(uint256)`
-    //                 mstore(0x20, deadline)
-    //                 revert(0x1c, 0x24)
-    //             }
-    //         }
-    //         if (msg.value < msgValue) {
-    //             assembly ("memory-safe") {
-    //                 mstore(0x00, 0x4a094431) // selector for `MsgValueMismatch(uint256,uint256)`
-    //                 mstore(0x20, msgValue)
-    //                 mstore(0x40, callvalue())
-    //                 revert(0x1c, 0x44)
-    //             }
-    //         }
-    //     }
-    //     else{
-    //         return false;
-    //     }
-    //     return true;
-    // }
+    function _dispatch(uint256 index, uint256 action, bytes calldata data) internal virtual override(SettlerBase,SettlerAbstract) returns (bool) {
+        if(super._dispatch(index, action, data)) {
+            return true;
+        }
+        else if(action == uint32(ISettlerActions.ESCROW_PARAMS_CHECK.selector)) {
+            (ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) = abi.decode(data, (ISettlerBase.EscrowParams, bytes));
+            bytes32 escrowTypedHash = makesureEscrowParams(_getRelayer(), _domainSeparator(), escrowParams, sig);
+            if (escrowTypedHash != getWitness()) {
+                revert InvalidWitness();
+            }
+        }
+        else if(action == uint32(ISettlerActions.ESCROW_AND_INTENT_CHECK.selector)) {
+            (ISettlerBase.EscrowParams memory escrowParams, ISettlerBase.IntentParams memory intentParams) = abi.decode(data, (ISettlerBase.EscrowParams, ISettlerBase.IntentParams));
+            bytes32 escrowTypedHash = getEscrowTypedHash(escrowParams, _domainSeparator());
+            if (escrowTypedHash != getWitness()) {
+                revert InvalidWitness();
+            }
+        }   
+        else{
+            return false;
+        }
+        return true;
+    }
 
-    function _dispatchVIP(uint256 action, bytes calldata data) internal virtual returns (bool);
+    function _dispatchVIP(uint256 action, bytes calldata data) internal virtual returns (bool){
+        if(action == uint32(ISettlerActions.SIGNATURE_TRANSFER_FROM.selector)) {
+            (
+                ISignatureTransfer.PermitTransferFrom memory permit, 
+                ISignatureTransfer.SignatureTransferDetails memory transferDetails, 
+                bytes memory sig
+            ) = abi.decode(data, (ISignatureTransfer.PermitTransferFrom, ISignatureTransfer.SignatureTransferDetails, bytes));
+            address payer = getPayer();
+            _transferFrom(permit, transferDetails, payer, sig);
+            clearPayer(payer);
+        }
+        else if(action == uint32(ISettlerActions.SIGNATURE_TRANSFER_FROM_WITH_WITNESS.selector)) {
+            (
+                ISignatureTransfer.PermitTransferFrom memory permit, 
+                ISignatureTransfer.SignatureTransferDetails memory transferDetails, 
+                ISettlerBase.IntentParams memory intentParams,
+                bytes memory sig
+            ) = abi.decode(data, (ISignatureTransfer.PermitTransferFrom, ISignatureTransfer.SignatureTransferDetails, ISettlerBase.IntentParams, bytes));
+            bytes32 intentParamsHash = intentParams.hash(); 
+            address payer = getPayer();
+            _transferFromIKnowWhatImDoing(permit, transferDetails, payer,intentParamsHash, ParamsHash._INTENT_WITNESS_TYPE_STRING, sig);
+            clearPayer(payer);
+        }
+        else{
+            return false;
+        }
+        return true;
+    }
 
-    function execute(bytes[] calldata actions, bytes32 /* zid & affiliate */ )
+    function execute(address payer, bytes32 escrowTypedHash, bytes[] calldata actions)
         public
         payable
         override
-        takerSubmitted
+        takeIntent(payer, escrowTypedHash)
         returns (bool)
     {
         if (actions.length != 0) {
@@ -94,7 +121,7 @@ abstract contract Settler is ISettlerTakerSubmitted, Permit2PaymentTakerSubmitte
         internal
         view
         virtual
-        override(Permit2PaymentTakerSubmitted, AbstractContext)
+        override(Permit2PaymentTakeIntent, AbstractContext)
         returns (address)
     {
         return super._msgSender();
@@ -104,7 +131,7 @@ abstract contract Settler is ISettlerTakerSubmitted, Permit2PaymentTakerSubmitte
         internal
         pure
         virtual
-        override(Permit2PaymentTakerSubmitted, Permit2PaymentAbstract)
+        override(Permit2PaymentTakeIntent, Permit2PaymentAbstract)
         returns (bool)
     {
         return super._isRestrictedTarget(target);

@@ -1,5 +1,5 @@
 @uniswap/permit2/=lib/permit2/src
-@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/
+@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
 @tokenbound/=lib/tokenbound/src/
 erc6551/=lib/tokenbound/lib/erc6551/
 solady/=lib/solady/

@@ -23,6 +23,7 @@ abstract contract Permit2PaymentAbstract is AbstractContext {
     function _transferFrom(
         ISignatureTransfer.PermitTransferFrom memory permit,
         ISignatureTransfer.SignatureTransferDetails memory transferDetails,
+        address owner,
         bytes memory sig,
         bool isForwarded
     ) internal virtual;
@@ -30,6 +31,26 @@ abstract contract Permit2PaymentAbstract is AbstractContext {
     function _transferFrom(
         ISignatureTransfer.PermitTransferFrom memory permit,
         ISignatureTransfer.SignatureTransferDetails memory transferDetails,
+        address owner,
+        bytes memory sig
+    ) internal virtual;
+
+    function _transferFromIKnowWhatImDoing(
+        ISignatureTransfer.PermitTransferFrom memory permit,
+        ISignatureTransfer.SignatureTransferDetails memory transferDetails,
+        address from,
+        bytes32 witness,
+        string memory witnessTypeString,
+        bytes memory sig,
+        bool isForwarded
+    ) internal virtual;
+
+    function _transferFromIKnowWhatImDoing(
+        ISignatureTransfer.PermitTransferFrom memory permit,
+        ISignatureTransfer.SignatureTransferDetails memory transferDetails,
+        address from,
+        bytes32 witness,
+        string memory witnessTypeString,
         bytes memory sig
     ) internal virtual;
 
@@ -52,12 +73,22 @@ abstract contract Permit2PaymentAbstract is AbstractContext {
         internal
         virtual;
 
+    /**
+     * allowance transfer with permit(compatible with Permit2)
+     * @param owner owner of the token
+     * @param permitSingle permit single
+     * @param signature signature
+     */
     function _permit(address owner, IAllowanceTransfer.PermitSingle memory permitSingle, bytes memory signature)
         internal 
         virtual;
 
     modifier metaTx(address msgSender, bytes32 witness) virtual;
 
-    modifier takerSubmitted() virtual;
-
+    /**
+     * take intent with payer and witness
+     * @param payer payer
+     * @param witness witness
+     */
+    modifier takeIntent(address payer, bytes32 witness) virtual;
 }

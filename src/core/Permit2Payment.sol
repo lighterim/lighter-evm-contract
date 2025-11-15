@@ -132,10 +132,29 @@ library TransientStorage {
         }
     }
 
+    function checkSpentPayer() internal view {
+        address currentPayer;
+        assembly ("memory-safe") {
+            currentPayer := tload(_PAYER_SLOT)
+        }
+        if (currentPayer != address(0)) {
+            assembly ("memory-safe") {
+                mstore(0x00, 0x9684be17) // selector for `PayerNotSpent()`
+                revert(0x1c, 0x04)
+            }
+        }
+    }
+
     function getAndClearWitness() internal returns (bytes32 witness) {
         assembly ("memory-safe") {
             witness := tload(_WITNESS_SLOT)
             tstore(_WITNESS_SLOT, 0x00)
+        }
+    }
+
+    function getWitness() internal view returns (bytes32 witness) {
+        assembly ("memory-safe") {
+            witness := tload(_WITNESS_SLOT)
         }
     }
 
@@ -207,6 +226,18 @@ abstract contract Permit2PaymentBase is Context, SettlerAbstract {
         return TransientStorage.getPayer();
     }
 
+    function getWitness() internal view returns (bytes32) {
+        return TransientStorage.getWitness();
+    }
+
+    function getPayer() internal view returns (address) {
+        return TransientStorage.getPayer();
+    }
+
+    function clearPayer(address expectedOldPayer) internal {
+        TransientStorage.clearPayer(expectedOldPayer);
+    }
+
     /// @dev You must ensure that `target` is derived by hashing trusted initcode or another
     ///      equivalent mechanism that guarantees "reasonable"ness. `target` must not be
     ///      user-supplied or attacker-controlled. This is required for security and is not checked
@@ -268,7 +299,7 @@ abstract contract Permit2Payment is Permit2PaymentBase {
         string memory witnessTypeString,
         bytes memory sig,
         bool isForwarded
-    ) internal {
+    ) internal virtual override(Permit2PaymentAbstract) {
         if (isForwarded) {
             assembly ("memory-safe") {
                 mstore(0x00, 0x1c500e5c) // selector for `ForwarderNotAllowed()`
@@ -339,47 +370,23 @@ abstract contract Permit2Payment is Permit2PaymentBase {
         bytes32 witness,
         string memory witnessTypeString,
         bytes memory sig
-    ) internal {
+    ) internal virtual override(Permit2PaymentAbstract) {
         _transferFromIKnowWhatImDoing(permit, transferDetails, from, witness, witnessTypeString, sig, _isForwarded());
     }
 
     function _transferFrom(
         ISignatureTransfer.PermitTransferFrom memory permit,
         ISignatureTransfer.SignatureTransferDetails memory transferDetails,
+        address owner,
         bytes memory sig
     ) internal virtual override(Permit2PaymentAbstract) {
-        _transferFrom(permit, transferDetails, sig, _isForwarded());
-    }
-
-    // /**
-    //  * @dev Permit a spender to a given amount of the owner's token via the owner's EIP-712 signature
-    //  * @param owner The owner of the tokens being approved
-    //  * @param permitSingle Data signed over by the owner specifying the terms of approval
-    //  * @param signature The owner's signature over the permit data
-    //  */
-    // function _allowanceHolderTransferFrom(address owner, IAllowanceTransfer.PermitSingle memory permitSingle, bytes calldata signature) internal virtual {
-    //     _ALLOWANCE_HOLDER.transferFrom(permitSingle.details.token, owner,  permitSingle.details.to, uint160(permitSingle.details.amount));
-    // }
-    
-}
-
-// DANGER: the order of the base contracts here is very significant for the use of `super` below
-// (and in derived contracts). Do not change this order.
-abstract contract Permit2PaymentTakerSubmitted is Permit2Payment {
-    using FullMath for uint256;
-    using SafeTransferLib for IERC20;
-
-    constructor(IAllowanceHolder allowanceHolder) Permit2PaymentBase(allowanceHolder) {
-        assert(!_hasMetaTxn());
-    }
-
-    function _isRestrictedTarget(address target) internal pure virtual override returns (bool) {
-        return /*target == address(_ALLOWANCE_HOLDER) ||*/ super._isRestrictedTarget(target);
+        _transferFrom(permit, transferDetails, owner, sig, _isForwarded());
     }
 
     function _transferFrom(
         ISignatureTransfer.PermitTransferFrom memory permit,
         ISignatureTransfer.SignatureTransferDetails memory transferDetails,
+        address owner,
         bytes memory sig,
         bool isForwarded
     ) internal virtual override(Permit2PaymentAbstract) {
@@ -390,18 +397,16 @@ abstract contract Permit2PaymentTakerSubmitted is Permit2Payment {
                     revert(0x1c, 0x04)
                 }
             }
-
+            if (permit.nonce != 0) Panic.panic(Panic.ARITHMETIC_OVERFLOW);
             if (block.timestamp > permit.deadline) {
                 assembly ("memory-safe") {
                     mstore(0x00, 0xcd21db4f) // selector for `SignatureExpired(uint256)`
-                    mstore(0x20, mload(add(0x40, permit)))
+                    mstore(0x20, mload(add(0x60, permit)))
                     revert(0x1c, 0x24)
                 }
             }
             // we don't check `requestedAmount` because it's checked by AllowanceHolder itself
-            _allowanceHolderTransferFrom(
-                permit.permitted.token, _msgSender(), transferDetails.to, transferDetails.requestedAmount
-            );
+            _allowanceHolderTransferFrom(permit.permitted.token, owner, transferDetails.to, transferDetails.requestedAmount);
         } else {
             // This is effectively
             /*
@@ -417,7 +422,7 @@ abstract contract Permit2PaymentTakerSubmitted is Permit2Payment {
             // compiles down to just a single PUSH opcode just before the CALL, with optimization
             // turned on.
             ISignatureTransfer __PERMIT2 = _PERMIT2;
-            address from = _msgSender();
+            address from = owner;
             assembly ("memory-safe") {
                 let ptr := mload(0x40)
                 mstore(ptr, 0x30f28b7a) // selector for `permitTransferFrom(((address,uint256),uint256,uint256),(address,uint256),address,bytes)`
@@ -448,45 +453,32 @@ abstract contract Permit2PaymentTakerSubmitted is Permit2Payment {
         }
     }
 
-    function _allowanceHolderTransferFrom(address token, address owner, address recipient, uint256 amount)
-        internal
-        override
-    {
-        // `owner` is always `_msgSender()`
-        // This is effectively
-        /*
-        _ALLOWANCE_HOLDER.transferFrom(token, owner, recipient, amount);
-        */
-        // but it's written in assembly for contract size reasons.
+    function _allowanceHolderTransferFrom(address token, address owner, address recipient, uint256 amount) internal virtual override(Permit2PaymentAbstract) {
+        _ALLOWANCE_HOLDER.transferFrom(token, owner, recipient, uint160(amount));
+    }
+}
 
-        // Solidity won't let us reference the constant `_ALLOWANCE_HOLDER` in assembly, but this
-        // compiles down to just a single PUSH opcode just before the CALL, with optimization turned
-        // on.
-        address __ALLOWANCE_HOLDER = address(_ALLOWANCE_HOLDER);
-        assembly ("memory-safe") {
-            let ptr := mload(0x40)
-            mstore(add(0x80, ptr), amount)
-            mstore(add(0x60, ptr), recipient)
-            mstore(add(0x4c, ptr), shl(0x60, owner)) // clears `recipient`'s padding
-            mstore(add(0x2c, ptr), shl(0x60, token)) // clears `owner`'s padding
-            mstore(add(0x0c, ptr), 0x15dacbea000000000000000000000000) // selector for `transferFrom(address,address,address,uint256)` with `token`'s padding
+// DANGER: the order of the base contracts here is very significant for the use of `super` below
+// (and in derived contracts). Do not change this order.
+abstract contract Permit2PaymentTakeIntent is Permit2Payment {
+    using FullMath for uint256;
+    using SafeTransferLib for IERC20;
 
-            // Although `transferFrom` returns `bool`, we don't need to bother checking the return
-            // value because `AllowanceHolder` always either reverts or returns `true`. We also
-            // don't need to check that it has code.
-            if iszero(call(gas(), __ALLOWANCE_HOLDER, 0x00, add(0x1c, ptr), 0x84, 0x00, 0x00)) {
-                let ptr_ := mload(0x40)
-                returndatacopy(ptr_, 0x00, returndatasize())
-                revert(ptr_, returndatasize())
-            }
-        }
+    constructor(IAllowanceHolder allowanceHolder) Permit2PaymentBase(allowanceHolder) {
+        assert(!_hasMetaTxn());
     }
 
-    modifier takerSubmitted() override {
-        address msgSender = _operator();
-        TransientStorage.setPayer(msgSender);
+    function _isRestrictedTarget(address target) internal pure virtual override returns (bool) {
+        return /*target == address(_ALLOWANCE_HOLDER) ||*/ super._isRestrictedTarget(target);
+    }
+
+
+    modifier takeIntent(address payer, bytes32 witness) override {
+        TransientStorage.setPayer(payer);
+        TransientStorage.setWitness(witness);
         _;
-        TransientStorage.clearPayer(msgSender);
+        TransientStorage.checkSpentPayer();
+        TransientStorage.checkSpentWitness();
     }
 
     modifier metaTx(address msgSender, bytes32 witness) override {
@@ -540,10 +532,12 @@ abstract contract Permit2PaymentMetaTxn is Context, Permit2Payment {
     function _transferFrom(
         ISignatureTransfer.PermitTransferFrom memory permit,
         ISignatureTransfer.SignatureTransferDetails memory transferDetails,
+        address owner,
         bytes memory sig,
         bool isForwarded // must be false
     ) internal override {
-        bytes32 witness = TransientStorage.getAndClearWitness();
+        //TODO: check witness where from!!!!
+        bytes32 witness = TransientStorage.getWitness();
         if (witness == bytes32(0)) {
             revertConfusedDeputy();
         }
@@ -556,7 +550,7 @@ abstract contract Permit2PaymentMetaTxn is Context, Permit2Payment {
         revertConfusedDeputy();
     }
 
-    modifier takerSubmitted() override {
+    modifier takeIntent(address payer, bytes32 witness) override {
         revert();
         _;
     }
