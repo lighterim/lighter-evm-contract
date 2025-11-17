@@ -3,6 +3,7 @@
 pragma solidity ^0.8.25;
 
 import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
+import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {ISettlerTakeIntent} from "./interfaces/ISettlerTakeIntent.sol";
 import {Permit2PaymentTakeIntent} from "./core/Permit2Payment.sol";
@@ -15,7 +16,10 @@ import {UnsafeMath} from "./utils/UnsafeMath.sol";
 import {ISettlerActions} from "./ISettlerActions.sol";
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
 import {ParamsHash} from "./utils/ParamsHash.sol";
-import {revertActionInvalid, SignatureExpired, MsgValueMismatch, InvalidWitness} from "./core/SettlerErrors.sol";
+import {
+    revertActionInvalid, SignatureExpired, MsgValueMismatch, InvalidWitness, InvalidToken, InvalidAmount, 
+    InvalidPayment, InvalidPrice, InvalidPayer
+    } from "./core/SettlerErrors.sol";
 import {SettlerAbstract} from "./SettlerAbstract.sol";
 
 
@@ -48,21 +52,7 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
                 revert InvalidWitness();
             }
         }
-        else if(action == uint32(ISettlerActions.ESCROW_AND_INTENT_CHECK.selector)) {
-            (ISettlerBase.EscrowParams memory escrowParams, ISettlerBase.IntentParams memory intentParams) = abi.decode(data, (ISettlerBase.EscrowParams, ISettlerBase.IntentParams));
-            bytes32 escrowTypedHash = getEscrowTypedHash(escrowParams, _domainSeparator());
-            if (escrowTypedHash != getWitness()) {
-                revert InvalidWitness();
-            }
-        }   
-        else{
-            return false;
-        }
-        return true;
-    }
-
-    function _dispatchVIP(uint256 action, bytes calldata data) internal virtual returns (bool){
-        if(action == uint32(ISettlerActions.SIGNATURE_TRANSFER_FROM.selector)) {
+        else if(action == uint32(ISettlerActions.SIGNATURE_TRANSFER_FROM.selector)) {
             (
                 ISignatureTransfer.PermitTransferFrom memory permit, 
                 ISignatureTransfer.SignatureTransferDetails memory transferDetails, 
@@ -84,6 +74,30 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
             _transferFromIKnowWhatImDoing(permit, transferDetails, payer,intentParamsHash, ParamsHash._INTENT_WITNESS_TYPE_STRING, sig);
             clearPayer(payer);
         }
+        else if (action == uint32(ISettlerActions.BULK_SELL_TRANSFER_FROM.selector)) {
+            (
+                IAllowanceTransfer.AllowanceTransferDetails memory details
+            ) = abi.decode(data, (IAllowanceTransfer.AllowanceTransferDetails));
+            address payer = getPayer();
+            if(details.from != payer) revert InvalidPayer();
+            _allowanceHolderTransferFrom(details.token, payer, details.to, details.amount);
+            clearPayer(payer);
+        } 
+        else{
+            return false;
+        }
+        return true;
+    }
+
+    function _dispatchVIP(uint256 action, bytes calldata data) internal virtual returns (bool){
+        if(action == uint32(ISettlerActions.ESCROW_AND_INTENT_CHECK.selector)) {
+            (ISettlerBase.EscrowParams memory escrowParams, ISettlerBase.IntentParams memory intentParams) = abi.decode(data, (ISettlerBase.EscrowParams, ISettlerBase.IntentParams));
+            bytes32 escrowTypedHash = getEscrowTypedHash(escrowParams, _domainSeparator());
+            if (escrowTypedHash != getWitness()) {
+                revert InvalidWitness();
+            }
+            makesureTradeValidation(escrowParams, intentParams);
+        } 
         else{
             return false;
         }

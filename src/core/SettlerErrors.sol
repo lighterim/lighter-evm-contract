@@ -39,6 +39,8 @@ error InvalidTarget();
 /// @notice Thrown when validating the caller against the expected caller
 error InvalidSender();
 
+error InvalidPayer();
+
 error InvalidSpender();
 
 error InvalidZkProof();

@@ -54,12 +54,12 @@ abstract contract Permit2PaymentAbstract is AbstractContext {
         bytes memory sig
     ) internal virtual;
 
-    function _setOperatorAndCall(
-        address target,
-        bytes memory data,
-        uint32 selector,
-        function (bytes calldata) internal returns (bytes memory) callback
-    ) internal virtual returns (bytes memory);
+    // function _setOperatorAndCall(
+    //     address target,
+    //     bytes memory data,
+    //     uint32 selector,
+    //     function (bytes calldata) internal returns (bytes memory) callback
+    // ) internal virtual returns (bytes memory);
     
 
         /**
@@ -69,7 +69,7 @@ abstract contract Permit2PaymentAbstract is AbstractContext {
      * @param recipient The recipient of the transfer
      * @param amount The amount of tokens to transfer
      */
-    function _allowanceHolderTransferFrom(address token, address owner, address recipient, uint256 amount)
+    function _allowanceHolderTransferFrom(address token, address owner, address recipient, uint160 amount) 
         internal
         virtual;
 
@@ -83,7 +83,11 @@ abstract contract Permit2PaymentAbstract is AbstractContext {
         internal 
         virtual;
 
+    /**
+     * temporary modifier for meta transactions
+     */
     modifier metaTx(address msgSender, bytes32 witness) virtual;
+
 
     /**
      * take intent with payer and witness

@@ -21,12 +21,14 @@ import {ParamsHash} from "../../utils/ParamsHash.sol";
 import {Permit2PaymentAbstract} from "../../core/Permit2PaymentAbstract.sol";
 import {Permit2PaymentTakeIntent} from "../../core/Permit2Payment.sol";
 import {IAllowanceHolder} from "../../allowanceholder/IAllowanceHolder.sol";
+import {IEscrow} from "../../interfaces/IEscrow.sol";
+import {LighterAccount} from "../../account/LighterAccount.sol";
 
 contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
 
     
-    constructor(address lighterRelayer, bytes20 gitCommit, IAllowanceHolder allowanceHolder) 
-        MainnetMixin(lighterRelayer, gitCommit)
+    constructor(address lighterRelayer, IEscrow escrow, LighterAccount lighterAccount, bytes20 gitCommit, IAllowanceHolder allowanceHolder) 
+        MainnetMixin(lighterRelayer, escrow, lighterAccount, gitCommit)
         Permit2PaymentTakeIntent(allowanceHolder)
         EIP712("MainnetTakeIntent", "1") 
     {

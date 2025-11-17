@@ -15,15 +15,18 @@ import {EscrowAbstract} from "../../core/EscrowAbstract.sol";
 import {SettlerAbstract} from "../../SettlerAbstract.sol";
 import {SettlerBase} from "../../SettlerBase.sol";
 import {Context} from "../../Context.sol";
+import {IEscrow} from "../../interfaces/IEscrow.sol";
+import {LighterAccount} from "../../account/LighterAccount.sol";
 
 
 contract MainnetSettlerMetaTxn is MainnetMixin, SettlerMetaTxn {
 
-    constructor(address lighterRelayer, bytes20 gitCommit, IAllowanceHolder allowanceHolder)
-     MainnetMixin(lighterRelayer, gitCommit)
-      Permit2PaymentMetaTxn(allowanceHolder){
+    constructor(address lighterRelayer, IEscrow escrow, LighterAccount lighterAccount, bytes20 gitCommit, IAllowanceHolder allowanceHolder) 
+    MainnetMixin(lighterRelayer, escrow, lighterAccount, gitCommit)
+    Permit2PaymentMetaTxn(allowanceHolder)
+    {
 
-      }
+    }
 
     
     function _dispatch(uint256 i, uint256 action, bytes calldata data) internal virtual override(SettlerAbstract, SettlerBase, MainnetMixin) returns (bool) {
