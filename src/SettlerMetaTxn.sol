@@ -6,7 +6,6 @@ import {ISettlerMetaTxn} from "./interfaces/ISettlerMetaTxn.sol";
 
 import {Permit2PaymentMetaTxn} from "./core/Permit2Payment.sol";
 
-import {Context, AbstractContext} from "./Context.sol";
 import {CalldataDecoder, SettlerBase} from "./SettlerBase.sol";
 import {UnsafeMath} from "./utils/UnsafeMath.sol";
 
@@ -121,8 +120,4 @@ abstract contract SettlerMetaTxn is ISettlerMetaTxn, Permit2PaymentMetaTxn, Sett
         return _executeMetaTxn(actions, sig);
     }
 
-    // Solidity inheritance is stupid
-    function _msgSender() internal view virtual override(Permit2PaymentMetaTxn, AbstractContext) returns (address) {
-        return super._msgSender();
-    }
 }

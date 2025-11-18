@@ -20,8 +20,7 @@ import {IPermit2} from "@uniswap/permit2/interfaces/IPermit2.sol";
 
 
 library TransientStorage {
-    // bytes32((uint256(keccak256("operator slot")) - 1) & type(uint96).max)
-    // bytes32 private constant _OPERATOR_SLOT = 0x0000000000000000000000000000000000000000cdccd5c65a7d4860ce3abbe9;
+    
     // bytes32((uint256(keccak256("witness slot")) - 1) & type(uint96).max)
     bytes32 private constant _WITNESS_SLOT = 0x0000000000000000000000000000000000000000c7aebfbc05485e093720deaa;
     // bytes32((uint256(keccak256("payer slot")) - 1) & type(uint96).max)
@@ -65,29 +64,7 @@ library TransientStorage {
             tstore(_PAYER_SLOT, and(0xffffffffffffffffffffffffffffffffffffffff, payer))
             tstore(_WITNESS_SLOT, witness)
         }
-
     }
-
-
-    // `newWitness` must not be `bytes32(0)`. This is not checked.
-    // function setWitness(bytes32 newWitness) internal {
-    //     bytes32 currentWitness;
-    //     assembly ("memory-safe") {
-    //         currentWitness := tload(_WITNESS_SLOT)
-    //     }
-    //     if (currentWitness != bytes32(0)) {
-    //         // It should be impossible to reach this error because the first thing a metatransaction
-    //         // does on entry is to spend the `witness` (either directly or via a callback)
-    //         assembly ("memory-safe") {
-    //             mstore(0x00, 0x9936cbab) // selector for `ReentrantMetatransaction(bytes32)`
-    //             mstore(0x20, currentWitness)
-    //             revert(0x1c, 0x24)
-    //         }
-    //     }
-    //     assembly ("memory-safe") {
-    //         tstore(_WITNESS_SLOT, newWitness)
-    //     }
-    // }
 
     function checkSpentPayerAndWitness() internal view {
         bytes32 currentWitness;
@@ -127,26 +104,6 @@ library TransientStorage {
         }
     }
 
-    // function setPayer(address payer) internal {
-    //     if (payer == address(0)) {
-    //         revertConfusedDeputy();
-    //     }
-    //     address oldPayer;
-    //     assembly ("memory-safe") {
-    //         oldPayer := tload(_PAYER_SLOT)
-    //     }
-    //     if (oldPayer != address(0)) {
-    //         assembly ("memory-safe") {
-    //             mstore(0x14, oldPayer)
-    //             mstore(0x00, 0x7407c0f8000000000000000000000000) // selector for `ReentrantPayer(address)` with `oldPayer`'s padding
-    //             revert(0x10, 0x24)
-    //         }
-    //     }
-    //     assembly ("memory-safe") {
-    //         tstore(_PAYER_SLOT, and(0xffffffffffffffffffffffffffffffffffffffff, payer))
-    //     }
-    // }
-
     function getPayer() internal view returns (address payer) {
         assembly ("memory-safe") {
             payer := tload(_PAYER_SLOT)
@@ -170,7 +127,7 @@ library TransientStorage {
     }
 }
 
-abstract contract Permit2PaymentBase is Context, SettlerAbstract {
+abstract contract Permit2PaymentBase is  SettlerAbstract {
 
     using Revert for bool;
 
@@ -182,18 +139,10 @@ abstract contract Permit2PaymentBase is Context, SettlerAbstract {
     constructor(IAllowanceHolder allowanceHolder) {
         _ALLOWANCE_HOLDER = allowanceHolder;
     }
-    
-    function _isRestrictedTarget(address target) internal pure virtual override returns (bool) {
-        return target == address(_PERMIT2);
-    }
 
-    function _operator() internal view virtual override returns (address) {
-        return super._msgSender();
-    }
-
-    function _msgSender() internal view virtual override(AbstractContext, Context) returns (address) {
-        return TransientStorage.getPayer();
-    }
+    // function _msgSender() internal view virtual override(AbstractContext, Context) returns (address) {
+    //     return TransientStorage.getPayer();
+    // }
 
     function getWitness() internal view returns (bytes32) {
         return TransientStorage.getWitness();
@@ -207,50 +156,14 @@ abstract contract Permit2PaymentBase is Context, SettlerAbstract {
         TransientStorage.clearPayer(expectedOldPayer);
     }
 
-    // /// @dev You must ensure that `target` is derived by hashing trusted initcode or another
-    // ///      equivalent mechanism that guarantees "reasonable"ness. `target` must not be
-    // ///      user-supplied or attacker-controlled. This is required for security and is not checked
-    // ///      here. For example, it must not do something weird like modifying the spender (possibly
-    // ///      setting it to itself). If the callback is expected to relay a
-    // ///      `ISignatureTransfer.PermitTransferFrom` struct, then the computation of `target` using
-    // ///      the trusted initcode (or equivalent) must ensure that that calldata is relayed
-    // ///      unmodified. The library function `AddressDerivation.deriveDeterministicContract` is
-    // ///      recommended.
-    // function _setOperatorAndCall(
-    //     address payable target,
-    //     uint256 value,
-    //     bytes memory data,
-    //     uint32 selector,
-    //     function (bytes calldata) internal returns (bytes memory) callback
-    // ) internal returns (bytes memory) {
-    //     TransientStorage.setOperatorAndCallback(target, selector, callback);
-    //     (bool success, bytes memory returndata) = target.call{value: value}(data);
-    //     success.maybeRevert(returndata);
-    //     TransientStorage.checkSpentOperatorAndCallback();
-    //     return returndata;
-    // }
-
-    // function _setOperatorAndCall(
-    //     address target,
-    //     bytes memory data,
-    //     uint32 selector,
-    //     function (bytes calldata) internal returns (bytes memory) callback
-    // ) internal override returns (bytes memory) {
-    //     return _setOperatorAndCall(payable(target), 0, data, selector, callback);
-    // }
-
-    // function _invokeCallback(bytes calldata data) internal returns (bytes memory) {
-    //     // Retrieve callback and perform call with untrusted calldata
-    //     return TransientStorage.getAndClearCallback()(data[4:]);
-    // }
+    function getAndClearWitness() internal returns (bytes32) {
+        return TransientStorage.getAndClearWitness();
+    }
 
 }
 
 abstract contract Permit2Payment is Permit2PaymentBase {
     
-    // fallback(bytes calldata) external virtual returns (bytes memory) {
-    //     return _invokeCallback(_msgData());
-    // }
 
     function _permit(address owner, IAllowanceTransfer.PermitSingle memory permitSingle, bytes memory signature) internal virtual override(Permit2PaymentAbstract) {
         _PERMIT2.permit(owner, permitSingle, signature);
@@ -266,16 +179,8 @@ abstract contract Permit2Payment is Permit2PaymentBase {
         address from,
         bytes32 witness,
         string memory witnessTypeString,
-        bytes memory sig,
-        bool isForwarded
+        bytes memory sig
     ) internal virtual override(Permit2PaymentAbstract) {
-        if (isForwarded) {
-            assembly ("memory-safe") {
-                mstore(0x00, 0x1c500e5c) // selector for `ForwarderNotAllowed()`
-                revert(0x1c, 0x04)
-            }
-        }
-
         // This is effectively
         /*
         _PERMIT2.permitWitnessTransferFrom(permit, transferDetails, from, witness, witnessTypeString, sig);
@@ -331,33 +236,11 @@ abstract contract Permit2Payment is Permit2PaymentBase {
         }
     }
 
-    // See comment in above overload; don't use this function
-    function _transferFromIKnowWhatImDoing(
-        ISignatureTransfer.PermitTransferFrom memory permit,
-        ISignatureTransfer.SignatureTransferDetails memory transferDetails,
-        address from,
-        bytes32 witness,
-        string memory witnessTypeString,
-        bytes memory sig
-    ) internal virtual override(Permit2PaymentAbstract) {
-        _transferFromIKnowWhatImDoing(permit, transferDetails, from, witness, witnessTypeString, sig, _isForwarded());
-    }
-
     function _transferFrom(
         ISignatureTransfer.PermitTransferFrom memory permit,
         ISignatureTransfer.SignatureTransferDetails memory transferDetails,
         address owner,
         bytes memory sig
-    ) internal virtual override(Permit2PaymentAbstract) {
-        _transferFrom(permit, transferDetails, owner, sig, _isForwarded());
-    }
-
-    function _transferFrom(
-        ISignatureTransfer.PermitTransferFrom memory permit,
-        ISignatureTransfer.SignatureTransferDetails memory transferDetails,
-        address owner,
-        bytes memory sig,
-        bool isForwarded
     ) internal virtual override(Permit2PaymentAbstract) {
         // This is effectively
         /*
@@ -415,13 +298,7 @@ abstract contract Permit2PaymentTakeIntent is Permit2Payment {
     using SafeTransferLib for IERC20;
 
     constructor(IAllowanceHolder allowanceHolder) Permit2PaymentBase(allowanceHolder) {
-        assert(!_hasMetaTxn());
     }
-
-    function _isRestrictedTarget(address target) internal pure virtual override returns (bool) {
-        return /*target == address(_ALLOWANCE_HOLDER) ||*/ super._isRestrictedTarget(target);
-    }
-
 
     modifier takeIntent(address payer, bytes32 witness) override {
         TransientStorage.setPayerAndWitness(payer, witness);
@@ -433,44 +310,13 @@ abstract contract Permit2PaymentTakeIntent is Permit2Payment {
         revert();
         _;
     }
-
-    // Solidity inheritance is stupid
-    function _isForwarded()
-        internal
-        view
-        virtual
-        override(AbstractContext, Context)
-        returns (bool)
-    {
-        return super._isForwarded();
-    }
-
-    function _msgData()
-        internal
-        view
-        virtual
-        override(AbstractContext, Context)
-        returns (bytes calldata)
-    {
-        return super._msgData();
-    }
-
-    function _msgSender()
-        internal
-        view
-        virtual
-        override(Permit2PaymentBase)
-        returns (address)
-    {
-        return super._msgSender();
-    }
 }
 
 // DANGER: the order of the base contracts here is very significant for the use of `super` below
 // (and in derived contracts). Do not change this order.
-abstract contract Permit2PaymentMetaTxn is Context, Permit2Payment {
+abstract contract Permit2PaymentMetaTxn is Permit2Payment {
     constructor(IAllowanceHolder allowanceHolder) Permit2PaymentBase(allowanceHolder) {
-        assert(_hasMetaTxn());
+        
     }
 
     function _witnessTypeSuffix() internal pure virtual returns (string memory) {
@@ -481,8 +327,7 @@ abstract contract Permit2PaymentMetaTxn is Context, Permit2Payment {
         ISignatureTransfer.PermitTransferFrom memory permit,
         ISignatureTransfer.SignatureTransferDetails memory transferDetails,
         address owner,
-        bytes memory sig,
-        bool isForwarded // must be false
+        bytes memory sig
     ) internal override {
         //TODO: check witness where from!!!!
         bytes32 witness = TransientStorage.getWitness();
@@ -490,7 +335,7 @@ abstract contract Permit2PaymentMetaTxn is Context, Permit2Payment {
             revertConfusedDeputy();
         }
         _transferFromIKnowWhatImDoing(
-            permit, transferDetails, _msgSender(), witness, _witnessTypeSuffix(), sig, isForwarded
+            permit, transferDetails, owner, witness, _witnessTypeSuffix(), sig
         );
     }
 
@@ -504,17 +349,7 @@ abstract contract Permit2PaymentMetaTxn is Context, Permit2Payment {
     }
 
     modifier metaTx(address msgSender, bytes32 witness) override {
-        if (_isForwarded()) {
-            assembly ("memory-safe") {
-                mstore(0x00, 0x1c500e5c) // selector for `ForwarderNotAllowed()`
-                revert(0x1c, 0x04)
-            }
-        }
-        if (_operator() == msgSender) {
-            revertConfusedDeputy();
-        }
         TransientStorage.setPayerAndWitness(msgSender, witness);
-        
         _;
         
         // It should not be possible for this check to revert because the very first thing that a
@@ -522,10 +357,6 @@ abstract contract Permit2PaymentMetaTxn is Context, Permit2Payment {
         TransientStorage.checkSpentPayerAndWitness();
     }
 
-    // Solidity inheritance is stupid
-    function _msgSender() internal view virtual override(Context, Permit2PaymentBase) returns (address) {
-        return super._msgSender();
-    }
 }
 
 abstract contract Permit2PaymentIntent is Permit2PaymentMetaTxn {

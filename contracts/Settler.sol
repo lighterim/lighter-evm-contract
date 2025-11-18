@@ -8,7 +8,6 @@ import {ISettlerTakerSubmitted} from "./interfaces/ISettlerTakerSubmitted.sol";
 import {Permit2PaymentTakerSubmitted} from "./core/Permit2Payment.sol";
 import {Permit2PaymentAbstract} from "./core/Permit2PaymentAbstract.sol";
 
-import {AbstractContext} from "./Context.sol";
 import {CalldataDecoder, SettlerBase} from "./SettlerBase.sol";
 import {UnsafeMath} from "./utils/UnsafeMath.sol";
 
@@ -94,7 +93,7 @@ abstract contract Settler is ISettlerTakerSubmitted, Permit2PaymentTakerSubmitte
         internal
         view
         virtual
-        override(Permit2PaymentTakerSubmitted, AbstractContext)
+        override(Permit2PaymentTakerSubmitted)
         returns (address)
     {
         return super._msgSender();

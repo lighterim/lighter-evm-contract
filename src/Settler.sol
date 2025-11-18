@@ -9,7 +9,6 @@ import {ISettlerTakeIntent} from "./interfaces/ISettlerTakeIntent.sol";
 import {Permit2PaymentTakeIntent} from "./core/Permit2Payment.sol";
 import {Permit2PaymentAbstract} from "./core/Permit2PaymentAbstract.sol";
 
-import {AbstractContext} from "./Context.sol";
 import {CalldataDecoder, SettlerBase} from "./SettlerBase.sol";
 import {UnsafeMath} from "./utils/UnsafeMath.sol";
 
@@ -117,24 +116,4 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
         return true;
     }
 
-    // Solidity inheritance is stupid
-    function _msgSender()
-        internal
-        view
-        virtual
-        override(Permit2PaymentTakeIntent, AbstractContext)
-        returns (address)
-    {
-        return super._msgSender();
-    }
-
-    function _isRestrictedTarget(address target)
-        internal
-        pure
-        virtual
-        override(Permit2PaymentTakeIntent, Permit2PaymentAbstract)
-        returns (bool)
-    {
-        return super._isRestrictedTarget(target);
-    }
 }

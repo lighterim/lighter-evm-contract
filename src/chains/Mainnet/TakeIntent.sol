@@ -16,7 +16,6 @@ import {InvalidSpender, InvalidSignature, InvalidWitness} from "../../core/Settl
 
 import {SettlerAbstract} from "../../SettlerAbstract.sol";
 import {SettlerBase} from "../../SettlerBase.sol";
-import {AbstractContext} from "../../Context.sol";
 import {ParamsHash} from "../../utils/ParamsHash.sol";
 import {Permit2PaymentAbstract} from "../../core/Permit2PaymentAbstract.sol";
 import {Permit2PaymentTakeIntent} from "../../core/Permit2Payment.sol";
@@ -27,7 +26,10 @@ import {LighterAccount} from "../../account/LighterAccount.sol";
 contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
 
     
-    constructor(address lighterRelayer, IEscrow escrow, LighterAccount lighterAccount, bytes20 gitCommit, IAllowanceHolder allowanceHolder) 
+    constructor(
+        address lighterRelayer, IEscrow escrow, LighterAccount lighterAccount,
+        bytes20 gitCommit, IAllowanceHolder allowanceHolder
+        ) 
         MainnetMixin(lighterRelayer, escrow, lighterAccount, gitCommit)
         Permit2PaymentTakeIntent(allowanceHolder)
         EIP712("MainnetTakeIntent", "1") 
@@ -39,20 +41,39 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
      * @dev Returns the EIP-712 domain separator for this contract
      */
     function _domainSeparator() internal view override returns (bytes32) {
-        return keccak256(
-            abi.encode(
-                ParamsHash.EIP712_DOMAIN_TYPEHASH,
-                keccak256(bytes("MainnetTakeIntent")),
-                keccak256(bytes("1")),
-                block.chainid,
-                address(this)
-            )
-        );
+        return super._domainSeparatorV4();
     }
 
-    function _dispatch(uint256 index, uint256 action, bytes calldata data) internal virtual override(MainnetMixin, Settler) returns (bool) {
-        return super._dispatch(index, action, data);
+    function _dispatch(uint256 i, uint256 action, bytes calldata data)
+        internal
+        override(Settler, MainnetMixin)
+        returns (bool)
+    {
+        if (super._dispatch(i, action, data)) {
+            return true;
+        } else if (action == uint32(ISettlerActions.NATIVE_CHECK.selector)) {
+            (uint256 deadline, uint256 msgValue) = abi.decode(data, (uint256, uint256));
+            if (block.timestamp > deadline) {
+                assembly ("memory-safe") {
+                    mstore(0x00, 0xcd21db4f) // selector for `SignatureExpired(uint256)`
+                    mstore(0x20, deadline)
+                    revert(0x1c, 0x24)
+                }
+            }
+            if (msg.value > msgValue) {
+                assembly ("memory-safe") {
+                    mstore(0x00, 0x4a094431) // selector for `MsgValueMismatch(uint256,uint256)`
+                    mstore(0x20, msgValue)
+                    mstore(0x40, callvalue())
+                    revert(0x1c, 0x44)
+                }
+            }
+        } else {
+            return false;
+        }
+        return true;
     }
+
 
     function _dispatchVIP(uint256 action, bytes calldata data) internal virtual override DANGEROUS_freeMemory returns (bool) {
         if(action == uint32(ISettlerActions.ESCROW_AND_INTENT_CHECK.selector)) {
@@ -62,30 +83,11 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
                 revert InvalidWitness();
             }
             makesureTradeValidation(escrowParams, intentParams);
+            _makeEscrow(escrowTypedHash, escrowParams, 0, 0);
             return true;
         }
 
         return false;
     }
 
-    function _isRestrictedTarget(address target)
-        internal
-        pure
-        override(Permit2PaymentAbstract, Settler)
-        returns (bool)
-    {
-        return super._isRestrictedTarget(target);
-    }
-
-    // function _dispatch(uint256 i, uint256 action, bytes calldata data)
-    //     internal
-    //     override(Settler, MainnetMixin)
-    //     returns (bool)
-    // {
-    //     return super._dispatch(i, action, data);
-    // }
-
-    function _msgSender() internal view override(Settler, AbstractContext) returns (address) {
-        return super._msgSender();
-    }
 }

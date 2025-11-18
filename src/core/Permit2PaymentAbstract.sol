@@ -1,48 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
-import {AbstractContext} from "../Context.sol";
 
 import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
 import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer.sol";
 
-abstract contract Permit2PaymentAbstract is AbstractContext {
+abstract contract Permit2PaymentAbstract {
     
-        
-    function _isRestrictedTarget(address) internal pure virtual returns (bool);
-
-    function _operator() internal view virtual returns (address);
-
     /**
      * signatureTransfer
      * @param permit ISignatureTransfer.PermitTransferFrom(
      * @param transferDetails ISignatureTransfer.SignatureTransferDetails
      * @param sig signature
-     * @param isForwarded is forwarded
      */
     function _transferFrom(
         ISignatureTransfer.PermitTransferFrom memory permit,
         ISignatureTransfer.SignatureTransferDetails memory transferDetails,
         address owner,
-        bytes memory sig,
-        bool isForwarded
-    ) internal virtual;
-
-    function _transferFrom(
-        ISignatureTransfer.PermitTransferFrom memory permit,
-        ISignatureTransfer.SignatureTransferDetails memory transferDetails,
-        address owner,
         bytes memory sig
-    ) internal virtual;
-
-    function _transferFromIKnowWhatImDoing(
-        ISignatureTransfer.PermitTransferFrom memory permit,
-        ISignatureTransfer.SignatureTransferDetails memory transferDetails,
-        address from,
-        bytes32 witness,
-        string memory witnessTypeString,
-        bytes memory sig,
-        bool isForwarded
     ) internal virtual;
 
     function _transferFromIKnowWhatImDoing(
@@ -53,14 +28,6 @@ abstract contract Permit2PaymentAbstract is AbstractContext {
         string memory witnessTypeString,
         bytes memory sig
     ) internal virtual;
-
-    // function _setOperatorAndCall(
-    //     address target,
-    //     bytes memory data,
-    //     uint32 selector,
-    //     function (bytes calldata) internal returns (bytes memory) callback
-    // ) internal virtual returns (bytes memory);
-    
 
         /**
      * allowanceTransferWithPermit
