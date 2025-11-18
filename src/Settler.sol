@@ -89,20 +89,7 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
         return true;
     }
 
-    function _dispatchVIP(uint256 action, bytes calldata data) internal virtual returns (bool){
-        if(action == uint32(ISettlerActions.ESCROW_AND_INTENT_CHECK.selector)) {
-            (ISettlerBase.EscrowParams memory escrowParams, ISettlerBase.IntentParams memory intentParams) = abi.decode(data, (ISettlerBase.EscrowParams, ISettlerBase.IntentParams));
-            bytes32 escrowTypedHash = getEscrowTypedHash(escrowParams, _domainSeparator());
-            if (escrowTypedHash != getWitness()) {
-                revert InvalidWitness();
-            }
-            makesureTradeValidation(escrowParams, intentParams);
-        } 
-        else{
-            return false;
-        }
-        return true;
-    }
+    function _dispatchVIP(uint256 action, bytes calldata data) internal virtual returns (bool);
 
     function execute(address payer, bytes32 escrowTypedHash, bytes[] calldata actions)
         public

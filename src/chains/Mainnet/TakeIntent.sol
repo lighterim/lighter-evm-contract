@@ -12,7 +12,7 @@ import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import {ISettlerActions} from "../../ISettlerActions.sol";
 import {ISettlerBase} from "../../interfaces/ISettlerBase.sol";
-import {InvalidSpender, InvalidSignature} from "../../core/SettlerErrors.sol";
+import {InvalidSpender, InvalidSignature, InvalidWitness} from "../../core/SettlerErrors.sol";
 
 import {SettlerAbstract} from "../../SettlerAbstract.sol";
 import {SettlerBase} from "../../SettlerBase.sol";
@@ -55,7 +55,17 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
     }
 
     function _dispatchVIP(uint256 action, bytes calldata data) internal virtual override DANGEROUS_freeMemory returns (bool) {
-        return super._dispatchVIP(action, data);
+        if(action == uint32(ISettlerActions.ESCROW_AND_INTENT_CHECK.selector)) {
+            (ISettlerBase.EscrowParams memory escrowParams, ISettlerBase.IntentParams memory intentParams) = abi.decode(data, (ISettlerBase.EscrowParams, ISettlerBase.IntentParams));
+            bytes32 escrowTypedHash = getEscrowTypedHash(escrowParams, _domainSeparator());
+            if (escrowTypedHash != getWitness()) {
+                revert InvalidWitness();
+            }
+            makesureTradeValidation(escrowParams, intentParams);
+            return true;
+        }
+
+        return false;
     }
 
     function _isRestrictedTarget(address target)
