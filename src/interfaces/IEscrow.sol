@@ -21,6 +21,9 @@ interface IEscrow {
      */
     function creditOf(address token, address account) external view returns (uint256);
 
+    /** pending escrow for the account */
+    function escrowOf(address token, address account) external view returns (uint256);
+
     /**
      * create an escrow for the buyer and seller
      * @param token The token to create the escrow for
@@ -50,9 +53,19 @@ interface IEscrow {
      * @param buyer The buyer of the escrow
      * @param seller The seller of the escrow
      * @param amount The amount of the escrow
-     * @param status The status of the escrow
      */
-    function release(bytes32 escrowHash, uint256 id, address token, address buyer, address seller, uint256 amount, ISettlerBase.EscrowStatus status) external;
+    function releaseByVerifier(bytes32 escrowHash, uint256 id, address token, address buyer, address seller, uint256 amount) external;
+
+    /**
+     * release the escrow by executor
+     * @param escrowHash The hash of the escrow
+     * @param id the id of escrow trade
+     * @param token The token of the escrow
+     * @param buyer The buyer of the escrow
+     * @param seller The seller of the escrow
+     * @param amount The amount of the escrow
+     */
+    function releaseByExecutor(bytes32 escrowHash, uint256 id, address token, address buyer, address seller, uint256 amount) external;
 
     /**
      * cancel the escrow
@@ -81,4 +94,15 @@ interface IEscrow {
     event Released(address indexed token, address indexed buyer, address indexed seller, bytes32 escrowHash,  uint256 id, uint256 amount, ISettlerBase.EscrowStatus status);
     event Cancelled(address indexed token, address indexed buyer, address indexed seller, bytes32 escrowHash,  uint256 id, uint256 amount, ISettlerBase.EscrowStatus status);
     event Claimed(address indexed token, address indexed to, uint256 amount);
+
+    event AddAuthorizedCreator(address indexed creator);
+    event AddAuthorizedExecutor(address indexed executor);
+    event AddAuthorizedVerifier(address indexed verifier);
+    event WhitelistedToken(address indexed token);
+
+    event RemoveAuthorizedCreator(address indexed creator);
+    event RemoveAuthorizedExecutor(address indexed executor);
+    event RemoveAuthorizedVerifier(address indexed verifier);
+    event UnwhitelistedToken(address indexed token);
+
 }

@@ -57,6 +57,7 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
                 ISignatureTransfer.SignatureTransferDetails memory transferDetails, 
                 bytes memory sig
             ) = abi.decode(data, (ISignatureTransfer.PermitTransferFrom, ISignatureTransfer.SignatureTransferDetails, bytes));
+            
             address payer = getPayer();
             _transferFrom(permit, transferDetails, payer, sig);
             clearPayer(payer);

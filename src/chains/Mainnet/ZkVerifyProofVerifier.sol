@@ -48,14 +48,13 @@ contract ZkVerifyProofVerifier is IProofVerifier {
         );
         if(!isValid) revert InvalidZkProof();
 
-        escrow.release(
+        escrow.releaseByVerifier(
             escrowTypedHash, 
             escrowParams.id, 
-            escrowParams.token, 
+            address(escrowParams.token), 
             escrowParams.buyer, 
             escrowParams.seller, 
-            escrowParams.volume,
-            ISettlerBase.EscrowStatus.ThresholdReachedReleased
+            escrowParams.volume
             );
         return true;
     }

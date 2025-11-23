@@ -238,7 +238,7 @@ contract MainnetUserTxn is EIP712 {
         bytes32 escrowTypedHash = _hashTypedDataV4(escrowHash);
         SignatureChecker.isValidSignatureNow(lighterRelayer, escrowTypedHash, sig);
 
-        escrow.release(escrowTypedHash, escrowParams.id, address(escrowParams.token), escrowParams.buyer, escrowParams.seller, escrowParams.volume,  ISettlerBase.EscrowStatus.SellerReleased);
+        escrow.releaseByExecutor(escrowTypedHash, escrowParams.id, address(escrowParams.token), escrowParams.buyer, escrowParams.seller, escrowParams.volume);
         
         lighterAccount.removePendingTx(escrowParams.buyer);
         lighterAccount.removePendingTx(escrowParams.seller);

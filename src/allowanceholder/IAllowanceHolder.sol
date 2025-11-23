@@ -6,7 +6,7 @@ import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer
 interface IAllowanceHolder {
 
     
-    function permit(address owner, IAllowanceTransfer.PermitSingle memory permitSingle, bytes calldata signature) external;
+    // function permit(address owner, IAllowanceTransfer.PermitSingle memory permitSingle, bytes calldata signature) external;
 
     /**
      * consumes allowance to recipient

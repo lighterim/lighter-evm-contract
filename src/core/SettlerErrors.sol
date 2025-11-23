@@ -26,6 +26,11 @@ function revertRelayerNotAuthorized() pure {
     }
 }
 
+error TokenNotWhitelisted(address token);
+error UnauthorizedCreator(address creator);
+error UnauthorizedExecutor(address executor);
+error UnauthorizedVerifier(address verifier);
+
 error InsufficientPayment(uint256 required, uint256 provided);
 error InvalidCount();
 error InvalidRecipient();
@@ -59,7 +64,7 @@ error EscrowAlreadyExists(bytes32 escrowHash);
 
 error EscrowNotExists(bytes32 escrowHash);
 
-error EscrowStatusError(bytes32 escrowHash, ISettlerBase.EscrowStatus expected, ISettlerBase.EscrowStatus actual);
+error InvalidEscrowStatus(bytes32 escrowHash, ISettlerBase.EscrowStatus actual);
 
 /// @notice Thrown in cases when using a Trusted Forwarder / AllowanceHolder is not allowed
 error ForwarderNotAllowed();

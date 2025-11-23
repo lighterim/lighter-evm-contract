@@ -3,7 +3,6 @@ pragma solidity ^0.8.25;
 
 import {Permit2PaymentAbstract} from "./Permit2PaymentAbstract.sol";
 import {revertConfusedDeputy} from "./SettlerErrors.sol";
-import {Context, AbstractContext} from "../Context.sol";
 import {SettlerAbstract} from "../SettlerAbstract.sol";
 import {IAllowanceHolder} from "../allowanceholder/IAllowanceHolder.sol";
 import {AllowanceHolder} from "../allowanceholder/AllowanceHolder.sol";

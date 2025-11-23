@@ -13,11 +13,11 @@ contract AllowanceHolder is IAllowanceHolder {
     constructor() {
     }
 
-    function permit(address owner, IAllowanceTransfer.PermitSingle memory permitSingle, bytes calldata signature) external {
-        if(permitSingle.spender != address(this)) revert InvalidSpender();
-        // if(permitSingle.details.nonce != PERMIT2_ALLOWANCE.nonce(owner, permitSingle.details.token, permitSingle.spender)) revert InvalidNonce();
-        PERMIT2_ALLOWANCE.permit(owner, permitSingle, signature);
-    }
+    // function permit(address owner, IAllowanceTransfer.PermitSingle memory permitSingle, bytes calldata signature) external {
+    //     if(permitSingle.spender != address(this)) revert InvalidSpender();
+    //     // if(permitSingle.details.nonce != PERMIT2_ALLOWANCE.nonce(owner, permitSingle.details.token, permitSingle.spender)) revert InvalidNonce();
+    //     PERMIT2_ALLOWANCE.permit(owner, permitSingle, signature);
+    // }
 
     function transferFrom(address token, address owner, address recipient, uint160 amount) public  {
         PERMIT2_ALLOWANCE.transferFrom(owner, recipient, amount, token);
