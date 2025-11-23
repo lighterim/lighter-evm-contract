@@ -32,7 +32,7 @@ contract Escrow is Ownable, Pausable, IEscrow{
 
     mapping(address => bool) private _authorizedExecutor;
 
-    mapping(address => bool) private _authorizdVerifier;
+    mapping(address => bool) private _authorizedVerifier;
 
     
     modifier onlyWhitelistedToken(address token){
@@ -51,7 +51,7 @@ contract Escrow is Ownable, Pausable, IEscrow{
     }
 
     modifier onlyAuthorizedVerifier(){
-        if(!_authorizdVerifier[msg.sender]) revert UnauthorizedVerifier(msg.sender);
+        if(!_authorizedVerifier[msg.sender]) revert UnauthorizedVerifier(msg.sender);
         _;
     }
     
@@ -78,7 +78,7 @@ contract Escrow is Ownable, Pausable, IEscrow{
     }
 
     function authorizeVerifier(address verifier, bool isAuthorized) external onlyOwner{
-        _authorizdVerifier[verifier] = isAuthorized;
+        _authorizedVerifier[verifier] = isAuthorized;
         if(isAuthorized) emit AddAuthorizedVerifier(verifier);
         else emit RemoveAuthorizedVerifier(verifier);
     }
