@@ -231,9 +231,19 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         ticketContract.setBaseURI(newBaseURI);
     }
 
-    function token(address tbaAddress) external view returns (uint256, address, uint256) {
+    function token(address tbaAddress) public view returns (uint256, address, uint256) {
         IERC6551Account account = IERC6551Account(payable(tbaAddress));
         return account.token();
+    }
+
+    function isOwnerCall(address tbaAddress) public view returns (bool) {
+        (uint256 chainId, address tokenContract, uint256 tokenId) = token(tbaAddress);
+        if (chainId == block.chainid && tokenContract == address(ticketContract)){
+            if(tbaAddress == msg.sender) return true;
+            address owner = IERC721(tokenContract).ownerOf(tokenId);
+            return owner == msg.sender;
+        }
+        return false;
     }
 
     /**

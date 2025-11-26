@@ -76,10 +76,18 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
         }
         else if (action == uint32(ISettlerActions.BULK_SELL_TRANSFER_FROM.selector)) {
             (
-                IAllowanceTransfer.AllowanceTransferDetails memory details
-            ) = abi.decode(data, (IAllowanceTransfer.AllowanceTransferDetails));
+                IAllowanceTransfer.AllowanceTransferDetails memory details,
+                ISettlerBase.IntentParams memory intentParams,
+                bytes memory bulkSellIntentSig
+            ) = abi.decode(data, (IAllowanceTransfer.AllowanceTransferDetails, ISettlerBase.IntentParams, bytes));
+            
+            /// verify bulk sell intent signature by payer
+            bytes32 intentParamsHash = intentParams.hash();
+            makesureIntentParams(details.from, _domainSeparator(), intentParams, bulkSellIntentSig);
+            
             address payer = getPayer();
             if(details.from != payer) revert InvalidPayer();
+            // 不验证花费者额度，因为transferFrom将自动验证额度及调用关系。
             _allowanceHolderTransferFrom(details.token, payer, details.to, details.amount);
             clearPayer(payer);
         } 
@@ -91,11 +99,11 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
 
     function _dispatchVIP(uint256 action, bytes calldata data) internal virtual returns (bool);
 
-    function execute(address payer, bytes32 escrowTypedHash, bytes[] calldata actions)
+    function execute(address payer, bytes32 escrowTypedHash, bytes32 intentTypeHash, bytes[] calldata actions)
         public
         payable
         override
-        takeIntent(payer, escrowTypedHash)
+        takeIntent(payer, escrowTypedHash, intentTypeHash)
         returns (bool)
     {
         if (actions.length != 0) {

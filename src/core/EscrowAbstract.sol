@@ -30,6 +30,11 @@ abstract contract EscrowAbstract is SettlerAbstract {
         escrowTypedHash = MessageHashUtils.toTypedDataHash(domainSeparator, escrowHash);
     }
 
+    function getIntentTypedHash(ISettlerBase.IntentParams memory params, bytes32 domainSeparator) internal pure returns (bytes32 intentTypedHash) {
+        bytes32 intentHash = params.hash();
+        intentTypedHash = MessageHashUtils.toTypedDataHash(domainSeparator, intentHash);
+    }
+
     /**
      * 确认担保交易参数是否完整有效。
      * @param relayer 可信的签名者地址
@@ -44,16 +49,20 @@ abstract contract EscrowAbstract is SettlerAbstract {
 
     /**
      * 确认受托意向是否完整有效。
-     * @param relayer 可信的签名者地址
+     * @param signer 可信的签名者地址
      * @param domainSeparator 域分隔符
      * @param params 受托意向参数
      * @param sig 受托意向参数的签名
      */
-    function makesureIntentParams(address relayer, bytes32 domainSeparator, ISettlerBase.IntentParams memory params, bytes memory sig) internal view virtual returns (bytes32 intentTypedHash){
+    function makesureIntentParams(
+        address signer, 
+        bytes32 domainSeparator, 
+        ISettlerBase.IntentParams memory params, 
+        bytes memory sig
+        ) internal view virtual returns (bytes32 intentTypedHash){
         if(block.timestamp > params.expiryTime) revert IntentExpired(params.expiryTime);
-        bytes32 intentHash = params.hash();
-        intentTypedHash = MessageHashUtils.toTypedDataHash(domainSeparator, intentHash);
-        if(!isValidSignature(relayer, intentTypedHash, sig)) revert InvalidIntentSignature();
+        intentTypedHash = getIntentTypedHash(params, domainSeparator);
+        if(!isValidSignature(signer, intentTypedHash, sig)) revert InvalidIntentSignature();
     }
 
     /**

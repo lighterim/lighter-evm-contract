@@ -12,7 +12,7 @@ import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import {ISettlerActions} from "../../ISettlerActions.sol";
 import {ISettlerBase} from "../../interfaces/ISettlerBase.sol";
-import {InvalidSpender, InvalidSignature, InvalidWitness} from "../../core/SettlerErrors.sol";
+import {InvalidSpender, InvalidSignature, InvalidWitness, InvalidIntent, InsufficientQuota} from "../../core/SettlerErrors.sol";
 
 import {SettlerAbstract} from "../../SettlerAbstract.sol";
 import {SettlerBase} from "../../SettlerBase.sol";
@@ -77,17 +77,47 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
 
     function _dispatchVIP(uint256 action, bytes calldata data) internal virtual override DANGEROUS_freeMemory returns (bool) {
         if(action == uint32(ISettlerActions.ESCROW_AND_INTENT_CHECK.selector)) {
-            (ISettlerBase.EscrowParams memory escrowParams, ISettlerBase.IntentParams memory intentParams) = abi.decode(data, (ISettlerBase.EscrowParams, ISettlerBase.IntentParams));
+            (
+                ISettlerBase.EscrowParams memory escrowParams, 
+                ISettlerBase.IntentParams memory intentParams,
+                bytes memory makerIntentSig
+            ) = abi.decode(data, (ISettlerBase.EscrowParams, ISettlerBase.IntentParams, bytes));
+            
             bytes32 escrowTypedHash = getEscrowTypedHash(escrowParams, _domainSeparator());
             if (escrowTypedHash != getWitness()) {
                 revert InvalidWitness();
             }
+
+            bytes32 intentParamsHash = getIntentTypedHash(intentParams, _domainSeparator());
+            if (intentParamsHash != getIntentTypeHash()) {
+                revert InvalidIntent();
+            }
+
+            /**
+             * 1. takeBulkSell, maker: seller(tba), maker intent signature(seller tba)
+             * 2. takeSellerIntent, maker: seller(tba), 
+             * 3. takeBuyerIntent, maker: buyer(tba), maker intent signature(buyer tba)
+             */
+            if(lighterAccount.isOwnerCall(escrowParams.seller)){
+                /// tba is seller ==> 3. takeBuyerIntent
+                /// verify buyer intent signature
+                makesureIntentParams(escrowParams.buyer, _domainSeparator(), intentParams, makerIntentSig);
+            }
+
+            _makesureAvailableQuota(escrowParams.buyer);
+            _makesureAvailableQuota(escrowParams.seller);
+            
             makesureTradeValidation(escrowParams, intentParams);
             _makeEscrow(escrowTypedHash, escrowParams, 0, 0);
+            
             return true;
         }
 
         return false;
+    }
+
+    function _makesureAvailableQuota(address tbaAddress) internal view {
+        if(!lighterAccount.hasAvailableQuota(tbaAddress)) revert InsufficientQuota(tbaAddress);
     }
 
 }

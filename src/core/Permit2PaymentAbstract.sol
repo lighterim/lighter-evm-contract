@@ -61,5 +61,5 @@ abstract contract Permit2PaymentAbstract {
      * @param payer payer
      * @param witness witness
      */
-    modifier takeIntent(address payer, bytes32 witness) virtual;
+    modifier takeIntent(address payer, bytes32 witness, bytes32 intentTypeHash) virtual;
 }

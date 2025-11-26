@@ -38,6 +38,8 @@ error WithdrawalFailed();
 
 error InvalidWitness();
 
+error InvalidIntent();
+
 /// @notice Thrown when a target contract is invalid given the context
 error InvalidTarget();
 
@@ -58,7 +60,7 @@ error PendingTxNotExists(address account, bytes32 escrowHash);
 
 error InvalidRentPrice();
 
-error InsufficientQuota();
+error InsufficientQuota(address account);
 
 error EscrowAlreadyExists(bytes32 escrowHash);
 

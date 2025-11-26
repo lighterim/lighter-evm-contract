@@ -25,7 +25,9 @@ interface ISettlerActions {
     
    
     function BULK_SELL_TRANSFER_FROM(
-        IAllowanceTransfer.AllowanceTransferDetails memory details
+        IAllowanceTransfer.AllowanceTransferDetails memory details,
+        ISettlerBase.IntentParams memory intentParams,
+        bytes memory bulkSellIntentSig
         ) external;
 
     ///@dev msgValue is interpreted as an upper bound on the expected msg.value, not as an exact specification
@@ -33,6 +35,10 @@ interface ISettlerActions {
 
     function ESCROW_PARAMS_CHECK(ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) external;
 
-    function ESCROW_AND_INTENT_CHECK(ISettlerBase.EscrowParams memory escrowParams, ISettlerBase.IntentParams memory intentParams) external;
+    function ESCROW_AND_INTENT_CHECK(
+        ISettlerBase.EscrowParams memory escrowParams, 
+        ISettlerBase.IntentParams memory intentParams,
+        bytes memory makerIntentSig
+        ) external;
     
 }

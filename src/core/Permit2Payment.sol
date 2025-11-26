@@ -22,6 +22,8 @@ library TransientStorage {
     
     // bytes32((uint256(keccak256("witness slot")) - 1) & type(uint96).max)
     bytes32 private constant _WITNESS_SLOT = 0x0000000000000000000000000000000000000000c7aebfbc05485e093720deaa;
+    // bytes32((uint256(keccak256("intentTypeHash slot")) - 1) & type(uint96).max)
+    bytes32 private constant _INTENT_TYPE_HASH_SLOT = 0x0000000000000000000000000000000000000000c7aebfbc05485e093720deaa;
     // bytes32((uint256(keccak256("payer slot")) - 1) & type(uint96).max)
     bytes32 private constant _PAYER_SLOT = 0x0000000000000000000000000000000000000000cd1e9517bb0cb8d0d5cde893;
 
@@ -35,58 +37,69 @@ library TransientStorage {
     // `witness` must not be `bytes32(0)`. This is not checked.
     function setPayerAndWitness(
         address payer,
-        bytes32 witness
+        bytes32 witness,
+        bytes32 intentTypeHash
     ) internal {
-        address currentSigner;
-        assembly ("memory-safe") {
-            currentSigner := tload(_PAYER_SLOT)
-        }
-        if (currentSigner != address(0)) {
-            revertConfusedDeputy();
-        }
-
-        bytes32 currentWitness;
-        assembly ("memory-safe") {
-            currentWitness := tload(_WITNESS_SLOT)
-        }
-        if (currentWitness != bytes32(0)) {
-            // It should be impossible to reach this error because the first thing a metatransaction
-            // does on entry is to spend the `witness` (either directly or via a callback)
-            assembly ("memory-safe") {
-                mstore(0x00, 0x9936cbab) // selector for `ReentrantMetatransaction(bytes32)`
-                mstore(0x20, currentWitness)
-                revert(0x1c, 0x24)
-            }
-        }
-
+        _makesureFirstTimeSetPayer(_PAYER_SLOT);
+        _makesureFirstTimeSet(_WITNESS_SLOT);
+        _makesureFirstTimeSet(_INTENT_TYPE_HASH_SLOT);
+       
         assembly ("memory-safe") {
             tstore(_PAYER_SLOT, and(0xffffffffffffffffffffffffffffffffffffffff, payer))
             tstore(_WITNESS_SLOT, witness)
+            tstore(_INTENT_TYPE_HASH_SLOT, intentTypeHash)
+        }
+    }
+
+    function _makesureFirstTimeSetPayer(bytes32 slot) private view {
+        address currentPayer;
+        assembly ("memory-safe") {
+            currentPayer := tload(slot)
+        }
+        if (currentPayer != address(0)) {
+            revertConfusedDeputy();
+        }
+    }
+
+    function _makesureFirstTimeSet(bytes32 slot) private view {
+        bytes32 currentValue;
+        assembly ("memory-safe") {
+            currentValue := tload(slot)
+        }
+        if (currentValue != bytes32(0)) {
+            revertConfusedDeputy();
+        }
+    }
+
+    function _checkSpentBytes32(bytes32 slot) private view {
+        bytes32 currentValue;
+        assembly ("memory-safe") {
+            currentValue := tload(slot)
+        }
+        if (currentValue != bytes32(0)) {
+            revertConfusedDeputy();
+        }
+    }
+
+    function _checkSpentAddress(bytes32 slot) private view {
+        address currentValue;
+        assembly ("memory-safe") {
+            currentValue := tload(slot)
+        }
+        if (currentValue != address(0)) {
+            revertConfusedDeputy();
         }
     }
 
     function checkSpentPayerAndWitness() internal view {
-        bytes32 currentWitness;
-        assembly ("memory-safe") {
-            currentWitness := tload(_WITNESS_SLOT)
-        }
-        if (currentWitness != bytes32(0)) {
-            assembly ("memory-safe") {
-                mstore(0x00, 0xe25527c2) // selector for `WitnessNotSpent(bytes32)`
-                mstore(0x20, currentWitness)
-                revert(0x1c, 0x24)
-            }
-        }
+        _checkSpentAddress(_PAYER_SLOT);
+        _checkSpentBytes32(_WITNESS_SLOT);
+        _checkSpentBytes32(_INTENT_TYPE_HASH_SLOT);
+    }
 
-        address currentPayer;
+    function getWitness() internal view returns (bytes32 witness) {
         assembly ("memory-safe") {
-            currentPayer := tload(_PAYER_SLOT)
-        }
-        if (currentPayer != address(0)) {
-            assembly ("memory-safe") {
-                mstore(0x00, 0x9684be17) // selector for `PayerNotSpent()`
-                revert(0x1c, 0x04)
-            }
+            witness := tload(_WITNESS_SLOT)
         }
     }
 
@@ -97,9 +110,21 @@ library TransientStorage {
         }
     }
 
-    function getWitness() internal view returns (bytes32 witness) {
+    function clearWitness() internal {
         assembly ("memory-safe") {
-            witness := tload(_WITNESS_SLOT)
+            tstore(_WITNESS_SLOT, 0x00)
+        }
+    }
+
+    function getIntentTypeHash() internal view returns (bytes32 intentTypeHash) {
+        assembly ("memory-safe") {
+            intentTypeHash := tload(_INTENT_TYPE_HASH_SLOT)
+        }
+    }
+
+    function clearIntentTypeHash() internal {
+        assembly ("memory-safe") {
+            tstore(_INTENT_TYPE_HASH_SLOT, 0x00)
         }
     }
 
@@ -145,6 +170,10 @@ abstract contract Permit2PaymentBase is  SettlerAbstract {
 
     function getWitness() internal view returns (bytes32) {
         return TransientStorage.getWitness();
+    }
+
+    function getIntentTypeHash() internal view returns (bytes32) {
+        return TransientStorage.getIntentTypeHash();
     }
 
     function getPayer() internal view returns (address) {
@@ -299,8 +328,8 @@ abstract contract Permit2PaymentTakeIntent is Permit2Payment {
     constructor(IAllowanceHolder allowanceHolder) Permit2PaymentBase(allowanceHolder) {
     }
 
-    modifier takeIntent(address payer, bytes32 witness) override {
-        TransientStorage.setPayerAndWitness(payer, witness);
+    modifier takeIntent(address payer, bytes32 witness, bytes32 intentTypeHash) override {
+        TransientStorage.setPayerAndWitness(payer, witness, intentTypeHash);
         _;
         TransientStorage.checkSpentPayerAndWitness();
     }
@@ -342,13 +371,13 @@ abstract contract Permit2PaymentMetaTxn is Permit2Payment {
         revertConfusedDeputy();
     }
 
-    modifier takeIntent(address payer, bytes32 witness) override {
+    modifier takeIntent(address payer, bytes32 witness, bytes32 intentTypeHash) override {
         revert();
         _;
     }
 
     modifier metaTx(address msgSender, bytes32 witness) override {
-        TransientStorage.setPayerAndWitness(msgSender, witness);
+        TransientStorage.setPayerAndWitness(msgSender, witness, bytes32(0));
         _;
         
         // It should not be possible for this check to revert because the very first thing that a
