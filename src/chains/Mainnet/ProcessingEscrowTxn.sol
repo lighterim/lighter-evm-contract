@@ -5,7 +5,7 @@ pragma solidity ^0.8.25;
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
 import {IAllowanceHolder} from "../../allowanceholder/IAllowanceHolder.sol";
-import {Permit2PaymentMetaTxn} from "../../core/Permit2Payment.sol";
+import {Permit2PaymentProcessingTxn} from "../../core/Permit2Payment.sol";
 import {MainnetMixin} from "./Common.sol";
 import {SettlerMetaTxn} from "../../SettlerMetaTxn.sol";
 import {ISettlerActions} from "../../ISettlerActions.sol";
@@ -22,7 +22,7 @@ contract MainnetSettlerMetaTxn is MainnetMixin, SettlerMetaTxn {
 
     constructor(address lighterRelayer, IEscrow escrow, LighterAccount lighterAccount, bytes20 gitCommit, IAllowanceHolder allowanceHolder) 
     MainnetMixin(lighterRelayer, escrow, lighterAccount, gitCommit)
-    Permit2PaymentMetaTxn(allowanceHolder)
+    Permit2PaymentProcessingTxn(allowanceHolder)
     {
 
     }

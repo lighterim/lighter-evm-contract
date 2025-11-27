@@ -3,8 +3,9 @@ pragma solidity ^0.8.25;
 
 import {ISettlerBase} from "./ISettlerBase.sol";
 
-interface ISettlerMetaTxn is ISettlerBase {
-    function executeMetaTxn(
+interface ISettlerProcessingTxn is ISettlerBase {
+    
+    function executeEscrowTxn(
         // AllowedSlippage calldata slippage,
         bytes[] calldata actions,
         bytes32 /* zid & affiliate */,

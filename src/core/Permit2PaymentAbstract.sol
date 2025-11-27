@@ -51,15 +51,22 @@ abstract contract Permit2PaymentAbstract {
         virtual;
 
     /**
-     * temporary modifier for meta transactions
+     * processing escrow transaction
+     * @param escrowTypedHash escrow typed hash
      */
-    modifier metaTx(address msgSender, bytes32 witness) virtual;
-
+    modifier processingEscrowTx(bytes32 escrowTypedHash) virtual;
 
     /**
      * take intent with payer and witness
      * @param payer payer
      * @param witness witness
+     * @param intentTypeHash intent type hash
      */
     modifier takeIntent(address payer, bytes32 witness, bytes32 intentTypeHash) virtual;
+
+    /**
+     * release after verifier
+     * @param escrowTypedHash escrow typed hash
+     */
+    modifier releaseAfterVerifier(bytes32 escrowTypedHash) virtual;
 }

@@ -2,9 +2,9 @@
 pragma solidity ^0.8.25;
 
 import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
-import {ISettlerMetaTxn} from "./interfaces/ISettlerMetaTxn.sol";
+import {ISettlerProcessingTxn} from "./interfaces/ISettlerProcessingTxn.sol";
 
-import {Permit2PaymentMetaTxn} from "./core/Permit2Payment.sol";
+import {Permit2PaymentProcessingTxn} from "./core/Permit2Payment.sol";
 
 import {CalldataDecoder, SettlerBase} from "./SettlerBase.sol";
 import {UnsafeMath} from "./utils/UnsafeMath.sol";
@@ -12,7 +12,7 @@ import {UnsafeMath} from "./utils/UnsafeMath.sol";
 import {ISettlerActions} from "./ISettlerActions.sol";
 import {revertActionInvalid} from "./core/SettlerErrors.sol";
 
-abstract contract SettlerMetaTxn is ISettlerMetaTxn, Permit2PaymentMetaTxn, SettlerBase {
+abstract contract SettlerMetaTxn is ISettlerProcessingTxn, Permit2PaymentProcessingTxn, SettlerBase {
     using UnsafeMath for uint256;
     using CalldataDecoder for bytes[];
 
@@ -111,12 +111,12 @@ abstract contract SettlerMetaTxn is ISettlerMetaTxn, Permit2PaymentMetaTxn, Sett
         return true;
     }
 
-    function executeMetaTxn(
+    function executeEscrowTxn(
         bytes[] calldata actions,
         bytes32 /* zid & affiliate */,
         address msgSender,
         bytes calldata sig
-    ) public virtual override metaTx(msgSender, _hashActionsAndSlippage(actions)) returns (bool) {
+    ) public virtual override processingEscrowTx(_hashActionsAndSlippage(actions)) returns (bool) {
         return _executeMetaTxn(actions, sig);
     }
 

@@ -23,7 +23,7 @@ library TransientStorage {
     // bytes32((uint256(keccak256("witness slot")) - 1) & type(uint96).max)
     bytes32 private constant _WITNESS_SLOT = 0x0000000000000000000000000000000000000000c7aebfbc05485e093720deaa;
     // bytes32((uint256(keccak256("intentTypeHash slot")) - 1) & type(uint96).max)
-    bytes32 private constant _INTENT_TYPE_HASH_SLOT = 0x0000000000000000000000000000000000000000c7aebfbc05485e093720deaa;
+    bytes32 private constant _INTENT_TYPE_HASH_SLOT = 0x0000000000000000000000000000000000000000fd2291a0d36415a67d469179;
     // bytes32((uint256(keccak256("payer slot")) - 1) & type(uint96).max)
     bytes32 private constant _PAYER_SLOT = 0x0000000000000000000000000000000000000000cd1e9517bb0cb8d0d5cde893;
 
@@ -334,7 +334,12 @@ abstract contract Permit2PaymentTakeIntent is Permit2Payment {
         TransientStorage.checkSpentPayerAndWitness();
     }
 
-    modifier metaTx(address msgSender, bytes32 witness) override {
+    modifier processingEscrowTx(bytes32 escrowTypedHash) override {
+        revert();
+        _;
+    }
+
+    modifier releaseAfterVerifier(bytes32 escrowTypedHash) override {
         revert();
         _;
     }
@@ -342,7 +347,7 @@ abstract contract Permit2PaymentTakeIntent is Permit2Payment {
 
 // DANGER: the order of the base contracts here is very significant for the use of `super` below
 // (and in derived contracts). Do not change this order.
-abstract contract Permit2PaymentMetaTxn is Permit2Payment {
+abstract contract Permit2PaymentProcessingTxn is Permit2Payment {
     constructor(IAllowanceHolder allowanceHolder) Permit2PaymentBase(allowanceHolder) {
         
     }
@@ -375,9 +380,14 @@ abstract contract Permit2PaymentMetaTxn is Permit2Payment {
         revert();
         _;
     }
+    
+    modifier releaseAfterVerifier(bytes32 escrowTypedHash) override {
+        revert();
+        _;
+    }
 
-    modifier metaTx(address msgSender, bytes32 witness) override {
-        TransientStorage.setPayerAndWitness(msgSender, witness, bytes32(0));
+    modifier processingEscrowTx(bytes32 escrowTypedHash) override {
+        TransientStorage.setPayerAndWitness(msg.sender, escrowTypedHash, bytes32(0));
         _;
         
         // It should not be possible for this check to revert because the very first thing that a
@@ -387,7 +397,7 @@ abstract contract Permit2PaymentMetaTxn is Permit2Payment {
 
 }
 
-abstract contract Permit2PaymentIntent is Permit2PaymentMetaTxn {
+abstract contract Permit2PaymentIntent is Permit2PaymentProcessingTxn {
     
 }
 
