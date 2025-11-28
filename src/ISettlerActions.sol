@@ -27,7 +27,7 @@ interface ISettlerActions {
     function BULK_SELL_TRANSFER_FROM(
         IAllowanceTransfer.AllowanceTransferDetails memory details,
         ISettlerBase.IntentParams memory intentParams,
-        bytes memory bulkSellIntentSig
+        bytes memory makerIntentSig
         ) external;
 
     ///@dev msgValue is interpreted as an upper bound on the expected msg.value, not as an exact specification

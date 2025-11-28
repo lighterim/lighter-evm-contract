@@ -17,7 +17,7 @@ import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
 import {ParamsHash} from "./utils/ParamsHash.sol";
 import {
     revertActionInvalid, SignatureExpired, MsgValueMismatch, InvalidWitness, InvalidToken, InvalidAmount, 
-    InvalidPayment, InvalidPrice, InvalidPayer
+    InvalidPayment, InvalidPrice, InvalidPayer, InvalidIntent
     } from "./core/SettlerErrors.sol";
 import {SettlerAbstract} from "./SettlerAbstract.sol";
 
@@ -52,6 +52,7 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
             }
         }
         else if(action == uint32(ISettlerActions.SIGNATURE_TRANSFER_FROM.selector)) {
+            // take buyer intent
             (
                 ISignatureTransfer.PermitTransferFrom memory permit, 
                 ISignatureTransfer.SignatureTransferDetails memory transferDetails, 
@@ -63,30 +64,34 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
             clearPayer(payer);
         }
         else if(action == uint32(ISettlerActions.SIGNATURE_TRANSFER_FROM_WITH_WITNESS.selector)) {
+            // take seller intent
             (
                 ISignatureTransfer.PermitTransferFrom memory permit, 
                 ISignatureTransfer.SignatureTransferDetails memory transferDetails, 
                 ISettlerBase.IntentParams memory intentParams,
                 bytes memory sig
             ) = abi.decode(data, (ISignatureTransfer.PermitTransferFrom, ISignatureTransfer.SignatureTransferDetails, ISettlerBase.IntentParams, bytes));
+            
             bytes32 intentParamsHash = intentParams.hash(); 
+            //TODO: check intentParamsHash == getIntentTypeHash()
             address payer = getPayer();
             _transferFromIKnowWhatImDoing(permit, transferDetails, payer,intentParamsHash, ParamsHash._INTENT_WITNESS_TYPE_STRING, sig);
             clearPayer(payer);
         }
         else if (action == uint32(ISettlerActions.BULK_SELL_TRANSFER_FROM.selector)) {
+            // take bulk sell intent
             (
                 IAllowanceTransfer.AllowanceTransferDetails memory details,
                 ISettlerBase.IntentParams memory intentParams,
-                bytes memory bulkSellIntentSig
+                bytes memory sig
             ) = abi.decode(data, (IAllowanceTransfer.AllowanceTransferDetails, ISettlerBase.IntentParams, bytes));
-            
-            /// verify bulk sell intent signature by payer
-            bytes32 intentParamsHash = intentParams.hash();
-            makesureIntentParams(details.from, _domainSeparator(), intentParams, bulkSellIntentSig);
-            
+
             address payer = getPayer();
             if(details.from != payer) revert InvalidPayer();
+            // makesure intent params come from payer            
+            bytes32 intentTypeHash = makesureIntentParams(payer, _domainSeparator(), intentParams, sig);
+            if(intentTypeHash != getIntentTypeHash()) revert InvalidIntent();
+
             // 不验证花费者额度，因为transferFrom将自动验证额度及调用关系。
             _allowanceHolderTransferFrom(details.token, payer, details.to, details.amount);
             clearPayer(payer);
