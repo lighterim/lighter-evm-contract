@@ -12,6 +12,14 @@ build/
 # Hardhat Build Artifacts
 /artifacts
 
+# Hardhat Project dictory
+contracts/
+dapp/
+ignition/
+scripts/
+
+
+
 # Hardhat compilation (v2) support directory
 /cache
 
