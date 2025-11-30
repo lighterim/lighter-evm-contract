@@ -46,7 +46,9 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
         }
         else if(action == uint32(ISettlerActions.ESCROW_PARAMS_CHECK.selector)) {
             (ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) = abi.decode(data, (ISettlerBase.EscrowParams, bytes));
+            // makesure escrow params come from relayer signature.
             bytes32 escrowTypedHash = makesureEscrowParams(_getRelayer(), _domainSeparator(), escrowParams, sig);
+            // escrow typed hash(takeIntent modifier) should be the same as the escrow typed hash in the escrow params.
             if (escrowTypedHash != getWitness()) {
                 revert InvalidWitness();
             }
@@ -86,14 +88,17 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
                 bytes memory sig
             ) = abi.decode(data, (IAllowanceTransfer.AllowanceTransferDetails, ISettlerBase.IntentParams, bytes));
 
+            // 付款方
             address payer = getPayer();
             if(details.from != payer) revert InvalidPayer();
-            // makesure intent params come from payer            
+            // makesure intent params come from payer signature.
             bytes32 intentTypeHash = makesureIntentParams(payer, _domainSeparator(), intentParams, sig);
+            // intent typed hash should be the same as the intent type hash in the intent params.
             if(intentTypeHash != getIntentTypeHash()) revert InvalidIntent();
 
             // 不验证花费者额度，因为transferFrom将自动验证额度及调用关系。
             _allowanceHolderTransferFrom(details.token, payer, details.to, details.amount);
+            
             clearPayer(payer);
         } 
         else{

@@ -4,8 +4,12 @@ pragma solidity ^0.8.25;
 import {Test} from "forge-std/Test.sol";
 import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
 import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer.sol";
+import {ISettlerBase} from "../../src/interfaces/ISettlerBase.sol";
+import {ParamsHash} from "../../src/utils/ParamsHash.sol";
 
 contract Permit2Signature is Test {
+    using ParamsHash for ISettlerBase.IntentParams;
+    
     bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermissions(address token,uint256 amount)");
     bytes32 public constant _PERMIT_TRANSFER_FROM_TYPEHASH = keccak256(
         "PermitTransferFrom(TokenPermissions permitted,address spender,uint256 nonce,uint256 deadline)TokenPermissions(address token,uint256 amount)"
@@ -18,7 +22,15 @@ contract Permit2Signature is Test {
     bytes32 public constant _PERMIT_SINGLE_TYPEHASH = keccak256(
         "PermitSingle(PermitDetails details,address spender,uint256 sigDeadline)PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)"
     );
+    string public constant _PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB =
+        "PermitWitnessTransferFrom(TokenPermissions permitted,address spender,uint256 nonce,uint256 deadline,";
 
+    string public constant _INTENT_WITNESS_TYPE_STRING = string(
+        abi.encodePacked("IntentParams witness)",
+        ParamsHash._INTENT_PARAMS_TYPE,
+        ParamsHash._TOKEN_PERMISSIONS_TYPE_STRING
+        )
+    );
     function defaultERC20PermitBatchTransfer(address token, uint256 amount, uint256 nonce)
         internal
         view
@@ -80,6 +92,30 @@ contract Permit2Signature is Test {
         return bytes.concat(r, s, bytes1(v));
     }
 
+    function getIntentWitnessTransferSignature(
+        ISignatureTransfer.PermitTransferFrom memory permit,
+        address spender,
+        ISettlerBase.IntentParams memory intentParams,
+        uint256 privateKey,
+        bytes32 domainSeparator
+    ) internal pure returns (bytes memory sig) {
+        bytes32 typehash = keccak256(abi.encodePacked(_PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB, _INTENT_WITNESS_TYPE_STRING));
+        bytes32 witness = intentParams.hash();
+        return getPermitWitnessTransferSignature(
+            permit, spender, privateKey, typehash, witness, domainSeparator
+            );
+    }
+
+
+
+    /// get signature for permit transfer with witness.
+    /// typehash = keccak256(abi.encodePacked(PermitHash._PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB, witnessTypeString));
+    /// @param permit permit transfer details.
+    /// @param spender spender address.
+    /// @param privateKey private key.
+    /// @param typehash typehash. 
+    /// @param witness witness.
+    /// @param domainSeparator domain separator.
     function getPermitWitnessTransferSignature(
         ISignatureTransfer.PermitTransferFrom memory permit,
         address spender,

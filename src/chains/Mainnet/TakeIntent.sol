@@ -84,18 +84,21 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
             ) = abi.decode(data, (ISettlerBase.EscrowParams, ISettlerBase.IntentParams, bytes));
             
             bytes32 escrowTypedHash = getEscrowTypedHash(escrowParams, _domainSeparator());
+            // escrow typed hash(takeIntent modifier) should be the same as the escrow typed hash in the escrow params.
             if (escrowTypedHash != getWitness()) {
                 revert InvalidWitness();
             }
 
+            // intent typed hash should be the same as the intent type hash in the intent params.
+            // TODO: takeSellerIntent: intentParamsHash VS getIntentTypeHash()?
             bytes32 intentParamsHash = getIntentTypedHash(intentParams, _domainSeparator());
             if (intentParamsHash != getIntentTypeHash()) {
                 revert InvalidIntent();
             }
 
             /**
-             * 1. takeBulkSell, maker: seller(tba), maker intent signature(seller tba)
-             * 2. takeSellerIntent, maker: seller(tba), 
+             * 1. takeBulkSell, maker: seller(tba), maker intent signature(seller tba), check it in _dispatchVIP.
+             * 2. takeSellerIntent, maker: seller(tba),  check it in permit2 transferFrom.
              * 3. takeBuyerIntent, maker: buyer(tba), maker intent signature(buyer tba)
              */
             if(lighterAccount.isOwnerCall(escrowParams.seller)){
