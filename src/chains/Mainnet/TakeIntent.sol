@@ -25,6 +25,8 @@ import {LighterAccount} from "../../account/LighterAccount.sol";
 
 contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
 
+    using ParamsHash for ISettlerBase.EscrowParams;
+    using ParamsHash for ISettlerBase.IntentParams;
     
     constructor(
         address lighterRelayer, IEscrow escrow, LighterAccount lighterAccount,
@@ -35,6 +37,16 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
         EIP712("MainnetTakeIntent", "1") 
     {
 
+    }
+
+    function getEscrowTypedHash(ISettlerBase.EscrowParams memory params) public view returns (bytes32){
+        bytes32 escrowHash = params.hash();
+        return _hashTypedDataV4(escrowHash);
+    }
+
+    function getIntentTypedHash(ISettlerBase.IntentParams memory params) public view returns (bytes32){
+        bytes32 intentHash = params.hash();
+        return _hashTypedDataV4(intentHash);
     }
 
     /**

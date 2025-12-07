@@ -13,3 +13,6 @@
 [submodule "lib/tokenbound"]
 	path = lib/tokenbound
 	url = git@github.com:tokenbound/contracts.git
+[submodule "lib/forge-gas-snapshot"]
+	path = lib/forge-gas-snapshot
+	url = https://github.com/marktoda/forge-gas-snapshot

@@ -9,6 +9,7 @@ import {ParamsHash} from "../../src/utils/ParamsHash.sol";
 
 contract Permit2Signature is Test {
     using ParamsHash for ISettlerBase.IntentParams;
+    using ParamsHash for ISettlerBase.EscrowParams;
     
     bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermissions(address token,uint256 amount)");
     bytes32 public constant _PERMIT_TRANSFER_FROM_TYPEHASH = keccak256(
@@ -56,7 +57,7 @@ contract Permit2Signature is Test {
 
     function defaultERC20PermitSingle(address token, uint48 nonce)
         internal
-        view
+        pure
         returns (IAllowanceTransfer.PermitSingle memory permit)
     {
         permit = IAllowanceTransfer.PermitSingle({
@@ -69,6 +70,23 @@ contract Permit2Signature is Test {
             spender: address(0),
             sigDeadline: type(uint256).max
         });
+    }
+
+    function getEscrowSignature(
+        ISettlerBase.EscrowParams memory escrowParams,
+        uint256 privateKey,
+        bytes32 domainSeparator
+    ) internal pure returns (bytes memory sig) {
+        bytes32 escrowParamsHash = escrowParams.hash();
+        bytes32 msgHash = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                domainSeparator,
+                keccak256(abi.encode(ParamsHash._ESCROW_PARAMS_TYPEHASH, escrowParamsHash))
+            )
+        );
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
+        return bytes.concat(r, s, bytes1(v));
     }
 
     function getPermitTransferSignature(

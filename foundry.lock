@@ -16,5 +16,8 @@
       "name": "v0.1.26",
       "rev": "acd959aa4bd04720d640bf4e6a5c71037510cc4b"
     }
+  },
+  "lib/tokenbound": {
+    "rev": "bce75f985558fad3d06ee1b86f224f0cfb783631"
   }
 }
