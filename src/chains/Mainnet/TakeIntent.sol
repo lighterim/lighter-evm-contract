@@ -36,7 +36,7 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
         Permit2PaymentTakeIntent(allowanceHolder)
         EIP712("MainnetTakeIntent", "1") 
     {
-
+        
     }
 
     function getEscrowTypedHash(ISettlerBase.EscrowParams memory params) public view returns (bytes32){

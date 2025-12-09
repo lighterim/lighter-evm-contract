@@ -21,3 +21,10 @@ line_length = 120
 tab_width = 4
 bracket_spacing = true
 
+[rpc_endpoints]
+mainnet = "${MAINNET_RPC_URL}"
+bnb = "${BNB_MAINNET_RPC_URL}"
+base = "${BASE_MAINNET_RPC_URL}"
+sepolia = "${SEPOLIA_RPC_URL}"
+
+

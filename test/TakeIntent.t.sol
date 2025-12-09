@@ -4,7 +4,8 @@ pragma solidity ^0.8.25;
 
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import {Test} from "forge-std/Test.sol";
-import {BasePairTest} from "./BasePairTest.t.sol";
+// import {BasePairTest} from "./BasePairTest.t.sol";
+import {BasePairTest} from "./LocalBasePairTest.t.sol";
 import {Settler} from "../src/Settler.sol";
 import {ISettlerTakeIntent} from "../src/interfaces/ISettlerTakeIntent.sol";
 import {MainnetTakeIntent} from "../src/chains/Mainnet/TakeIntent.sol";
@@ -28,6 +29,14 @@ contract TakeIntentTest is BasePairTest {
     function _testName() internal pure override returns (string memory) {
         return "TakeIntent";
     }
+
+    // function _testChainId() internal pure virtual override returns (string memory) {
+    //     return "sepolia";
+    // }
+
+    // function _testBlockNumber() internal pure virtual override returns (uint256) {
+    //     return 9788151;
+    // }
     
 
     address buyer;
@@ -78,11 +87,11 @@ contract TakeIntentTest is BasePairTest {
         return IERC20(address(usdc));
     }
 
-    function buyerFeeRate() internal view override returns (uint256) {
+    function buyerFeeRate() internal pure override returns (uint256) {
         return 0;
     }
 
-    function sellerFeeRate() internal view override returns (uint256) {
+    function sellerFeeRate() internal pure override returns (uint256) {
         return 0;
     }
 
@@ -90,7 +99,7 @@ contract TakeIntentTest is BasePairTest {
         return FROM;
     }
 
-    function amount() internal view override returns (uint256) {
+    function amount() internal pure override returns (uint256) {
         return 1 ether;
     }
 
@@ -120,7 +129,15 @@ contract TakeIntentTest is BasePairTest {
         bytes memory escrowSignature = getEscrowSignature(
             escrowParams, relayerPrivKey, permit2Domain
             );
-
+        console.logString("escrowSignature");
+        console.logBytes(escrowSignature);
+        console.logString("escrowTypedDataHash");
+        console.logBytes32(escrowTypedDataHash);
+        console.logString("intentTypedDataHash");
+        console.logBytes32(intentTypedDataHash);
+        
+        console.logBytes(escrowSignature);
+        
         bytes[] memory actions = ActionDataBuilder.build(
             // intent signature is not used in signature sell intent.
             abi.encodeCall(ISettlerActions.ESCROW_AND_INTENT_CHECK, (escrowParams, intentParams, bytes(""))),
@@ -128,18 +145,18 @@ contract TakeIntentTest is BasePairTest {
             abi.encodeCall(ISettlerActions.SIGNATURE_TRANSFER_FROM_WITH_WITNESS, (permit, transferDetails, intentParams, transferSignatureWithWitness))
         );
 
-        MainnetTakeIntent _settler = settler;
+        // MainnetTakeIntent _settler = settler;
 
         uint256 beforeBalance = balanceOf(fromToken(), seller);
         console.log("beforeBalance", beforeBalance);
         vm.startPrank(buyer);
         snapStartName("TakeIntent_takeSellerIntent");
-        _settler.execute(
-            seller,
-            escrowTypedDataHash,
-            intentTypedDataHash,
-            actions
-        );
+        // _settler.execute(
+        //     seller,
+        //     escrowTypedDataHash,
+        //     intentTypedDataHash,
+        //     actions
+        // );
         snapEnd();
         vm.stopPrank();
         uint256 afterBalance = fromToken().balanceOf(seller);

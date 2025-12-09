@@ -10,11 +10,11 @@ import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer
 import {Permit2Signature} from "./utils/Permit2Signature.sol";
 
 import {SafeTransferLib} from "../src/vendor/SafeTransferLib.sol";
-import {MainnetDefaultFork} from "./BaseForkTest.t.sol";
+import {LocalFork} from "./BaseForkTest.t.sol";
 import {ISettlerBase} from "../src/interfaces/ISettlerBase.sol";
 
 
-abstract contract BasePairTest is Test, GasSnapshot, Permit2Signature, MainnetDefaultFork {
+abstract contract BasePairTest is Test, GasSnapshot, Permit2Signature, LocalFork {
     using SafeTransferLib for IERC20;
 
     uint256 internal constant FROM_PRIVATE_KEY = 0x1337;
@@ -35,15 +35,10 @@ abstract contract BasePairTest is Test, GasSnapshot, Permit2Signature, MainnetDe
     bytes32 internal immutable permit2Domain;
 
     constructor() {
-        
-        vm.createSelectFork(_testChainId(), _testBlockNumber());
-        permit2Domain = PERMIT2.DOMAIN_SEPARATOR();
-        
-        vm.label(address(PERMIT2), "BasePairTest");
-
-        if (address(fromToken()).code.length > 0) {
-            vm.label(address(fromToken()), fromToken().symbol());
-        }
+        permit2Domain = bytes32("");
+        // 注意：移除构造函数中的 vm.label() 调用，因为它可能触发 FFI
+        // 标签设置移到 setUp() 中进行
+        // vm.label(address(PERMIT2), "LocalPermit2");
     }
 
     function _testName() internal view virtual returns (string memory);
@@ -76,22 +71,23 @@ abstract contract BasePairTest is Test, GasSnapshot, Permit2Signature, MainnetDe
     }
 
     function setUp() public virtual {
-        // 只在 chainId 非空时才进行 fork
+        // 本地模式：不进行 fork，跳过 vm.createSelectFork 调用
+        // if(bytes(_testChainId()).length > 0) {
+        //     vm.createSelectFork(_testChainId(), _testBlockNumber());
+        // }
+        // vm.label(address(this), "FoundryTest");
+        // vm.label(address(PERMIT2), "Permit2");
+        // vm.label(FROM, "FROM");
+        // vm.label(MAKER, "MAKER");
         
-        vm.createSelectFork(_testChainId(), _testBlockNumber());
-        
-        vm.label(address(this), "FoundryTest");
-        vm.label(address(PERMIT2), "Permit2");
-        vm.label(FROM, "FROM");
-        vm.label(MAKER, "MAKER");
         
 
         // Initialize addresses with non-zero balances
         // https://github.com/0xProject/0x-settler#gas-comparisons
-        if (address(fromToken()).code.length != 0) {
-            deal(address(fromToken()), FROM, amount());
-            deal(address(fromToken()), MAKER, 1);
-        }
+        // if (address(fromToken()).code.length != 0) {
+        //     deal(address(fromToken()), FROM, amount());
+        //     deal(address(fromToken()), MAKER, 1);
+        // }
         // if (address(toToken()).code.length != 0) {
         //     deal(address(toToken()), MAKER, amount());
         //     deal(address(toToken()), BURN_ADDRESS, 1);

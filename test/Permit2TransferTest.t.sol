@@ -39,7 +39,7 @@ abstract contract Permit2TransferTest is BasePairTest {
         ISignatureTransfer.SignatureTransferDetails[] memory transferDetails =
             new ISignatureTransfer.SignatureTransferDetails[](1);
         transferDetails[0] = ISignatureTransfer.SignatureTransferDetails({
-            to: address(BURN_ADDRESS),
+            to: address(this),
             requestedAmount: permit.permitted[0].amount
         });
 
@@ -70,7 +70,7 @@ abstract contract Permit2TransferTest is BasePairTest {
         ISignatureTransfer.SignatureTransferDetails[] memory transferDetails =
             new ISignatureTransfer.SignatureTransferDetails[](1);
         transferDetails[0] = ISignatureTransfer.SignatureTransferDetails({
-            to: address(BURN_ADDRESS),
+            to: address(this),
             requestedAmount: permit.permitted[0].amount
         });
 

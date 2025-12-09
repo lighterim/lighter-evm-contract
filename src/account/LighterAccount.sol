@@ -9,7 +9,8 @@ import "erc6551/src/interfaces/IERC6551Account.sol";
 import "../token/LighterTicket.sol";
 import {
     PendingTxExists, ZeroAddress, ZeroFunds, InvalidRecipient, InvalidRentPrice, HasPendingTx,
-    InsufficientPayment, WithdrawalFailed, PendingTxNotExists, InvalidSender, InvalidTokenId
+    InsufficientPayment, WithdrawalFailed, PendingTxNotExists, InvalidSender, InvalidTokenId,
+    UnauthorizedExecutor,MaxPendingTxReached, NoPendingTx
     } from "../core/SettlerErrors.sol";
 
 /**
@@ -43,6 +44,9 @@ contract LighterAccount is Ownable, ReentrancyGuard {
 
     // pending tx list [user => [tradeId...]]
     mapping(address => uint32) internal ticketPendingCounts;
+
+    // authorized list [operator => isAuthorized]
+    mapping(address => bool) public authorizedOperators;
 
     // / @notice 租借者地址
     // address payable public rentee;
@@ -91,6 +95,12 @@ contract LighterAccount is Ownable, ReentrancyGuard {
      */
     event RentPriceUpdated(uint256 oldPrice, uint256 newPrice);
     
+    event OperatorAuthorized(address indexed operator, bool isAuthorized);
+
+    modifier onlyAuthorized() {
+        if (!authorizedOperators[msg.sender]) revert UnauthorizedExecutor(msg.sender);
+        _;
+    }
 
     // ============ Constructor ============
 
@@ -180,6 +190,7 @@ contract LighterAccount is Ownable, ReentrancyGuard {
 
         if (tbaAddress == address(0)) revert ZeroAddress();
         if (msg.sender != ticketContract.ownerOf(nftId)) revert InvalidSender();
+        if (ticketPendingCounts[tbaAddress] > 0) revert HasPendingTx(tbaAddress);
 
         string memory hexNostrPubKey = ticketContract.burn(nftId);
         uint256 amount = ticketRents[tbaAddress];
@@ -194,13 +205,15 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     
     /// @notice add pending tx count
     /// @param account user address
-    function addPendingTx(address account) external {
+    function addPendingTx(address account) public onlyAuthorized {
+        if (ticketPendingCounts[account] > getQuota(account) -1 ) revert MaxPendingTxReached(account);
         ticketPendingCounts[account]++;
     }
 
     /// @notice remove pending tx count
     /// @param account user address
-    function removePendingTx(address account) external {
+    function removePendingTx(address account) public onlyAuthorized {
+        if (ticketPendingCounts[account] <= 0) revert NoPendingTx(account);
         ticketPendingCounts[account]--;
     }
 
@@ -229,6 +242,11 @@ contract LighterAccount is Ownable, ReentrancyGuard {
 
     function setTicketBaseURI(string calldata newBaseURI) external onlyOwner {
         ticketContract.setBaseURI(newBaseURI);
+    }
+
+    function authorizeOperator(address operator, bool isAuthorized) external onlyOwner {
+        authorizedOperators[operator] = isAuthorized;
+        emit OperatorAuthorized(operator, isAuthorized);
     }
 
     function token(address tbaAddress) public view returns (uint256, address, uint256) {

@@ -58,6 +58,10 @@ error PendingTxExists(address account, bytes32 escrowHash);
 
 error PendingTxNotExists(address account, bytes32 escrowHash);
 
+error MaxPendingTxReached(address account);
+
+error NoPendingTx(address account);
+
 error InvalidRentPrice();
 
 error InsufficientQuota(address account);
