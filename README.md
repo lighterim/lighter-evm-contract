@@ -62,5 +62,5 @@ export ZK_VERIFY=0xEA0A0f1EfB1088F4ff0Def03741Cb2C64F89361E
 export USDC=0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238
 
 # --rpc-url http://127.0.0.1:8545 --broadcast 
-export RPC_URL=https://eth-sepolia.g.alchemy.com/v2/tE4nUL18kXAYmNOM9M4U4K-jL21y5oJ3
+export RPC_URL=
 forge script script/Deploy.s.sol --rpc-url $RPC_URL --broadcast --private-key $PRIV_KEY 

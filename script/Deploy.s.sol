@@ -86,7 +86,6 @@ contract DeployerContract is Script {
         console.log("Deploying ZkVerifyProofVerifier...");
         zkVerifyProofVerifier = new ZkVerifyProofVerifier(escrow, zkVerify);
         escrow.authorizeVerifier(address(zkVerifyProofVerifier), true);
-        escrow.whitelistToken(address(ticket), true);
         console.log("ZkVerifyProofVerifier deployed at:", address(zkVerifyProofVerifier));
         
         console.log("Deploying completed!");

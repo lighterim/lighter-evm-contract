@@ -10,7 +10,7 @@ import "../token/LighterTicket.sol";
 import {
     PendingTxExists, ZeroAddress, ZeroFunds, InvalidRecipient, InvalidRentPrice, HasPendingTx,
     InsufficientPayment, WithdrawalFailed, PendingTxNotExists, InvalidSender, InvalidTokenId,
-    UnauthorizedExecutor,MaxPendingTxReached, NoPendingTx
+    UnauthorizedExecutor,MaxPendingTxReached, NoPendingTx, InsufficientQuota
     } from "../core/SettlerErrors.sol";
 
 /**
@@ -206,7 +206,7 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     /// @notice add pending tx count
     /// @param account user address
     function addPendingTx(address account) public onlyAuthorized {
-        if (ticketPendingCounts[account] > getQuota(account) -1 ) revert MaxPendingTxReached(account);
+        if(!hasAvailableQuota(account)) revert InsufficientQuota(account);
         ticketPendingCounts[account]++;
     }
 

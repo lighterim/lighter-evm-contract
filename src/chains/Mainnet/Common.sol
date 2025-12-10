@@ -69,4 +69,5 @@ abstract contract MainnetMixin is SettlerBase, FreeMemory{
         lighterAccount.addPendingTx(escrowParams.buyer);
         lighterAccount.addPendingTx(escrowParams.seller);
     }
+
 }

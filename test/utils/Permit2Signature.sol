@@ -32,6 +32,7 @@ contract Permit2Signature is Test {
         ParamsHash._TOKEN_PERMISSIONS_TYPE_STRING
         )
     );
+    
     function defaultERC20PermitBatchTransfer(address token, uint256 amount, uint256 nonce)
         internal
         view

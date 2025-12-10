@@ -36,7 +36,7 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
         Permit2PaymentTakeIntent(allowanceHolder)
         EIP712("MainnetTakeIntent", "1") 
     {
-        
+
     }
 
     function getEscrowTypedHash(ISettlerBase.EscrowParams memory params) public view returns (bytes32){
@@ -80,10 +80,11 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
                     revert(0x1c, 0x44)
                 }
             }
+            return true;
+
         } else {
             return false;
         }
-        return true;
     }
 
 
@@ -118,21 +119,18 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
                 /// verify buyer intent signature
                 makesureIntentParams(escrowParams.buyer, _domainSeparator(), intentParams, makerIntentSig);
             }
-
-            _makesureAvailableQuota(escrowParams.buyer);
-            _makesureAvailableQuota(escrowParams.seller);
             
             makesureTradeValidation(escrowParams, intentParams);
-            _makeEscrow(escrowTypedHash, escrowParams, 0, 0);
             
+            lighterAccount.addPendingTx(escrowParams.buyer);
+            lighterAccount.addPendingTx(escrowParams.seller);
+            _makeEscrow(escrowTypedHash, escrowParams, 0, 0);
+
+
             return true;
         }
 
         return false;
-    }
-
-    function _makesureAvailableQuota(address tbaAddress) internal view {
-        if(!lighterAccount.hasAvailableQuota(tbaAddress)) revert InsufficientQuota(tbaAddress);
     }
 
 }
