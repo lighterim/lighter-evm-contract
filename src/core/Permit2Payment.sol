@@ -188,6 +188,14 @@ abstract contract Permit2PaymentBase is  SettlerAbstract {
         return TransientStorage.getAndClearWitness();
     }
 
+    function clearWitness() internal {
+        TransientStorage.clearWitness();
+    }
+
+    function clearIntentTypeHash() internal {
+        TransientStorage.clearIntentTypeHash();
+    }
+
 }
 
 abstract contract Permit2Payment is Permit2PaymentBase {

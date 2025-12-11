@@ -20,6 +20,7 @@ import {
     InvalidPayment, InvalidPrice, InvalidPayer, InvalidIntent
     } from "./core/SettlerErrors.sol";
 import {SettlerAbstract} from "./SettlerAbstract.sol";
+import {console} from "forge-std/console.sol";
 
 
 abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, SettlerBase {
@@ -45,19 +46,22 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
             return true;
         }
         else if(action == uint32(ISettlerActions.ESCROW_PARAMS_CHECK.selector)) {
+            console.logString("------------ESCROW_PARAMS_CHECK--------------------");
             (ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) = abi.decode(data, (ISettlerBase.EscrowParams, bytes));
             // makesure escrow params come from relayer signature.
             bytes32 escrowTypedHash = makesureEscrowParams(_getRelayer(), _domainSeparator(), escrowParams, sig);
+            
             // escrow typed hash(takeIntent modifier) should be the same as the escrow typed hash in the escrow params.
             if (escrowTypedHash != getWitness()) {
                 revert InvalidWitness();
             }
+            clearWitness();
         }
         else if(action == uint32(ISettlerActions.SIGNATURE_TRANSFER_FROM.selector)) {
             // take buyer intent
             (
                 ISignatureTransfer.PermitTransferFrom memory permit, 
-                ISignatureTransfer.SignatureTransferDetails memory transferDetails, 
+                ISignatureTransfer.SignatureTransferDetails memory transferDetails,
                 bytes memory sig
             ) = abi.decode(data, (ISignatureTransfer.PermitTransferFrom, ISignatureTransfer.SignatureTransferDetails, bytes));
             
@@ -73,12 +77,16 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
                 ISettlerBase.IntentParams memory intentParams,
                 bytes memory sig
             ) = abi.decode(data, (ISignatureTransfer.PermitTransferFrom, ISignatureTransfer.SignatureTransferDetails, ISettlerBase.IntentParams, bytes));
-            
+            console.logString("------------SIGNATURE_TRANSFER_FROM_WITH_WITNESS--------------------");
             bytes32 intentParamsHash = intentParams.hash(); 
-            //TODO: check intentParamsHash == getIntentTypeHash()
+
+            bytes32 intentTypedHash = getIntentTypedHash(intentParams, _domainSeparator());
+            if(intentTypedHash != getIntentTypeHash()) revert InvalidIntent();
+            
             address payer = getPayer();
-            _transferFromIKnowWhatImDoing(permit, transferDetails, payer,intentParamsHash, ParamsHash._INTENT_WITNESS_TYPE_STRING, sig);
+            // _transferFromIKnowWhatImDoing(permit, transferDetails, payer,intentParamsHash, ParamsHash._INTENT_WITNESS_TYPE_STRING, sig);
             clearPayer(payer);
+            clearIntentTypeHash();
         }
         else if (action == uint32(ISettlerActions.BULK_SELL_TRANSFER_FROM.selector)) {
             // take bulk sell intent
@@ -100,6 +108,7 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
             _allowanceHolderTransferFrom(details.token, payer, details.to, details.amount);
             
             clearPayer(payer);
+            clearIntentTypeHash();
         } 
         else{
             return false;

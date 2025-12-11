@@ -22,6 +22,7 @@ import {Permit2PaymentTakeIntent} from "../../core/Permit2Payment.sol";
 import {IAllowanceHolder} from "../../allowanceholder/IAllowanceHolder.sol";
 import {IEscrow} from "../../interfaces/IEscrow.sol";
 import {LighterAccount} from "../../account/LighterAccount.sol";
+import {console} from "forge-std/console.sol";
 
 contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
 
@@ -47,6 +48,10 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
     function getIntentTypedHash(ISettlerBase.IntentParams memory params) public view returns (bytes32){
         bytes32 intentHash = params.hash();
         return _hashTypedDataV4(intentHash);
+    }
+
+    function getDomainSeparator() public view returns (bytes32) {
+        return super._domainSeparatorV4();
     }
 
     /**
@@ -95,7 +100,7 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
                 ISettlerBase.IntentParams memory intentParams,
                 bytes memory makerIntentSig
             ) = abi.decode(data, (ISettlerBase.EscrowParams, ISettlerBase.IntentParams, bytes));
-            
+            console.logString("------------ESCROW_AND_INTENT_CHECK--------------------");
             bytes32 escrowTypedHash = getEscrowTypedHash(escrowParams, _domainSeparator());
             // escrow typed hash(takeIntent modifier) should be the same as the escrow typed hash in the escrow params.
             if (escrowTypedHash != getWitness()) {
@@ -110,7 +115,7 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
             }
 
             /**
-             * 1. takeBulkSell, maker: seller(tba), maker intent signature(seller tba), check it in _dispatchVIP.
+             * 1. takeBulkSell, maker: seller(tba), maker intent signature(seller tba), check it in _dispatch(transferFrom).
              * 2. takeSellerIntent, maker: seller(tba),  check it in permit2 transferFrom.
              * 3. takeBuyerIntent, maker: buyer(tba), maker intent signature(buyer tba)
              */
@@ -118,12 +123,14 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
                 /// tba is seller ==> 3. takeBuyerIntent
                 /// verify buyer intent signature
                 makesureIntentParams(escrowParams.buyer, _domainSeparator(), intentParams, makerIntentSig);
+                clearIntentTypeHash();
             }
+
             
             makesureTradeValidation(escrowParams, intentParams);
             
-            lighterAccount.addPendingTx(escrowParams.buyer);
-            lighterAccount.addPendingTx(escrowParams.seller);
+            // lighterAccount.addPendingTx(escrowParams.buyer);
+            // lighterAccount.addPendingTx(escrowParams.seller);
             _makeEscrow(escrowTypedHash, escrowParams, 0, 0);
 
 

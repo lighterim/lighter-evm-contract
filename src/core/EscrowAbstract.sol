@@ -7,6 +7,7 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
 import {ISettlerBase} from "../interfaces/ISettlerBase.sol";
 import {SettlerAbstract} from "../SettlerAbstract.sol";
 import {ParamsHash} from "../utils/ParamsHash.sol";
+import {console} from "forge-std/console.sol";
 
 import {
     InvalidEscrowSignature, InvalidIntentSignature, InvalidAmount, IntentExpired, InvalidToken,
@@ -44,6 +45,12 @@ abstract contract EscrowAbstract is SettlerAbstract {
      */
     function makesureEscrowParams(address relayer, bytes32 domainSeparator, ISettlerBase.EscrowParams memory params, bytes memory sig) internal view virtual returns (bytes32 escrowTypedHash){
         escrowTypedHash = getEscrowTypedHash(params, domainSeparator);
+        console.logString("escrowTypedHash=");
+        console.logBytes32(escrowTypedHash);
+        console.logString("sig=");
+        console.logBytes(sig);
+        console.logString("relayer=");
+        console.logAddress(relayer);
         if(!isValidSignature(relayer, escrowTypedHash, sig)) revert InvalidEscrowSignature();
     }
 

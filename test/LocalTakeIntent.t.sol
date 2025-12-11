@@ -29,6 +29,8 @@ contract LocalTakeIntentTest is Permit2Signature {
 
     address buyer;
     address seller;
+    address eoaSeller;
+    address eoaBuyer;
     address relayer;
     MockUSDC usdc;
     IAllowanceHolder allowanceHolder;
@@ -41,13 +43,17 @@ contract LocalTakeIntentTest is Permit2Signature {
     uint256 buyerPrivKey = 0x456;
     uint256 sellerPrivKey = 0x789;
     uint256 rentPrice = 0.00001 ether;
-    bytes32 permit2Domain = bytes32(0x94c1dec87927751697bfc9ebf6fc4ca506bed30308b518f0e9d6c5f74bbafdb8);
+    bytes32 permit2Domain = 0x94c1dec87927751697bfc9ebf6fc4ca506bed30308b518f0e9d6c5f74bbafdb8;
+    bytes32 takeIntentDomain;
+    bytes32 buyerNostrPubKey = 0x36bd5b22605899659cb1053737316096195b3ceb37c851645efd23e4497d7097;
+    bytes32 sellerNostrPubKey = 0x2a9716cdd08bd7b14c94119c8259c89f3baab64d7b161eb03ad43dc1c1ccec68;
     
 
     function setUp() public {
         relayer = vm.addr(relayerPrivKey);
-        buyer = vm.addr(buyerPrivKey);
-        seller = vm.addr(sellerPrivKey);
+        eoaBuyer = vm.addr(buyerPrivKey);
+        eoaSeller = vm.addr(sellerPrivKey);
+        
         usdc = new MockUSDC();
 
         LighterTicket lighterTicket = new LighterTicket("LighterTicket", "LTKT", "https://lighter.im/ticket/");
@@ -60,11 +66,23 @@ contract LocalTakeIntentTest is Permit2Signature {
         vm.prank(relayer);
         escrow.whitelistToken(address(usdc), true);
         allowanceHolder = new AllowanceHolder();
-
-        vm.deal(buyer, 1 ether);
-        vm.deal(seller, 1 ether);
-        usdc.mint(seller, 10 ether);
         
+        usdc.mint(eoaSeller, 10 ether);
+        vm.deal(eoaBuyer, 1 ether);
+        vm.deal(eoaSeller, 1 ether);
+
+        vm.prank(eoaBuyer);
+        (, buyer) = lighterAccount.createAccount{value: rentPrice}(eoaBuyer, buyerNostrPubKey);
+        vm.prank(eoaSeller);
+        (, seller) = lighterAccount.createAccount{value: rentPrice}(eoaSeller, sellerNostrPubKey);
+        console.log("buyer", buyer);
+        console.log("seller", seller);
+        console.log("eoaBuyer", eoaBuyer);
+        console.log("eoaSeller", eoaSeller);
+        console.log("relayer", relayer);
+        console.log("seller getQuota", lighterAccount.getQuota(seller));
+        console.log("buyer getQuota", lighterAccount.getQuota(buyer));
+
         settler = new MainnetTakeIntent(
             relayer,
             escrow,
@@ -72,6 +90,7 @@ contract LocalTakeIntentTest is Permit2Signature {
             bytes20(0),
             allowanceHolder
         );
+        takeIntentDomain = settler.getDomainSeparator();
         vm.startPrank(relayer);
         escrow.authorizeCreator(address(settler), true);
         vm.stopPrank();
@@ -141,7 +160,7 @@ contract LocalTakeIntentTest is Permit2Signature {
         bytes32 escrowTypedDataHash = settler.getEscrowTypedHash(escrowParams);
         bytes32 intentTypedDataHash = settler.getIntentTypedHash(intentParams);
         bytes memory escrowSignature = getEscrowSignature(
-            escrowParams, relayerPrivKey, permit2Domain
+            escrowParams, relayerPrivKey, takeIntentDomain
             );
         console.logString("escrowSignature");
         console.logBytes(escrowSignature);
@@ -150,7 +169,7 @@ contract LocalTakeIntentTest is Permit2Signature {
         console.logString("intentTypedDataHash");
         console.logBytes32(intentTypedDataHash);
         
-        console.logBytes(escrowSignature);
+        // console.logBytes(escrowSignature);
         
         bytes[] memory actions = ActionDataBuilder.build(
             // intent signature is not used in signature sell intent.
@@ -161,7 +180,7 @@ contract LocalTakeIntentTest is Permit2Signature {
 
         MainnetTakeIntent _settler = settler;
 
-        uint256 beforeBalance = balanceOf(fromToken(), seller);
+        uint256 beforeBalance = balanceOf(fromToken(), eoaSeller);
         console.log("beforeBalance", beforeBalance);
         vm.startPrank(buyer);
         // snapStartName("TakeIntent_takeSellerIntent");
@@ -173,7 +192,7 @@ contract LocalTakeIntentTest is Permit2Signature {
         );
         // snapEnd();
         vm.stopPrank();
-        uint256 afterBalance = fromToken().balanceOf(seller);
+        uint256 afterBalance = fromToken().balanceOf(eoaSeller);
         console.log("afterBalance", afterBalance);
         console.log("amount", amount());
 
@@ -199,7 +218,7 @@ contract LocalTakeIntentTest is Permit2Signature {
             volume: amount(),
             price: getPrice(),
             usdRate: 1_000,
-            payer: getSeller(),
+            payer: eoaSeller,
             seller: getSeller(),
             sellerFeeRate: sellerFeeRate(),
             paymentMethod: getPaymentMethod(),

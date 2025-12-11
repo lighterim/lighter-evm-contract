@@ -6,6 +6,8 @@ import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer
 import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer.sol";
 import {ISettlerBase} from "../../src/interfaces/ISettlerBase.sol";
 import {ParamsHash} from "../../src/utils/ParamsHash.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {console} from "forge-std/console.sol";
 
 contract Permit2Signature is Test {
     using ParamsHash for ISettlerBase.IntentParams;
@@ -32,7 +34,7 @@ contract Permit2Signature is Test {
         ParamsHash._TOKEN_PERMISSIONS_TYPE_STRING
         )
     );
-    
+
     function defaultERC20PermitBatchTransfer(address token, uint256 amount, uint256 nonce)
         internal
         view
@@ -79,13 +81,16 @@ contract Permit2Signature is Test {
         bytes32 domainSeparator
     ) internal pure returns (bytes memory sig) {
         bytes32 escrowParamsHash = escrowParams.hash();
-        bytes32 msgHash = keccak256(
-            abi.encodePacked(
-                "\x19\x01",
-                domainSeparator,
-                keccak256(abi.encode(ParamsHash._ESCROW_PARAMS_TYPEHASH, escrowParamsHash))
-            )
-        );
+        // bytes32 msgHash = keccak256(
+        //     abi.encodePacked(
+        //         "\x19\x01",
+        //         domainSeparator,
+        //         keccak256(abi.encode(ParamsHash._ESCROW_PARAMS_TYPEHASH, escrowParamsHash))
+        //     )
+        // );
+        bytes32 msgHash = MessageHashUtils.toTypedDataHash(domainSeparator, escrowParamsHash);
+        console.logString("msgHash=");
+        console.logBytes32(msgHash);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
         return bytes.concat(r, s, bytes1(v));
     }

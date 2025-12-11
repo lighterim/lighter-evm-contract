@@ -7,6 +7,7 @@ import {LibString} from "solady/src/utils/LibString.sol";
 import "erc6551/src/interfaces/IERC6551Registry.sol";
 import "erc6551/src/interfaces/IERC6551Account.sol";
 import "../token/LighterTicket.sol";
+import {console} from "forge-std/console.sol";
 import {
     PendingTxExists, ZeroAddress, ZeroFunds, InvalidRecipient, InvalidRentPrice, HasPendingTx,
     InsufficientPayment, WithdrawalFailed, PendingTxNotExists, InvalidSender, InvalidTokenId,
@@ -309,6 +310,9 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     /// @return true if user has available quota
     function hasAvailableQuota(address account) public view returns (bool) {
         uint256 quota = getQuota(account);
+        console.log("account", account);
+        console.log("quota", quota);
+        console.log("ticketPendingCounts[account]", ticketPendingCounts[account]);
         return ticketPendingCounts[account] < quota;
     }
 
