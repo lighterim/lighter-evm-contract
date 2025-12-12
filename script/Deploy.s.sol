@@ -34,10 +34,10 @@ contract DeployerContract is Script {
     function setUp() public {
         deployer = vm.envAddress("DEPLOYER");
         zkVerify = vm.envAddress("ZK_VERIFY");
-        // usdc = vm.envAddress("USDC");
-        MockUSDC u = new MockUSDC();
-        usdc = address(u);
-        console.log("usdc deployed at:", usdc);
+        usdc = vm.envAddress("USDC");
+        // MockUSDC u = new MockUSDC();
+        // usdc = address(u);
+        // console.log("usdc deployed at:", usdc);
     }
 
     function run() public{

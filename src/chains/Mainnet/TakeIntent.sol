@@ -22,7 +22,7 @@ import {Permit2PaymentTakeIntent} from "../../core/Permit2Payment.sol";
 import {IAllowanceHolder} from "../../allowanceholder/IAllowanceHolder.sol";
 import {IEscrow} from "../../interfaces/IEscrow.sol";
 import {LighterAccount} from "../../account/LighterAccount.sol";
-import {console} from "forge-std/console.sol";
+// import {console} from "forge-std/console.sol";
 
 contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
 
@@ -100,7 +100,7 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
                 ISettlerBase.IntentParams memory intentParams,
                 bytes memory makerIntentSig
             ) = abi.decode(data, (ISettlerBase.EscrowParams, ISettlerBase.IntentParams, bytes));
-            console.logString("------------ESCROW_AND_INTENT_CHECK--------------------");
+            // console.logString("------------ESCROW_AND_INTENT_CHECK--------------------");
             bytes32 escrowTypedHash = getEscrowTypedHash(escrowParams, _domainSeparator());
             // escrow typed hash(takeIntent modifier) should be the same as the escrow typed hash in the escrow params.
             if (escrowTypedHash != getWitness()) {
