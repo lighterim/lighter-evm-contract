@@ -13,7 +13,7 @@ import {Permit2PaymentBase} from "../../core/Permit2Payment.sol";
 import {FreeMemory} from "../../utils/FreeMemory.sol";
 import {IEscrow} from "../../interfaces/IEscrow.sol";
 import {LighterAccount} from "../../account/LighterAccount.sol";
-import {console} from "forge-std/console.sol";
+// import {console} from "forge-std/console.sol";
 
 
 abstract contract MainnetMixin is SettlerBase, FreeMemory{
@@ -64,7 +64,7 @@ abstract contract MainnetMixin is SettlerBase, FreeMemory{
                 }
             )
         );
-        console.logString("------------#### _makeEscrow### --------------------");
+        // console.logString("------------#### _makeEscrow### --------------------");
     }
 
 }

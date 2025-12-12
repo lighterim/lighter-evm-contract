@@ -21,9 +21,8 @@ import {IEscrow} from "../../interfaces/IEscrow.sol";
 import {LighterAccount} from "../../account/LighterAccount.sol";
 import {ParamsHash} from "../../utils/ParamsHash.sol";
 import {IAllowanceHolder} from "../../allowanceholder/IAllowanceHolder.sol";
-import {console} from "forge-std/console.sol";
-
 // import {console} from "forge-std/console.sol";
+
 
 
 contract MainnetUserTxn is EIP712 {
@@ -266,7 +265,7 @@ contract MainnetUserTxn is EIP712 {
             gasSpentForSeller: gasSpentForSeller
             })
         );
-        console.logString("------------_makeEscrow--------------------");
+        // console.logString("------------_makeEscrow--------------------");
         lighterAccount.addPendingTx(escrowParams.buyer);
         lighterAccount.addPendingTx(escrowParams.seller);
     }

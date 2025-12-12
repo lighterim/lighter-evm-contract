@@ -20,7 +20,7 @@ import {
     InvalidPayment, InvalidPrice, InvalidPayer, InvalidIntent
     } from "./core/SettlerErrors.sol";
 import {SettlerAbstract} from "./SettlerAbstract.sol";
-import {console} from "forge-std/console.sol";
+// import {console} from "forge-std/console.sol";
 
 
 abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, SettlerBase {
@@ -46,7 +46,7 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
             return true;
         }
         else if(action == uint32(ISettlerActions.ESCROW_PARAMS_CHECK.selector)) {
-            console.logString("------------ESCROW_PARAMS_CHECK--------------------");
+            // console.logString("------------ESCROW_PARAMS_CHECK--------------------");
             (ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) = abi.decode(data, (ISettlerBase.EscrowParams, bytes));
             // makesure escrow params come from relayer signature.
             bytes32 escrowTypedHash = makesureEscrowParams(_getRelayer(), _domainSeparator(), escrowParams, sig);
@@ -66,7 +66,7 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
             ) = abi.decode(data, (ISignatureTransfer.PermitTransferFrom, ISignatureTransfer.SignatureTransferDetails, bytes));
             
             address payer = getPayer();
-            // _transferFrom(permit, transferDetails, payer, sig);
+            _transferFrom(permit, transferDetails, payer, sig);
             clearPayer(payer);
         }
         else if(action == uint32(ISettlerActions.SIGNATURE_TRANSFER_FROM_WITH_WITNESS.selector)) {
@@ -77,14 +77,14 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
                 ISettlerBase.IntentParams memory intentParams,
                 bytes memory sig
             ) = abi.decode(data, (ISignatureTransfer.PermitTransferFrom, ISignatureTransfer.SignatureTransferDetails, ISettlerBase.IntentParams, bytes));
-            console.logString("------------SIGNATURE_TRANSFER_FROM_WITH_WITNESS--------------------");
+            // console.logString("------------SIGNATURE_TRANSFER_FROM_WITH_WITNESS--------------------");
             bytes32 intentParamsHash = intentParams.hash(); 
 
             bytes32 intentTypedHash = getIntentTypedHash(intentParams, _domainSeparator());
             if(intentTypedHash != getIntentTypeHash()) revert InvalidIntent();
 
             address payer = getPayer();
-            // _transferFromIKnowWhatImDoing(permit, transferDetails, payer,intentParamsHash, ParamsHash._INTENT_WITNESS_TYPE_STRING, sig);
+            _transferFromIKnowWhatImDoing(permit, transferDetails, payer,intentParamsHash, ParamsHash._INTENT_WITNESS_TYPE_STRING, sig);
             clearPayer(payer);
             clearIntentTypeHash();
         }

@@ -21,7 +21,7 @@ contract AllowanceHolder is IAllowanceHolder {
     // }
 
     function transferFrom(address token, address owner, address recipient, uint160 amount) public  {
-        IERC20(token).transferFrom(owner, recipient, amount);
-        // PERMIT2_ALLOWANCE.transferFrom(owner, recipient, amount, token);
+        // IERC20(token).transferFrom(owner, recipient, amount);
+        PERMIT2_ALLOWANCE.transferFrom(owner, recipient, amount, token);
     }
 }
