@@ -66,7 +66,7 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
             ) = abi.decode(data, (ISignatureTransfer.PermitTransferFrom, ISignatureTransfer.SignatureTransferDetails, bytes));
             
             address payer = getPayer();
-            _transferFrom(permit, transferDetails, payer, sig);
+            // _transferFrom(permit, transferDetails, payer, sig);
             clearPayer(payer);
         }
         else if(action == uint32(ISettlerActions.SIGNATURE_TRANSFER_FROM_WITH_WITNESS.selector)) {
@@ -82,7 +82,7 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
 
             bytes32 intentTypedHash = getIntentTypedHash(intentParams, _domainSeparator());
             if(intentTypedHash != getIntentTypeHash()) revert InvalidIntent();
-            
+
             address payer = getPayer();
             // _transferFromIKnowWhatImDoing(permit, transferDetails, payer,intentParamsHash, ParamsHash._INTENT_WITNESS_TYPE_STRING, sig);
             clearPayer(payer);

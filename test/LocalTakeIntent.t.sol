@@ -182,7 +182,7 @@ contract LocalTakeIntentTest is Permit2Signature {
 
         uint256 beforeBalance = balanceOf(fromToken(), eoaSeller);
         console.log("beforeBalance", beforeBalance);
-        vm.startPrank(buyer);
+        vm.startPrank(eoaBuyer);
         // snapStartName("TakeIntent_takeSellerIntent");
         _settler.execute(
             seller,
@@ -194,10 +194,83 @@ contract LocalTakeIntentTest is Permit2Signature {
         vm.stopPrank();
         uint256 afterBalance = fromToken().balanceOf(eoaSeller);
         console.log("afterBalance", afterBalance);
-        console.log("amount", amount());
+        
+        assertFalse(lighterAccount.hasAvailableQuota(seller));
+        assertFalse(lighterAccount.hasAvailableQuota(buyer));
 
+        ISettlerBase.EscrowData memory escrowData = escrow.getEscrowData(escrowTypedDataHash);
+        assertTrue(escrowData.status == ISettlerBase.EscrowStatus.Escrowed);
+        
+
+        assertTrue(escrow.escrowOf(address(fromToken()), seller) == amount());
+        assertTrue(escrow.creditOf(address(fromToken()), buyer) == 0);
         // assertGt(afterBalance, beforeBalance);
     }
+
+    function testTakeBulkSell() public {
+        ISettlerBase.IntentParams memory intentParams = getIntentParams();
+        ISettlerBase.EscrowParams memory escrowParams = getEscrowParams();
+        bytes32 escrowTypedDataHash = settler.getEscrowTypedHash(escrowParams);
+        bytes32 intentTypedDataHash = settler.getIntentTypedHash(intentParams);
+        bytes memory escrowSignature = getEscrowSignature(
+            escrowParams, relayerPrivKey, takeIntentDomain
+            );
+    }
+
+    function testTakeBuyerIntent() public {
+        // buyer: maker
+        ISettlerBase.IntentParams memory intentParams = getIntentParams();
+        bytes32 intentTypedDataHash = settler.getIntentTypedHash(intentParams);
+        bytes memory makerIntentSignature = getIntentSignature(
+            intentParams, buyerPrivKey, takeIntentDomain
+            );
+        
+        // seller: taker
+        ISignatureTransfer.PermitTransferFrom memory permit = ISignatureTransfer.PermitTransferFrom({
+            permitted: ISignatureTransfer.TokenPermissions({token: address(fromToken()), amount: amount()}),
+            nonce: 1,
+            deadline: getDeadline()
+        });
+        ISignatureTransfer.SignatureTransferDetails memory transferDetails = ISignatureTransfer.SignatureTransferDetails({
+            to: address(escrow),
+            requestedAmount: amount()
+        });
+        bytes memory transferSignature = getPermitTransferSignature(
+            permit, address(escrow), sellerPrivKey, permit2Domain
+            );
+        
+        // relayer: relayer
+        ISettlerBase.EscrowParams memory escrowParams = getEscrowParams();
+        bytes32 escrowTypedDataHash = settler.getEscrowTypedHash(escrowParams);
+        bytes memory escrowSignature = getEscrowSignature(
+            escrowParams, relayerPrivKey, takeIntentDomain
+            );
+        
+
+        bytes[] memory actions  = ActionDataBuilder.build(
+            abi.encodeCall(ISettlerActions.ESCROW_AND_INTENT_CHECK, (escrowParams, intentParams, makerIntentSignature)),
+            abi.encodeCall(ISettlerActions.ESCROW_PARAMS_CHECK, (escrowParams, escrowSignature)),
+            abi.encodeCall(ISettlerActions.SIGNATURE_TRANSFER_FROM, (permit, transferDetails, transferSignature))
+        );
+
+        MainnetTakeIntent _settler = settler;
+        vm.startPrank(eoaSeller);
+        _settler.execute(
+            eoaSeller,
+            escrowTypedDataHash,
+            intentTypedDataHash,
+            actions
+        );
+        vm.stopPrank();
+        
+        ISettlerBase.EscrowData memory escrowData = escrow.getEscrowData(escrowTypedDataHash);
+        assertTrue(escrowData.status == ISettlerBase.EscrowStatus.Escrowed);
+        
+        assertTrue(escrow.escrowOf(address(fromToken()), seller) >= amount());
+        assertTrue(escrow.creditOf(address(fromToken()), buyer) == 0);
+        
+    }
+
 
     function getIntentParams() public view returns (ISettlerBase.IntentParams memory intentParams) {
         intentParams = ISettlerBase.IntentParams({

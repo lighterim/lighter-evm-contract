@@ -207,6 +207,9 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     /// @notice add pending tx count
     /// @param account user address
     function addPendingTx(address account) public onlyAuthorized {
+        console.logString("------------addPendingTx--------------------");
+        console.logAddress(account);
+        console.log("ticketPendingCounts[account]", ticketPendingCounts[account]);
         if(!hasAvailableQuota(account)) revert InsufficientQuota(account);
         ticketPendingCounts[account]++;
     }
@@ -255,12 +258,16 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         return account.token();
     }
 
-    function isOwnerCall(address tbaAddress) public view returns (bool) {
+    function isOwnerCall(address tbaAddress, address caller) public view returns (bool) {
+        console.logString("------------isOwnerCall--------------------");
+        console.logAddress(tbaAddress);
+        console.logAddress(caller);
+        console.logString("------------isOwnerCall------------------end------------------");
         (uint256 chainId, address tokenContract, uint256 tokenId) = token(tbaAddress);
         if (chainId == block.chainid && tokenContract == address(ticketContract)){
-            if(tbaAddress == msg.sender) return true;
+            if(tbaAddress == caller) return true;
             address owner = IERC721(tokenContract).ownerOf(tokenId);
-            return owner == msg.sender;
+            return owner == caller;
         }
         return false;
     }

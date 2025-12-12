@@ -24,6 +24,8 @@ interface IEscrow {
     /** pending escrow for the account */
     function escrowOf(address token, address account) external view returns (uint256);
 
+    function getEscrowData(bytes32 escrowHash) external view returns (ISettlerBase.EscrowData memory);
+    
     /**
      * create an escrow for the buyer and seller
      * @param token The token to create the escrow for

@@ -166,6 +166,10 @@ contract Escrow is Ownable, Pausable, IEscrow{
         return userCredit[account][token];
     }
 
+    function getEscrowData(bytes32 escrowHash) external view returns (ISettlerBase.EscrowData memory){
+        return allEscrow[escrowHash];
+    }
+
     function pause() public onlyOwner {
         _pause();
     }

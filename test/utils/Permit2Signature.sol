@@ -95,6 +95,17 @@ contract Permit2Signature is Test {
         return bytes.concat(r, s, bytes1(v));
     }
 
+    function getIntentSignature(
+        ISettlerBase.IntentParams memory intentParams,
+        uint256 privateKey,
+        bytes32 domainSeparator
+    ) internal pure returns (bytes memory sig) {
+        bytes32 intentParamsHash = intentParams.hash();
+        bytes32 msgHash = MessageHashUtils.toTypedDataHash(domainSeparator, intentParamsHash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
+        return bytes.concat(r, s, bytes1(v));
+    }
+
     function getPermitTransferSignature(
         ISignatureTransfer.PermitTransferFrom memory permit,
         address spender,

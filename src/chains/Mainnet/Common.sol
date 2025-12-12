@@ -13,6 +13,7 @@ import {Permit2PaymentBase} from "../../core/Permit2Payment.sol";
 import {FreeMemory} from "../../utils/FreeMemory.sol";
 import {IEscrow} from "../../interfaces/IEscrow.sol";
 import {LighterAccount} from "../../account/LighterAccount.sol";
+import {console} from "forge-std/console.sol";
 
 
 abstract contract MainnetMixin is SettlerBase, FreeMemory{
@@ -40,12 +41,10 @@ abstract contract MainnetMixin is SettlerBase, FreeMemory{
         return super._dispatch(i, action, data);
     }
 
-    // function _dispatchVIP(uint256 i, uint256 action, bytes calldata data) internal virtual returns (bool) {
-
-    // }
 
     function _makeEscrow(bytes32 escrowTypedDataHash, ISettlerBase.EscrowParams memory escrowParams, uint256 gasSpentForBuyer, uint256 gasSpentForSeller) internal {
-        
+        lighterAccount.addPendingTx(escrowParams.buyer);
+        lighterAccount.addPendingTx(escrowParams.seller);
         escrow.create(
             address(escrowParams.token), 
             escrowParams.buyer, 
@@ -65,9 +64,7 @@ abstract contract MainnetMixin is SettlerBase, FreeMemory{
                 }
             )
         );
-
-        lighterAccount.addPendingTx(escrowParams.buyer);
-        lighterAccount.addPendingTx(escrowParams.seller);
+        console.logString("------------#### _makeEscrow### --------------------");
     }
 
 }
