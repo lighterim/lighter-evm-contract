@@ -16,6 +16,7 @@ import {AccountV3Simplified} from "../src/account/AccountV3.sol";
 import {MockUSDC} from "../src/utils/TokenMock.sol";
 import {AllowanceHolder} from "../src/allowanceholder/AllowanceHolder.sol";
 import {IAllowanceHolder} from "../src/allowanceholder/IAllowanceHolder.sol";
+import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer.sol";
 import {IEscrow} from "../src/interfaces/IEscrow.sol";
 import {Escrow} from "../src/Escrow.sol";
 import {ISettlerActions} from "../src/ISettlerActions.sol";
@@ -96,6 +97,19 @@ contract LocalTakeIntentTest is Permit2Signature {
         vm.stopPrank();
         lighterAccount.authorizeOperator(address(settler), true);
 
+        //for bulk sell
+        vm.startPrank(eoaSeller);
+        usdc.approve(address(allowanceHolder), type(uint256).max);
+        vm.stopPrank();
+        // IAllowanceTransfer.PermitSingle memory permitSingle = IAllowanceTransfer.PermitSingle({
+        //     details: IAllowanceTransfer.TokenPermissions({token: address(usdc), amount: amount()}),
+        //     nonce: 1,
+        //     expiry: getDeadline(),
+        //     spender: address(allowanceHolder)
+        // });
+        // bytes memory permitSig = getPermitSignature(permitSingle, sellerPrivKey, permit2Domain);
+    
+
     }
 
 
@@ -156,7 +170,7 @@ contract LocalTakeIntentTest is Permit2Signature {
             requestedAmount: amount()
         });
 
-        ISettlerBase.EscrowParams memory escrowParams = getEscrowParams();
+        ISettlerBase.EscrowParams memory escrowParams = getEscrowParams(1);
         bytes32 escrowTypedDataHash = settler.getEscrowTypedHash(escrowParams);
         bytes32 intentTypedDataHash = settler.getIntentTypedHash(intentParams);
         bytes memory escrowSignature = getEscrowSignature(
@@ -185,7 +199,7 @@ contract LocalTakeIntentTest is Permit2Signature {
         vm.startPrank(eoaBuyer);
         // snapStartName("TakeIntent_takeSellerIntent");
         _settler.execute(
-            seller,
+            eoaSeller,
             escrowTypedDataHash,
             intentTypedDataHash,
             actions
@@ -208,13 +222,52 @@ contract LocalTakeIntentTest is Permit2Signature {
     }
 
     function testTakeBulkSell() public {
+        //seller: maker
         ISettlerBase.IntentParams memory intentParams = getIntentParams();
-        ISettlerBase.EscrowParams memory escrowParams = getEscrowParams();
-        bytes32 escrowTypedDataHash = settler.getEscrowTypedHash(escrowParams);
         bytes32 intentTypedDataHash = settler.getIntentTypedHash(intentParams);
+        bytes memory makerIntentSignature = getIntentSignature(
+            intentParams, sellerPrivKey, takeIntentDomain
+            );
+
+        //relayer: relayer
+        ISettlerBase.EscrowParams memory escrowParams = getEscrowParams(2);
+        bytes32 escrowTypedDataHash = settler.getEscrowTypedHash(escrowParams);
         bytes memory escrowSignature = getEscrowSignature(
             escrowParams, relayerPrivKey, takeIntentDomain
             );
+        
+       IAllowanceTransfer.AllowanceTransferDetails memory details = IAllowanceTransfer.AllowanceTransferDetails({
+            token: address(fromToken()),
+            amount: uint160(amount()),
+            to: address(escrow),
+            from: eoaSeller
+        });
+
+        bytes[] memory actions = ActionDataBuilder.build(
+            abi.encodeCall(ISettlerActions.ESCROW_AND_INTENT_CHECK, (escrowParams, intentParams, makerIntentSignature)),
+            abi.encodeCall(ISettlerActions.ESCROW_PARAMS_CHECK, (escrowParams, escrowSignature)),
+            abi.encodeCall(ISettlerActions.BULK_SELL_TRANSFER_FROM, (details, intentParams, makerIntentSignature))
+        );
+
+        MainnetTakeIntent _settler = settler;
+        vm.startPrank(eoaBuyer);
+        _settler.execute(
+            eoaSeller,
+            escrowTypedDataHash,
+            intentTypedDataHash,
+            actions
+        );
+        vm.stopPrank();
+
+        console.log("escrow balance", usdc.balanceOf(address(escrow)));
+        console.log("amount", amount());
+        assertTrue(usdc.balanceOf(address(escrow)) == amount());
+
+        ISettlerBase.EscrowData memory escrowData = escrow.getEscrowData(escrowTypedDataHash);
+        assertTrue(escrowData.status == ISettlerBase.EscrowStatus.Escrowed);
+        
+        assertTrue(escrow.escrowOf(address(fromToken()), seller) >= amount());
+        assertTrue(escrow.creditOf(address(fromToken()), buyer) == 0);
     }
 
     function testTakeBuyerIntent() public {
@@ -240,7 +293,7 @@ contract LocalTakeIntentTest is Permit2Signature {
             );
         
         // relayer: relayer
-        ISettlerBase.EscrowParams memory escrowParams = getEscrowParams();
+        ISettlerBase.EscrowParams memory escrowParams = getEscrowParams(3);
         bytes32 escrowTypedDataHash = settler.getEscrowTypedHash(escrowParams);
         bytes memory escrowSignature = getEscrowSignature(
             escrowParams, relayerPrivKey, takeIntentDomain
@@ -284,9 +337,9 @@ contract LocalTakeIntentTest is Permit2Signature {
         });
     }
 
-    function getEscrowParams() public view returns (ISettlerBase.EscrowParams memory escrowParams) {
+    function getEscrowParams(uint256 id) public view returns (ISettlerBase.EscrowParams memory escrowParams) {
         escrowParams = ISettlerBase.EscrowParams({
-            id: 1,
+            id: id,
             token: address(fromToken()),
             volume: amount(),
             price: getPrice(),

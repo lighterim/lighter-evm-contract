@@ -4,6 +4,7 @@ pragma solidity ^0.8.25;
 import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer.sol";
 import {IAllowanceHolder} from "./IAllowanceHolder.sol";
 import {InvalidSpender} from "../core/SettlerErrors.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @custom:security-contact security@0x.org
 contract AllowanceHolder is IAllowanceHolder {
@@ -20,6 +21,7 @@ contract AllowanceHolder is IAllowanceHolder {
     // }
 
     function transferFrom(address token, address owner, address recipient, uint160 amount) public  {
-        PERMIT2_ALLOWANCE.transferFrom(owner, recipient, amount, token);
+        IERC20(token).transferFrom(owner, recipient, amount);
+        // PERMIT2_ALLOWANCE.transferFrom(owner, recipient, amount, token);
     }
 }
