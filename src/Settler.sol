@@ -8,6 +8,7 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {ISettlerTakeIntent} from "./interfaces/ISettlerTakeIntent.sol";
 import {Permit2PaymentTakeIntent} from "./core/Permit2Payment.sol";
 import {Permit2PaymentAbstract} from "./core/Permit2PaymentAbstract.sol";
+// import {PermitHash} from "@uniswap/permit2/libraries/PermitHash.sol";
 
 import {CalldataDecoder, SettlerBase} from "./SettlerBase.sol";
 import {UnsafeMath} from "./utils/UnsafeMath.sol";
@@ -29,6 +30,49 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
     using CalldataDecoder for bytes[];
     using ParamsHash for ISettlerBase.IntentParams;
     using ParamsHash for ISettlerBase.EscrowParams;
+    // // using PermitHash for ISignatureTransfer.PermitTransferFrom;
+    
+    // // 辅助函数：直接计算 permit hash with witness（避免 memory -> calldata 转换问题）
+    // function _hashPermitWithWitness(
+    //     ISignatureTransfer.PermitTransferFrom memory permit,
+    //     bytes32 witness
+    // ) internal view returns (bytes32) {
+    //     // 直接实现 hashWithWitness 的逻辑，使用 memory string
+    //     string memory witnessTypeString = ParamsHash._INTENT_WITNESS_TYPE_STRING;
+    //     bytes32 typeHash = keccak256(abi.encodePacked(
+    //         PermitHash._PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB,
+    //         witnessTypeString
+    //     ));
+    //     console.logString("witness.typeHash");
+    //     console.logBytes32(typeHash);
+
+    //     bytes32 tokenPermissionsHash = keccak256(abi.encode(
+    //         PermitHash._TOKEN_PERMISSIONS_TYPEHASH,
+    //         permit.permitted
+    //     ));
+    //     console.logString("tokenPermissionsHash");
+    //     console.logBytes32(tokenPermissionsHash);
+    //     console.logString("myAddress");
+    //     console.logAddress(_myAddress());
+    //     console.logString("permit.nonce");
+    //     console.logUint(permit.nonce);
+    //     console.logString("permit.deadline");
+    //     console.logUint(permit.deadline);
+    //     console.logString("witness");
+    //     console.logBytes32(witness);
+    //     console.logString("keccak256(abi.encode(typeHash, tokenPermissionsHash, _myAddress(), permit.nonce, permit.deadline, witness))");
+    //     bytes32 result = keccak256(abi.encode(
+    //         typeHash,
+    //         tokenPermissionsHash,
+    //         _myAddress(),
+    //         permit.nonce,
+    //         permit.deadline,
+    //         witness
+    //     ));
+    //     console.logString("result");
+    //     console.logBytes32(result);
+    //     return result;  
+    // }
     
 
     function _tokenId() internal pure override returns (uint256) {
@@ -40,6 +84,8 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
     }
 
     function _domainSeparator() internal view virtual returns (bytes32);
+
+    // function _myAddress() internal view virtual returns (address);
 
     function _dispatch(uint256 index, uint256 action, bytes calldata data) internal virtual override(SettlerBase,SettlerAbstract) returns (bool) {
         if(super._dispatch(index, action, data)) {
@@ -84,7 +130,34 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
             if(intentTypedHash != getIntentTypeHash()) revert InvalidIntent();
 
             address payer = getPayer();
-            _transferFromIKnowWhatImDoing(permit, transferDetails, payer,intentParamsHash, ParamsHash._INTENT_WITNESS_TYPE_STRING, sig);
+            _transferFromIKnowWhatImDoing(permit, transferDetails, payer, intentParamsHash, ParamsHash._INTENT_WITNESS_TYPE_STRING, sig);
+            // console.logString("--------------------------------");
+            // console.logString("payer");
+            // console.logAddress(payer);
+            // console.logString("intentParamsHash");
+            // console.logBytes32(intentParamsHash);
+            // console.logString("intentTypedHash");
+            // console.logBytes32(intentTypedHash);
+            // console.logString("sig");
+            // console.logBytes(sig);
+            
+            // // 使用辅助函数来处理 memory -> calldata 转换
+            // bytes32 dataHash = _hashPermitWithWitness(permit, intentParamsHash);
+            
+            // // 调试：输出 Permit2 地址和 DOMAIN_SEPARATOR
+            // console.logString("_PERMIT2 address");
+            // console.logAddress(address(_PERMIT2));
+            // bytes32 permit2DomainSeparator = _PERMIT2.DOMAIN_SEPARATOR();
+            // console.logString("_PERMIT2.DOMAIN_SEPARATOR()");
+            // console.logBytes32(permit2DomainSeparator);
+            
+            // bytes32 signatureForDataHash = keccak256(abi.encodePacked("\x19\x01", permit2DomainSeparator, dataHash));
+            // console.logString("signatureForDataHash");
+            // console.logBytes32(signatureForDataHash);
+            // console.logString("dataHash");
+            // console.logBytes32(dataHash);
+            // _transferFromIKnowWhatImDoing(permit, transferDetails, payer, intentParamsHash, ParamsHash._INTENT_WITNESS_TYPE_STRING, sig);
+            // console.logString("########################################################");
             clearPayer(payer);
             clearIntentTypeHash();
         }

@@ -122,6 +122,8 @@ contract Permit2Signature is Test {
                 )
             )
         );
+        console.logString("msgHash");
+        console.logBytes32(msgHash);
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
         return bytes.concat(r, s, bytes1(v));
@@ -136,6 +138,10 @@ contract Permit2Signature is Test {
     ) internal pure returns (bytes memory sig) {
         bytes32 typehash = keccak256(abi.encodePacked(_PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB, _INTENT_WITNESS_TYPE_STRING));
         bytes32 witness = intentParams.hash();
+        console.logString("witness");
+        console.logBytes32(witness);
+        console.logString("typehash");
+        console.logBytes32(typehash);
         return getPermitWitnessTransferSignature(
             permit, spender, privateKey, typehash, witness, domainSeparator
             );
@@ -160,82 +166,98 @@ contract Permit2Signature is Test {
         bytes32 domainSeparator
     ) internal pure returns (bytes memory sig) {
         bytes32 tokenPermissions = keccak256(abi.encode(_TOKEN_PERMISSIONS_TYPEHASH, permit.permitted));
-
+        console.logString("tokenPermissions");
+        console.logBytes32(tokenPermissions);
+        console.logString("spender");
+        console.logAddress(spender);
+        console.logString("permit.nonce");
+        console.logUint(permit.nonce);
+        console.logString("permit.deadline");
+        console.logUint(permit.deadline);
+        console.logString("witness");
+        console.logBytes32(witness);
+        
+        console.logString("keccak256(abi.encode(typehash, tokenPermissions, spender, permit.nonce, permit.deadline, witness))");
+        bytes32 dataHash = keccak256(abi.encode(typehash, tokenPermissions, spender, permit.nonce, permit.deadline, witness));
+        console.logBytes32(dataHash);
         bytes32 msgHash = keccak256(
             abi.encodePacked(
                 "\x19\x01",
                 domainSeparator,
-                keccak256(abi.encode(typehash, tokenPermissions, spender, permit.nonce, permit.deadline, witness))
+                dataHash
             )
         );
-
+        console.logString("getPermitWitnessTransferSignature.msgHash");
+        console.logBytes32(msgHash);
+        console.logString("Permit2.DomainSeparator");
+        console.logBytes32(domainSeparator);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
         return bytes.concat(r, s, bytes1(v));
     }
 
-    function getPermitTransferSignature(
-        ISignatureTransfer.PermitBatchTransferFrom memory permit,
-        address spender,
-        uint256 privateKey,
-        bytes32 domainSeparator
-    ) internal pure returns (bytes memory sig) {
-        bytes32[] memory tokenPermissions = new bytes32[](permit.permitted.length);
-        for (uint256 i = 0; i < permit.permitted.length; ++i) {
-            tokenPermissions[i] = keccak256(bytes.concat(_TOKEN_PERMISSIONS_TYPEHASH, abi.encode(permit.permitted[i])));
-        }
-        bytes32 msgHash = keccak256(
-            abi.encodePacked(
-                "\x19\x01",
-                domainSeparator,
-                keccak256(
-                    abi.encode(
-                        _PERMIT_BATCH_TRANSFER_FROM_TYPEHASH,
-                        keccak256(abi.encodePacked(tokenPermissions)),
-                        spender,
-                        permit.nonce,
-                        permit.deadline
-                    )
-                )
-            )
-        );
+    // function getPermitTransferSignature(
+    //     ISignatureTransfer.PermitBatchTransferFrom memory permit,
+    //     address spender,
+    //     uint256 privateKey,
+    //     bytes32 domainSeparator
+    // ) internal pure returns (bytes memory sig) {
+    //     bytes32[] memory tokenPermissions = new bytes32[](permit.permitted.length);
+    //     for (uint256 i = 0; i < permit.permitted.length; ++i) {
+    //         tokenPermissions[i] = keccak256(bytes.concat(_TOKEN_PERMISSIONS_TYPEHASH, abi.encode(permit.permitted[i])));
+    //     }
+    //     bytes32 msgHash = keccak256(
+    //         abi.encodePacked(
+    //             "\x19\x01",
+    //             domainSeparator,
+    //             keccak256(
+    //                 abi.encode(
+    //                     _PERMIT_BATCH_TRANSFER_FROM_TYPEHASH,
+    //                     keccak256(abi.encodePacked(tokenPermissions)),
+    //                     spender,
+    //                     permit.nonce,
+    //                     permit.deadline
+    //                 )
+    //             )
+    //         )
+    //     );
 
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
-        return bytes.concat(r, s, bytes1(v));
-    }
+    //     (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
+    //     return bytes.concat(r, s, bytes1(v));
+    // }
 
-    function getPermitWitnessTransferSignature(
-        ISignatureTransfer.PermitBatchTransferFrom memory permit,
-        address spender,
-        uint256 privateKey,
-        bytes32 typeHash,
-        bytes32 witness,
-        bytes32 domainSeparator
-    ) internal pure returns (bytes memory sig) {
-        bytes32[] memory tokenPermissions = new bytes32[](permit.permitted.length);
-        for (uint256 i = 0; i < permit.permitted.length; ++i) {
-            tokenPermissions[i] = keccak256(bytes.concat(_TOKEN_PERMISSIONS_TYPEHASH, abi.encode(permit.permitted[i])));
-        }
+    // function getPermitWitnessTransferSignature(
+    //     ISignatureTransfer.PermitBatchTransferFrom memory permit,
+    //     address spender,
+    //     uint256 privateKey,
+    //     bytes32 typeHash,
+    //     bytes32 witness,
+    //     bytes32 domainSeparator
+    // ) internal pure returns (bytes memory sig) {
+    //     bytes32[] memory tokenPermissions = new bytes32[](permit.permitted.length);
+    //     for (uint256 i = 0; i < permit.permitted.length; ++i) {
+    //         tokenPermissions[i] = keccak256(bytes.concat(_TOKEN_PERMISSIONS_TYPEHASH, abi.encode(permit.permitted[i])));
+    //     }
 
-        bytes32 msgHash = keccak256(
-            abi.encodePacked(
-                "\x19\x01",
-                domainSeparator,
-                keccak256(
-                    abi.encode(
-                        typeHash,
-                        keccak256(abi.encodePacked(tokenPermissions)),
-                        spender,
-                        permit.nonce,
-                        permit.deadline,
-                        witness
-                    )
-                )
-            )
-        );
+    //     bytes32 msgHash = keccak256(
+    //         abi.encodePacked(
+    //             "\x19\x01",
+    //             domainSeparator,
+    //             keccak256(
+    //                 abi.encode(
+    //                     typeHash,
+    //                     keccak256(abi.encodePacked(tokenPermissions)),
+    //                     spender,
+    //                     permit.nonce,
+    //                     permit.deadline,
+    //                     witness
+    //                 )
+    //             )
+    //         )
+    //     );
 
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
-        return bytes.concat(r, s, bytes1(v));
-    }
+    //     (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
+    //     return bytes.concat(r, s, bytes1(v));
+    // }
 
     function getPermitSingleSignature(
         IAllowanceTransfer.PermitSingle memory permit,

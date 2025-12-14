@@ -63,7 +63,7 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
 
     function _dispatch(uint256 i, uint256 action, bytes calldata data)
         internal
-        override(Settler, MainnetMixin)
+        override(Settler, MainnetMixin) DANGEROUS_freeMemory
         returns (bool)
     {
         if (super._dispatch(i, action, data)) {
@@ -134,5 +134,9 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
 
         return false;
     }
+
+    // function _myAddress() internal view override returns (address) {
+    //     return address(this);
+    // }
 
 }

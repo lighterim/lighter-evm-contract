@@ -5,13 +5,14 @@ import {Test} from "forge-std/Test.sol";
 import {GasSnapshot} from "@forge-gas-snapshot/GasSnapshot.sol";
 
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
-import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
+import {IPermit2} from "@uniswap/permit2/interfaces/IPermit2.sol";
 
 import {Permit2Signature} from "./utils/Permit2Signature.sol";
 
 import {SafeTransferLib} from "../src/vendor/SafeTransferLib.sol";
 import {MainnetDefaultFork} from "./BaseForkTest.t.sol";
 import {ISettlerBase} from "../src/interfaces/ISettlerBase.sol";
+import {console} from "forge-std/console.sol";
 
 
 abstract contract BasePairTest is Test, GasSnapshot, Permit2Signature, MainnetDefaultFork {
@@ -25,8 +26,9 @@ abstract contract BasePairTest is Test, GasSnapshot, Permit2Signature, MainnetDe
     uint48 internal constant PERMIT2_FROM_NONCE = 1;
 
     // address internal constant BURN_ADDRESS = 0x2222222222222222222222222222222222222222;
+    IPermit2 internal constant PERMIT2 = IPermit2(0x000000000022D473030F116dDEE9F6B43aC78BA3);
 
-    ISignatureTransfer internal constant PERMIT2 = ISignatureTransfer(0x000000000022D473030F116dDEE9F6B43aC78BA3);
+    // ISignatureTransfer internal constant PERMIT2 = IPermit2(0x000000000022D473030F116dDEE9F6B43aC78BA3);
     // address internal constant ZERO_EX_ADDRESS = 0xDef1C0ded9bec7F1a1670819833240f027b25EfF;
 
     // IERC20 internal constant ETH = IERC20(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
@@ -38,7 +40,8 @@ abstract contract BasePairTest is Test, GasSnapshot, Permit2Signature, MainnetDe
         
         vm.createSelectFork(_testChainId(), _testBlockNumber());
         permit2Domain = PERMIT2.DOMAIN_SEPARATOR();
-        
+        console.logString("permit2Domain");
+        console.logBytes32(permit2Domain);
         vm.label(address(PERMIT2), "BasePairTest");
 
         if (address(fromToken()).code.length > 0) {
