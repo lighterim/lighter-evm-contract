@@ -54,7 +54,7 @@ abstract contract Permit2PaymentAbstract {
      * processing escrow transaction
      * @param escrowTypedHash escrow typed hash
      */
-    modifier processingEscrowTx(bytes32 escrowTypedHash) virtual;
+    modifier placeWaypoint(bytes32 escrowTypedHash) virtual;
 
     /**
      * take intent with payer and witness

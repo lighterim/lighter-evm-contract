@@ -342,7 +342,7 @@ abstract contract Permit2PaymentTakeIntent is Permit2Payment {
         TransientStorage.checkSpentPayerAndWitness();
     }
 
-    modifier processingEscrowTx(bytes32 escrowTypedHash) override {
+    modifier placeWaypoint(bytes32 escrowTypedHash) override {
         revert();
         _;
     }
@@ -355,30 +355,15 @@ abstract contract Permit2PaymentTakeIntent is Permit2Payment {
 
 // DANGER: the order of the base contracts here is very significant for the use of `super` below
 // (and in derived contracts). Do not change this order.
-abstract contract Permit2PaymentProcessingTxn is Permit2Payment {
+abstract contract Permit2PaymentWaypoint is Permit2Payment {
+
     constructor(IAllowanceHolder allowanceHolder) Permit2PaymentBase(allowanceHolder) {
-        
     }
 
     function _witnessTypeSuffix() internal pure virtual returns (string memory) {
         return ParamsHash._INTENT_WITNESS_TYPE_STRING;
     }
 
-    function _transferFrom(
-        ISignatureTransfer.PermitTransferFrom memory permit,
-        ISignatureTransfer.SignatureTransferDetails memory transferDetails,
-        address owner,
-        bytes memory sig
-    ) internal override {
-        //TODO: check witness where from!!!!
-        bytes32 witness = TransientStorage.getWitness();
-        if (witness == bytes32(0)) {
-            revertConfusedDeputy();
-        }
-        _transferFromIKnowWhatImDoing(
-            permit, transferDetails, owner, witness, _witnessTypeSuffix(), sig
-        );
-    }
 
     function _allowanceHolderTransferFrom(address, address, address, uint160) internal pure override {
         revertConfusedDeputy();
@@ -394,10 +379,9 @@ abstract contract Permit2PaymentProcessingTxn is Permit2Payment {
         _;
     }
 
-    modifier processingEscrowTx(bytes32 escrowTypedHash) override {
+    modifier placeWaypoint(bytes32 escrowTypedHash) override {
         TransientStorage.setPayerAndWitness(msg.sender, escrowTypedHash, bytes32(0));
         _;
-        
         // It should not be possible for this check to revert because the very first thing that a
         // metatransaction does is spend the witness.
         TransientStorage.checkSpentPayerAndWitness();
@@ -405,7 +389,7 @@ abstract contract Permit2PaymentProcessingTxn is Permit2Payment {
 
 }
 
-abstract contract Permit2PaymentIntent is Permit2PaymentProcessingTxn {
+abstract contract Permit2PaymentIntent is Permit2Payment {
     
 }
 

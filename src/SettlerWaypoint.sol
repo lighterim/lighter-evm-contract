@@ -2,9 +2,10 @@
 pragma solidity ^0.8.25;
 
 import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
-import {ISettlerProcessingTxn} from "./interfaces/ISettlerProcessingTxn.sol";
+import {ISettlerWaypoint} from "./interfaces/ISettlerWaypoint.sol";
 
-import {Permit2PaymentProcessingTxn} from "./core/Permit2Payment.sol";
+import {Permit2PaymentWaypoint} from "./core/Permit2Payment.sol";
+import {SettlerAbstract} from "./SettlerAbstract.sol";
 
 import {CalldataDecoder, SettlerBase} from "./SettlerBase.sol";
 import {UnsafeMath} from "./utils/UnsafeMath.sol";
@@ -12,7 +13,7 @@ import {UnsafeMath} from "./utils/UnsafeMath.sol";
 import {ISettlerActions} from "./ISettlerActions.sol";
 import {revertActionInvalid} from "./core/SettlerErrors.sol";
 
-abstract contract SettlerMetaTxn is ISettlerProcessingTxn, Permit2PaymentProcessingTxn, SettlerBase {
+abstract contract SettlerWaypoint is ISettlerWaypoint, Permit2PaymentWaypoint, SettlerBase {
     using UnsafeMath for uint256;
     using CalldataDecoder for bytes[];
 
@@ -68,36 +69,30 @@ abstract contract SettlerMetaTxn is ISettlerProcessingTxn, Permit2PaymentProcess
         }
     }
 
-    function _dispatchVIP(uint256 action, bytes calldata data, bytes calldata sig) internal virtual returns (bool) {
-        if (action == uint32(ISettlerActions.NATIVE_CHECK.selector)) {
+    function _dispatch(uint256 index, uint256 action, bytes calldata data) internal virtual override(SettlerBase,SettlerAbstract) returns (bool) {
+        if(super._dispatch(index, action, data)) {
+            return true;
+        }
+        else if(action == uint32(ISettlerActions.NATIVE_CHECK.selector)) {
             (address recipient, ISignatureTransfer.PermitTransferFrom memory permit) =
                 abi.decode(data, (address, ISignatureTransfer.PermitTransferFrom));
-            // (ISignatureTransfer.SignatureTransferDetails memory transferDetails,) =
-                // _permitToTransferDetails(permit, recipient);
-
-            // We simultaneously transfer-in the taker's tokens and authenticate the
-            // metatransaction.
-            // _transferFrom(permit, transferDetails, sig);
-        } else {
-            return false;
+                return true;
         }
-        return true;
+        return false;
     }
 
-    function _executeMetaTxn(/*AllowedSlippage calldata slippage,*/ bytes[] calldata actions, bytes calldata sig)
+    function _dispatchVIP(uint256 action, bytes calldata data) internal virtual returns (bool);
+    
+
+    function _executeWaypoint(bytes[] calldata actions)
         internal
         returns (bool)
     {
-        require(actions.length != 0);
-        {
-            (uint256 action, bytes calldata data) = actions.decodeCall(0);
+        if(actions.length == 0) revertActionInvalid(0, 0, msg.data[0:0]);
 
-            // By forcing the first action to be one of the witness-aware
-            // actions, we ensure that the entire sequence of actions is
-            // authorized. `msgSender` is the signer of the metatransaction.
-            if (!_dispatchVIP(action, data, sig)) {
-                revertActionInvalid(0, action, data);
-            }
+        (uint256 action, bytes calldata data) = actions.decodeCall(0);
+        if (!_dispatchVIP(action, data)) {
+            revertActionInvalid(0, action, data);
         }
 
         for (uint256 i = 1; i < actions.length; i = i.unsafeInc()) {
@@ -107,17 +102,18 @@ abstract contract SettlerMetaTxn is ISettlerProcessingTxn, Permit2PaymentProcess
             }
         }
 
-        // _checkSlippageAndTransfer(slippage);
         return true;
     }
 
-    function executeEscrowTxn(
+    function executeWaypoint(
+        bytes32 escrowTypedDataHash,
         bytes[] calldata actions,
-        bytes32 /* zid & affiliate */,
-        address msgSender,
-        bytes calldata sig
-    ) public virtual override processingEscrowTx(_hashActionsAndSlippage(actions)) returns (bool) {
-        return _executeMetaTxn(actions, sig);
+        bytes32 /*affiliate*/
+    )
+        public payable override
+        placeWaypoint(escrowTypedDataHash)
+        returns (bool) {
+        return _executeWaypoint(actions);
     }
 
 }

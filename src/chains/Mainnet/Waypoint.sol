@@ -5,9 +5,9 @@ pragma solidity ^0.8.25;
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
 import {IAllowanceHolder} from "../../allowanceholder/IAllowanceHolder.sol";
-import {Permit2PaymentProcessingTxn} from "../../core/Permit2Payment.sol";
+import {Permit2PaymentWaypoint} from "../../core/Permit2Payment.sol";
 import {MainnetMixin} from "./Common.sol";
-import {SettlerMetaTxn} from "../../SettlerMetaTxn.sol";
+import {SettlerWaypoint} from "../../SettlerWaypoint.sol";
 import {ISettlerActions} from "../../ISettlerActions.sol";
 import {EscrowAbstract} from "../../core/EscrowAbstract.sol";
 
@@ -18,18 +18,22 @@ import {IEscrow} from "../../interfaces/IEscrow.sol";
 import {LighterAccount} from "../../account/LighterAccount.sol";
 
 
-contract MainnetSettlerMetaTxn is MainnetMixin, SettlerMetaTxn {
+contract MainnetWaypoint is MainnetMixin, SettlerWaypoint {
 
     constructor(address lighterRelayer, IEscrow escrow, LighterAccount lighterAccount, bytes20 gitCommit, IAllowanceHolder allowanceHolder) 
     MainnetMixin(lighterRelayer, escrow, lighterAccount, gitCommit)
-    Permit2PaymentProcessingTxn(allowanceHolder)
+    Permit2PaymentWaypoint(allowanceHolder)
     {
 
     }
 
     
-    function _dispatch(uint256 i, uint256 action, bytes calldata data) internal virtual override(SettlerAbstract, SettlerBase, MainnetMixin) returns (bool) {
+    function _dispatch(uint256 i, uint256 action, bytes calldata data) internal virtual override(MainnetMixin, SettlerWaypoint) returns (bool) {
         return super._dispatch(i, action, data);
+    }
+
+    function _dispatchVIP(uint256 action, bytes calldata data) internal virtual override(SettlerWaypoint) returns (bool) {
+        return false;
     }
 
 }
