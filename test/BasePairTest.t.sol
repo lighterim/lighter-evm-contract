@@ -39,7 +39,8 @@ abstract contract BasePairTest is Test, GasSnapshot, Permit2Signature, MainnetDe
     constructor() {
         
         vm.createSelectFork(_testChainId(), _testBlockNumber());
-        permit2Domain = PERMIT2.DOMAIN_SEPARATOR();
+        //PERMIT2.DOMAIN_SEPARATOR();
+        permit2Domain = permit2Domain = bytes32(0x4d553c58ae79a6c4ba64f0e690a5d1cd2deff8c6b91cf38300e0f2b76f9ee346); 
         console.logString("permit2Domain");
         console.logBytes32(permit2Domain);
         vm.label(address(PERMIT2), "BasePairTest");

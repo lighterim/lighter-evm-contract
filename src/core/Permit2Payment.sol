@@ -153,8 +153,6 @@ library TransientStorage {
 
 abstract contract Permit2PaymentBase is  SettlerAbstract {
 
-    using Revert for bool;
-
     /// @dev Permit2 address
     IPermit2 internal constant _PERMIT2 = IPermit2(0x000000000022D473030F116dDEE9F6B43aC78BA3);
     
@@ -204,7 +202,6 @@ abstract contract Permit2Payment is Permit2PaymentBase {
     function _permit(address owner, IAllowanceTransfer.PermitSingle memory permitSingle, bytes memory signature) internal virtual override(Permit2PaymentAbstract) {
         _PERMIT2.permit(owner, permitSingle, signature);
     }
-
     
     /**
      * TODO: 是否支持转发？ 应该支持转发。

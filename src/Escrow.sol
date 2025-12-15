@@ -9,6 +9,7 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {IEscrow} from "./interfaces/IEscrow.sol";
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
 import {SafeTransferLib} from "./vendor/SafeTransferLib.sol";
+import {FullMath} from "./vendor/FullMath.sol";
 import {
     EscrowAlreadyExists, EscrowNotExists, InvalidEscrowStatus, InsufficientBalance, 
     TokenNotWhitelisted, UnauthorizedCreator, UnauthorizedExecutor, UnauthorizedVerifier
@@ -18,6 +19,7 @@ import {
 contract Escrow is Ownable, Pausable, IEscrow{
 
     using SafeTransferLib for IERC20;
+    using FullMath for uint256;
 
     // for trade(escrow data)
     mapping(bytes32 => ISettlerBase.EscrowData) internal allEscrow;
