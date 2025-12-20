@@ -120,7 +120,7 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
              * 3. takeBuyerIntent, maker: buyer(tba), maker intent signature(buyer tba)
              */
             if(lighterAccount.isOwnerCall(escrowParams.seller, msg.sender)){
-                /// tba is seller ==> 3. takeBuyerIntent
+                /// the call is from seller ==> 3. takeBuyerIntent
                 /// verify buyer intent signature
                 makesureIntentParams(escrowParams.buyer, _domainSeparator(), intentParams, makerIntentSig);
                 clearIntentTypeHash();
