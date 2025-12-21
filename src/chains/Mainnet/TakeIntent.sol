@@ -57,14 +57,14 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
     }
 
     function getDomainSeparator() public view returns (bytes32) {
-        return super._domainSeparatorV4();
+        return _domainSeparatorV4();
     }
 
     /**
      * @dev Returns the EIP-712 domain separator for this contract
      */
     function _domainSeparator() internal view override returns (bytes32) {
-        return super._domainSeparatorV4();
+        return _domainSeparatorV4();
     }
 
     function _dispatch(uint256 i, uint256 action, bytes calldata data)
@@ -118,6 +118,16 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
             bytes32 intentParamsHash = getIntentTypedHash(intentParams, _domainSeparator());
             if (intentParamsHash != getIntentTypeHash()) {
                 revert InvalidIntent();
+            }
+
+            ISignatureTransfer.TokenPermissions memory tokenPermissions = ISignatureTransfer.TokenPermissions({
+                token: escrowParams.token,
+                amount: escrowParams.volume
+            });
+
+            bytes32 tokenPermissionsHash = tokenPermissions.hash();
+            if (tokenPermissionsHash != getTokenPermissionsHash()) {
+                revert InvalidTokenPermissions();
             }
 
             /**
