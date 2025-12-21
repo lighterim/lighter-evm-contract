@@ -22,6 +22,7 @@ import {Permit2PaymentTakeIntent} from "../../core/Permit2Payment.sol";
 import {IAllowanceHolder} from "../../allowanceholder/IAllowanceHolder.sol";
 import {IEscrow} from "../../interfaces/IEscrow.sol";
 import {LighterAccount} from "../../account/LighterAccount.sol";
+import {Context} from "../../Context.sol";
 // import {console} from "forge-std/console.sol";
 
 contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
@@ -35,7 +36,7 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
         bytes20 gitCommit, IAllowanceHolder allowanceHolder
         ) 
         MainnetMixin(lighterRelayer, escrow, lighterAccount, gitCommit)
-        Permit2PaymentTakeIntent(allowanceHolder)
+        Permit2PaymentTakeIntent( allowanceHolder)
         EIP712("MainnetTakeIntent", "1") 
     {
 

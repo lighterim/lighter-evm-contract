@@ -46,7 +46,7 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent {
             // console.logString("------------ESCROW_PARAMS_CHECK--------------------");
             (ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) = abi.decode(data, (ISettlerBase.EscrowParams, bytes));
             // makesure escrow params come from relayer signature.
-            bytes32 escrowTypedHash = makesureEscrowParams(_getRelayer(), _domainSeparator(), escrowParams, sig);
+            bytes32 escrowTypedHash = makesureEscrowParams(_domainSeparator(), escrowParams, sig);
             
             // escrow typed hash(takeIntent modifier) should be the same as the escrow typed hash in the escrow params.
             if (escrowTypedHash != getWitness()) {

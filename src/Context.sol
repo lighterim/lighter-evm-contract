@@ -4,6 +4,7 @@ pragma solidity ^0.8.25;
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
+import {IEscrow} from "./interfaces/IEscrow.sol";
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
 import {ParamsHash} from "./utils/ParamsHash.sol";
 import {
@@ -22,6 +23,14 @@ abstract contract AbstractContext {
 abstract contract Context is AbstractContext {
 
     using ParamsHash for ISettlerBase.EscrowParams;
+    
+    IEscrow internal escrow;
+    address internal relayer;
+
+    constructor(IEscrow escrow_, address lighterRelayer_) {
+        escrow = escrow_;
+        relayer = lighterRelayer_;
+    }
 
     /**
      * 计算担保交易参数的EIP-712类型化数据哈希。
@@ -59,12 +68,11 @@ abstract contract Context is AbstractContext {
 
     /**
      * 确认担保交易参数是否完整有效。
-     * @param relayer 可信的签名者地址
      * @param domainSeparator 域分隔符
      * @param params 担保交易参数
      * @param sig 担保交易参数的签名
      */
-    function makesureEscrowParams(address relayer, bytes32 domainSeparator, ISettlerBase.EscrowParams memory params, bytes memory sig) internal view virtual returns (bytes32 escrowTypedHash){
+    function makesureEscrowParams(bytes32 domainSeparator, ISettlerBase.EscrowParams memory params, bytes memory sig) internal view virtual returns (bytes32 escrowTypedHash){
         escrowTypedHash = getEscrowTypedHash(params, domainSeparator);
         // console.logString("escrowTypedHash=");
         // console.logBytes32(escrowTypedHash);
@@ -73,6 +81,14 @@ abstract contract Context is AbstractContext {
         // console.logString("relayer=");
         // console.logAddress(relayer);
         if(!isValidSignature(relayer, escrowTypedHash, sig)) revert InvalidEscrowSignature();
+    }
+
+    function getEscrow() internal view returns (IEscrow) {
+        return escrow;
+    }
+
+    function _getRelayer() internal view returns (address) {
+        return relayer;
     }
 
 }

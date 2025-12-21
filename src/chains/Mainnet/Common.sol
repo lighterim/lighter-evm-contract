@@ -11,6 +11,7 @@ import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer
 import {SettlerAbstract} from "../../SettlerAbstract.sol";
 import {FreeMemory} from "../../utils/FreeMemory.sol";
 import {IEscrow} from "../../interfaces/IEscrow.sol";
+import {Context} from "../../Context.sol";
 import {LighterAccount} from "../../account/LighterAccount.sol";
 // import {console} from "forge-std/console.sol";
 
@@ -20,20 +21,13 @@ abstract contract MainnetMixin is SettlerBase, FreeMemory{
     using SafeTransferLib for IERC20;
     using SafeTransferLib for address payable;
 
-
-    address internal lighterRelayer;
-    IEscrow internal escrow;
     LighterAccount internal lighterAccount;
 
-    constructor(address lighterRelayer_, IEscrow escrow_, LighterAccount lighterAccount_, bytes20 gitCommit) SettlerBase(gitCommit) {
+    constructor(address lighterRelayer_, IEscrow escrow_, LighterAccount lighterAccount_, bytes20 gitCommit)
+        SettlerBase(gitCommit)
+        Context(escrow_, lighterRelayer_) {
         // assert(block.chainid == 1 || block.chainid == 31337);
-        lighterRelayer = lighterRelayer_;
-        escrow = escrow_;
         lighterAccount = lighterAccount_;
-    }
-
-    function _getRelayer() internal view override returns (address) {
-        return lighterRelayer;
     }
 
     function _makeEscrow(bytes32 escrowTypedDataHash, ISettlerBase.EscrowParams memory escrowParams, uint256 gasSpentForBuyer, uint256 gasSpentForSeller) internal {

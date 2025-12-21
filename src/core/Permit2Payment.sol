@@ -12,6 +12,9 @@ import {Panic} from "../utils/Panic.sol";
 import {Revert} from "../utils/Revert.sol";
 import {ParamsHash} from "../utils/ParamsHash.sol";
 import {SettlerBase} from "../SettlerBase.sol";
+import {Context} from "../Context.sol";
+import {IEscrow} from "../interfaces/IEscrow.sol";
+import {LighterAccount} from "../account/LighterAccount.sol";
 
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer.sol";
@@ -19,14 +22,15 @@ import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer
 import {IPermit2} from "@uniswap/permit2/interfaces/IPermit2.sol";
 
 
+
 abstract contract Permit2PaymentTakeIntent is SettlerBase, Permit2PaymentAbstract {
     /// @dev Permit2 address
     IPermit2 internal constant _PERMIT2 = IPermit2(0x000000000022D473030F116dDEE9F6B43aC78BA3);
     
-    IAllowanceHolder internal immutable _ALLOWANCE_HOLDER;
+    IAllowanceHolder internal immutable allowanceHolder;
 
-    constructor(IAllowanceHolder allowanceHolder) {
-        _ALLOWANCE_HOLDER = allowanceHolder;
+    constructor(IAllowanceHolder allowanceHolder_) {
+        allowanceHolder = allowanceHolder_;
     }
 
     function _permit(address owner, IAllowanceTransfer.PermitSingle memory permitSingle, bytes memory signature) internal virtual override(Permit2PaymentAbstract) {
@@ -150,7 +154,7 @@ abstract contract Permit2PaymentTakeIntent is SettlerBase, Permit2PaymentAbstrac
     }
 
     function _allowanceHolderTransferFrom(address token, address owner, address recipient, uint160 amount) internal virtual override(Permit2PaymentAbstract) {
-        _ALLOWANCE_HOLDER.transferFrom(token, owner, recipient, amount);
+        allowanceHolder.transferFrom(token, owner, recipient, amount);
     }
 
     modifier takeIntent(address payer, bytes32 tokenPermissions, bytes32 witness, bytes32 intentTypeHash) override {

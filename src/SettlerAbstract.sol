@@ -22,8 +22,6 @@ abstract contract SettlerAbstract is Context {
 
     function _domainSeparator() internal view virtual returns (bytes32);
 
-    function _getRelayer() internal view virtual returns (address);
-
     function _dispatch(uint256 i, uint256 action, bytes calldata data) internal virtual returns (bool);
 
 
