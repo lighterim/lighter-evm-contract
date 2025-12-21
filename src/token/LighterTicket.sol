@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "solady/src/utils/LibString.sol";
+import {ERC721, IERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {ERC721Enumerable} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import {ERC721URIStorage} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {LibString} from "solady/src/utils/LibString.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 /**
  * @title LighterTicket
@@ -16,7 +17,7 @@ contract LighterTicket is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
     using Strings for uint256;
 
     // Base URI for token metadata
-    string private _baseTokenURI;
+    string private _baseTokenUri;
     
     // Token counter for minting
     uint256 private _tokenIdCounter;
@@ -37,7 +38,7 @@ contract LighterTicket is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
         string memory symbol_,
         string memory baseURI_
     ) ERC721(name_, symbol_) Ownable(msg.sender) {
-        _baseTokenURI = baseURI_;
+        _baseTokenUri = baseURI_;
         _tokenIdCounter = 1; // Start token IDs from 1
     }
 
@@ -85,7 +86,7 @@ contract LighterTicket is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
      * @param newBaseURI New base URI
      */
     function setBaseURI(string memory newBaseURI) external onlyOwner {
-        _baseTokenURI = newBaseURI;
+        _baseTokenUri = newBaseURI;
         emit BaseURIUpdated(newBaseURI);
     }
 
@@ -94,7 +95,7 @@ contract LighterTicket is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
      * @return Base URI string
      */
     function baseURI() external view returns (string memory) {
-        return _baseTokenURI;
+        return _baseTokenUri;
     }
 
     /**
@@ -124,7 +125,7 @@ contract LighterTicket is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
     // Override functions required by Solidity
 
     function _baseURI() internal view override returns (string memory) {
-        return _baseTokenURI;
+        return _baseTokenUri;
     }
 
     function _update(address to, uint256 tokenId, address auth)

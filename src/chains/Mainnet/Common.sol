@@ -6,9 +6,8 @@ import {ISettlerBase} from "../../interfaces/ISettlerBase.sol";
 
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import {SafeTransferLib} from "../../vendor/SafeTransferLib.sol";
-import {ISettlerActions} from "../../ISettlerActions.sol";
-import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
-import {SettlerAbstract} from "../../SettlerAbstract.sol";
+
+
 import {FreeMemory} from "../../utils/FreeMemory.sol";
 import {IEscrow} from "../../interfaces/IEscrow.sol";
 import {Context} from "../../Context.sol";

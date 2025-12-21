@@ -38,25 +38,40 @@ contract Escrow is Ownable, Pausable, IEscrow{
 
     
     modifier onlyWhitelistedToken(address token){
-        if(!isTokenWhitelisted[token]) revert TokenNotWhitelisted(token);
+        _onlyWhitelistedToken(token);
         _;
+    }
+
+    function _onlyWhitelistedToken(address token) private view {
+        if(!isTokenWhitelisted[token]) revert TokenNotWhitelisted(token);
     }
 
     modifier onlyAuthorizedCreator(){
-        if(!_authorizedCreator[msg.sender]) revert UnauthorizedCreator(msg.sender);
+        _onlyAuthorizedCreator();
         _;
+    }
+
+    function _onlyAuthorizedCreator() private view {
+        if(!_authorizedCreator[msg.sender]) revert UnauthorizedCreator(msg.sender);
     }
 
     modifier onlyAuthorizedExecutor(){
-        if(!_authorizedExecutor[msg.sender]) revert UnauthorizedExecutor(msg.sender);
+        _onlyAuthorizedExecutor();
         _;
     }
 
+    function _onlyAuthorizedExecutor() private view {
+        if(!_authorizedExecutor[msg.sender]) revert UnauthorizedExecutor(msg.sender);
+    }
+
     modifier onlyAuthorizedVerifier(){
-        if(!_authorizedVerifier[msg.sender]) revert UnauthorizedVerifier(msg.sender);
+        _onlyAuthorizedVerifier();
         _;
     }
-    
+
+    function _onlyAuthorizedVerifier() private view {
+        if(!_authorizedVerifier[msg.sender]) revert UnauthorizedVerifier(msg.sender);
+    }
 
     constructor(address _owner) Ownable(_owner) {
     }

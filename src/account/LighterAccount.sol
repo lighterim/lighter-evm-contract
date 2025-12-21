@@ -99,9 +99,15 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     event OperatorAuthorized(address indexed operator, bool isAuthorized);
 
     modifier onlyAuthorized() {
-        if (!authorizedOperators[msg.sender]) revert UnauthorizedExecutor(msg.sender);
+        _onlyAuthorized();
         _;
     }
+
+
+     function _onlyAuthorized() private view {
+         if (!authorizedOperators[msg.sender]) revert UnauthorizedExecutor(msg.sender);
+     }
+
 
     // ============ Constructor ============
 
