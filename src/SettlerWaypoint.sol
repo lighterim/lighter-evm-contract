@@ -22,59 +22,44 @@ abstract contract SettlerWaypoint is ISettlerWaypoint, WaypointAbstract, Settler
         return 3;
     }
 
-    /**
-     * The payment has been made by the buyer
-     * @param sender sender
-     * @param escrowParams escrow parameters
-     */
-    function _madePayment(address sender, ISettlerBase.EscrowParams memory escrowParams) internal virtual override{
-
+    function _dispatchVIP(uint256 action, bytes calldata data) internal virtual override returns (bool) {
+        if(action == uint32(ISettlerActions.MAKE_PAYMENT.selector)) {
+            (ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) = abi.decode(data, (ISettlerBase.EscrowParams, bytes));
+            _madePayment(_msgSender(), escrowParams, sig);
+            return true;
+        }
+        else if(action == uint32(ISettlerActions.REQUEST_CANCEL.selector)) {
+            (ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) = abi.decode(data, (ISettlerBase.EscrowParams, bytes));
+            _requestCancelBySeller(_msgSender(), escrowParams, sig);
+            return true;
+        }
+        else if(action == uint32(ISettlerActions.CANCEL_BY_BUYER.selector)) {
+            (ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) = abi.decode(data, (ISettlerBase.EscrowParams, bytes));
+            _cancelByBuyer(_msgSender(), escrowParams, sig);
+            return true;
+        }
+        else if(action == uint32(ISettlerActions.CANCEL_BY_SELLER.selector)) {
+            (ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) = abi.decode(data, (ISettlerBase.EscrowParams, bytes));
+            _cancelBySeller(_msgSender(), escrowParams, sig);
+            return true;
+        }
+        else if(action == uint32(ISettlerActions.DISPUTE_BY_BUYER.selector)) {
+            (ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) = abi.decode(data, (ISettlerBase.EscrowParams, bytes));
+            _disputeByBuyer(_msgSender(), escrowParams, sig);
+            return true;
+        }
+        else if(action == uint32(ISettlerActions.DISPUTE_BY_SELLER.selector)) {
+            (ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) = abi.decode(data, (ISettlerBase.EscrowParams, bytes));
+            _disputeBySeller(_msgSender(), escrowParams, sig);
+            return true;
+        }
+        return false;
     }
 
-    /**
-     * The seller requests to cancel the escrow
-     * @param sender sender
-     * @param escrowParams escrow parameters
-     */
-    function _requestCancelBySeller(address sender, ISettlerBase.EscrowParams memory escrowParams) internal virtual override{
-
+    function _dispatch(uint256 i, uint256 action, bytes calldata data) internal virtual override returns (bool) { 
+        return false;
     }
 
-    /**
-     * The buyer cancels the escrow
-     * @param sender sender
-     * @param escrowParams escrow parameters
-     */
-    function _cancelByBuyer(address sender, ISettlerBase.EscrowParams memory escrowParams) internal virtual override{
-
-    }
-
-    /**
-     * The seller cancels the escrow
-     * @param sender sender
-     * @param escrowParams escrow parameters
-     */
-    function _cancelBySeller(address sender, ISettlerBase.EscrowParams memory escrowParams) internal virtual override{
-
-    }
-
-    /**
-     * The buyer disputes the escrow
-     * @param sender sender
-     * @param escrowParams escrow parameters
-     */
-    function _disputeByBuyer(address sender, ISettlerBase.EscrowParams memory escrowParams) internal virtual override{
-
-    }
-
-    /**
-     * The seller disputes the escrow
-     * @param sender sender
-     * @param escrowParams escrow parameters
-     */
-    function _disputeBySeller(address sender, ISettlerBase.EscrowParams memory escrowParams) internal virtual override{
-
-    }
 
     /**
      * processing escrow transaction
@@ -109,10 +94,9 @@ abstract contract SettlerWaypoint is ISettlerWaypoint, WaypointAbstract, Settler
 
     function executeWaypoint(
         bytes32 escrowTypedDataHash,
-        bytes[] calldata actions,
-        bytes32 /*affiliate*/
+        bytes[] calldata actions
     )
-        public payable override
+        external payable override
         placeWaypoint(msg.sender, escrowTypedDataHash)
         returns (bool) {
         return _executeWaypoint(actions);

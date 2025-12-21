@@ -8,7 +8,6 @@ import {AccountV3Simplified} from "../src/account/AccountV3.sol";
 import {LighterAccount} from "../src/account/LighterAccount.sol";
 import {Escrow} from "../src/Escrow.sol";
 import {AllowanceHolder} from "../src/allowanceholder/AllowanceHolder.sol";
-import {MainnetUserTxn} from "../src/chains/Mainnet/UserTxn.sol";
 import {MainnetTakeIntent} from "../src/chains/Mainnet/TakeIntent.sol";
 import {MockUSDC} from "../src/utils/TokenMock.sol";
 import {ZkVerifyProofVerifier} from "../src/chains/Mainnet/ZkVerifyProofVerifier.sol";
@@ -65,7 +64,7 @@ contract DeployerContract is Script {
         console.log("LighterTicket ownership transferred to LighterAccount");
         
         console.log("Deploying Escrow...");
-        escrow = new Escrow(deployer);
+        escrow = new Escrow(deployer, lighterAccount);
         escrow.whitelistToken(usdc, true);
         console.log("Escrow deployed at:", address(escrow));
         

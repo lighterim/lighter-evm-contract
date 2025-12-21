@@ -82,12 +82,44 @@ interface IEscrow {
     function cancel( bytes32 escrowHash, uint256 id, address token, address buyer, address seller, uint256 amount, ISettlerBase.EscrowStatus status) external;
 
     /**
+     * cancel the escrow by buyer
+     * @param escrowHash The hash of the escrow
+     * @param id the id of escrow trade
+     * @param token The token of the escrow
+     * @param buyer The buyer of the escrow
+     * @param seller The seller of the escrow
+     */
+    function cancelByBuyer(bytes32 escrowHash, uint256 id, address token, address buyer, address seller) external;
+
+    /**
+     * request cancel the escrow
+     * @param escrowHash The hash of the escrow
+     * @param id the id of escrow trade
+     * @param token The token of the escrow
+     * @param buyer The buyer of the escrow
+     * @param seller The seller of the escrow
+     */
+    function requestCancel(bytes32 escrowHash, uint256 id, address token, address buyer, address seller) external;
+
+    /**
+     * dispute the escrow
+     * @param escrowHash The hash of the escrow
+     * @param id the id of escrow trade
+     * @param token The token of the escrow
+     * @param buyer The buyer of the escrow
+     * @param seller The seller of the escrow
+     * @param status The status of the escrow
+     */
+    function dispute(bytes32 escrowHash, uint256 id, address token, address buyer, address seller, ISettlerBase.EscrowStatus status) external;
+
+    /**
      * claim token from credit of the buyer
      * @param token The token to claim
+     * @param tba The tba of the claim
      * @param to The recipient of the claim
      * @param amount The amount of the claim
      */
-    function claim(address token, address to, uint256 amount) external;
+    function claim(address token, address tba, address to, uint256 amount) external;
 
 
     //event
@@ -95,7 +127,11 @@ interface IEscrow {
     event Paid(address indexed token, address indexed buyer, bytes32 indexed escrowHash, uint64 paidSeconds, uint256 id);
     event Released(address indexed token, address indexed buyer, address indexed seller, bytes32 escrowHash,  uint256 id, uint256 amount, ISettlerBase.EscrowStatus status);
     event Cancelled(address indexed token, address indexed buyer, address indexed seller, bytes32 escrowHash,  uint256 id, uint256 amount, ISettlerBase.EscrowStatus status);
-    event Claimed(address indexed token, address indexed to, uint256 amount);
+    event RequestCancelled(address indexed token, address indexed buyer, address indexed seller, bytes32 escrowHash, uint256 id);
+    event CancelledByBuyer(address indexed token, address indexed buyer, address indexed seller, bytes32 escrowHash, uint256 id);
+    event DisputedByBuyer(address indexed token, address indexed buyer, address indexed seller, bytes32 escrowHash, uint256 id);
+    event DisputedBySeller(address indexed token, address indexed buyer, address indexed seller, bytes32 escrowHash, uint256 id);
+    event Claimed(address indexed token, address indexed tba, address indexed to, uint256 amount);
 
     event AddAuthorizedCreator(address indexed creator);
     event AddAuthorizedExecutor(address indexed executor);

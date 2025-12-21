@@ -12,42 +12,42 @@ abstract contract WaypointAbstract is Context {
      * @param sender sender
      * @param escrowParams escrow parameters
      */
-    function _madePayment(address sender, ISettlerBase.EscrowParams memory escrowParams) internal virtual;
+    function _madePayment(address sender, ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) internal virtual;
 
     /**
      * The seller requests to cancel the escrow
      * @param sender sender
      * @param escrowParams escrow parameters
      */
-    function _requestCancelBySeller(address sender, ISettlerBase.EscrowParams memory escrowParams) internal virtual;
+    function _requestCancelBySeller(address sender, ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) internal virtual;
 
     /**
      * The buyer cancels the escrow
      * @param sender sender
      * @param escrowParams escrow parameters
      */
-    function _cancelByBuyer(address sender, ISettlerBase.EscrowParams memory escrowParams) internal virtual;
+    function _cancelByBuyer(address sender, ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) internal virtual;
 
     /**
      * The seller cancels the escrow
      * @param sender sender
      * @param escrowParams escrow parameters
      */
-    function _cancelBySeller(address sender, ISettlerBase.EscrowParams memory escrowParams) internal virtual;
+    function _cancelBySeller(address sender, ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) internal virtual;
 
     /**
      * The buyer disputes the escrow
      * @param sender sender
      * @param escrowParams escrow parameters
      */
-    function _disputeByBuyer(address sender, ISettlerBase.EscrowParams memory escrowParams) internal virtual;
+    function _disputeByBuyer(address sender, ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) internal virtual;
 
     /**
      * The seller disputes the escrow
      * @param sender sender
      * @param escrowParams escrow parameters
      */
-    function _disputeBySeller(address sender, ISettlerBase.EscrowParams memory escrowParams) internal virtual;
+    function _disputeBySeller(address sender, ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) internal virtual;
 
     /**
      * processing escrow transaction

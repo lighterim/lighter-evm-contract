@@ -333,7 +333,7 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     /// @param account user address
     /// @return quota quota
     function getQuota(address account) public view returns (uint256) {
-        return ticketRents[account] == 0 ? 1 : (ticketRents[account] + rentPrice-1) / rentPrice;
+        return ticketRents[account] == 0 ? 0 : (ticketRents[account] + rentPrice-1) / rentPrice;
     }
 
 

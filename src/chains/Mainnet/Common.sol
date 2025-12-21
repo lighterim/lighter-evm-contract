@@ -4,9 +4,6 @@ pragma solidity ^0.8.25;
 import {SettlerBase} from "../../SettlerBase.sol";
 import {ISettlerBase} from "../../interfaces/ISettlerBase.sol";
 
-import {IERC20} from "forge-std/interfaces/IERC20.sol";
-import {SafeTransferLib} from "../../vendor/SafeTransferLib.sol";
-
 
 import {FreeMemory} from "../../utils/FreeMemory.sol";
 import {IEscrow} from "../../interfaces/IEscrow.sol";
@@ -17,8 +14,8 @@ import {LighterAccount} from "../../account/LighterAccount.sol";
 
 abstract contract MainnetMixin is SettlerBase, FreeMemory{
 
-    using SafeTransferLib for IERC20;
-    using SafeTransferLib for address payable;
+    // using SafeTransferLib for IERC20;
+    // using SafeTransferLib for address payable;
 
     LighterAccount internal lighterAccount;
 
@@ -27,6 +24,10 @@ abstract contract MainnetMixin is SettlerBase, FreeMemory{
         Context(escrow_, lighterRelayer_) {
         // assert(block.chainid == 1 || block.chainid == 31337);
         lighterAccount = lighterAccount_;
+    }
+
+    function getLighterAccount() public view returns (LighterAccount) {
+        return lighterAccount;
     }
 
     function _makeEscrow(bytes32 escrowTypedDataHash, ISettlerBase.EscrowParams memory escrowParams, uint256 gasSpentForBuyer, uint256 gasSpentForSeller) internal {

@@ -7,7 +7,6 @@ interface ISettlerWaypoint is ISettlerBase {
     
     function executeWaypoint(
         bytes32 escrowTypedDataHash,
-        bytes[] calldata actions,
-        bytes32 affiliate
+        bytes[] calldata actions
     ) external payable returns (bool);
 }

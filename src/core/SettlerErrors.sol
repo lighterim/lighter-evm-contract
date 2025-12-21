@@ -30,6 +30,7 @@ error TokenNotWhitelisted(address token);
 error UnauthorizedCreator(address creator);
 error UnauthorizedExecutor(address executor);
 error UnauthorizedVerifier(address verifier);
+error UnauthorizedCaller(address caller);
 
 error InsufficientPayment(uint256 required, uint256 provided);
 error InvalidCount();
