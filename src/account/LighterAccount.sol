@@ -229,7 +229,7 @@ contract LighterAccount is Ownable, ReentrancyGuard {
 
     /// @notice upgrade quota
     /// @param nftId token id
-    function upgradeQuota(uint256  nftId) external payable {
+    function upgradeQuota(uint256  nftId) external payable nonReentrant {
         if (msg.value < rentPrice) {
             revert InsufficientPayment(rentPrice, msg.value);
         }

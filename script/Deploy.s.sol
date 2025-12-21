@@ -64,7 +64,7 @@ contract DeployerContract is Script {
         console.log("LighterTicket ownership transferred to LighterAccount");
         
         console.log("Deploying Escrow...");
-        escrow = new Escrow(deployer, lighterAccount);
+        escrow = new Escrow(deployer, lighterAccount, deployer);
         escrow.whitelistToken(usdc, true);
         console.log("Escrow deployed at:", address(escrow));
         

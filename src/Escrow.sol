@@ -5,6 +5,7 @@ pragma solidity ^0.8.25;
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import {IEscrow} from "./interfaces/IEscrow.sol";
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
@@ -18,12 +19,13 @@ import {
     } from "./core/SettlerErrors.sol";
 
 
-contract Escrow is Ownable, Pausable, IEscrow{
+contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
 
     using SafeTransferLib for IERC20;
     using FullMath for uint256;
 
     LighterAccount public immutable lighterAccount;
+    address public feeCollector;
 
     // for trade(escrow data)
     mapping(bytes32 => ISettlerBase.EscrowData) internal allEscrow;
@@ -77,8 +79,9 @@ contract Escrow is Ownable, Pausable, IEscrow{
         if(!_authorizedVerifier[msg.sender]) revert UnauthorizedVerifier(msg.sender);
     }
 
-    constructor(address _owner, LighterAccount _lighterAccount) Ownable(_owner) {
-        lighterAccount = _lighterAccount;
+    constructor(address owner_, LighterAccount lighterAccount_, address feeCollector_) Ownable(owner_) {
+        lighterAccount = lighterAccount_;
+        feeCollector = feeCollector_;
     }
 
     function whitelistToken(address token, bool isWhitelisted) external onlyOwner{
@@ -106,7 +109,7 @@ contract Escrow is Ownable, Pausable, IEscrow{
     }
 
     function create(address token, address buyer, address seller, uint256 amount, bytes32 escrowHash, uint256 id, ISettlerBase.EscrowData memory escrowData) external 
-        onlyWhitelistedToken(token) onlyAuthorizedCreator {
+        onlyWhitelistedToken(token) onlyAuthorizedCreator whenNotPaused {
         
         if(allEscrow[escrowHash].lastActionTs > 0) revert EscrowAlreadyExists(escrowHash);
 
@@ -142,7 +145,7 @@ contract Escrow is Ownable, Pausable, IEscrow{
         _release(escrowHash, id, token, buyer, seller, amount, ISettlerBase.EscrowStatus.SellerReleased);
     }
 
-    function _release(bytes32 escrowHash, uint256 id, address token, address buyer, address seller, uint256 amount, ISettlerBase.EscrowStatus status) internal{
+    function _release(bytes32 escrowHash, uint256 id, address token, address buyer, address seller, uint256 amount, ISettlerBase.EscrowStatus status) internal nonReentrant{
         if(allEscrow[escrowHash].lastActionTs == 0) revert EscrowNotExists(escrowHash);
 
         allEscrow[escrowHash].releaseSeconds = allEscrow[escrowHash].paidSeconds > 0 ? uint64(block.timestamp) - allEscrow[escrowHash].lastActionTs : 0;
@@ -175,7 +178,7 @@ contract Escrow is Ownable, Pausable, IEscrow{
         emit CancelledByBuyer(token, buyer, seller, escrowHash, id);
     }
 
-    function cancel(bytes32 escrowHash, uint256 id, address token, address buyer, address seller, uint256 amount, ISettlerBase.EscrowStatus status) external onlyAuthorizedExecutor{
+    function cancel(bytes32 escrowHash, uint256 id, address token, address buyer, address seller, uint256 amount, ISettlerBase.EscrowStatus status) external onlyAuthorizedExecutor nonReentrant{
         if(allEscrow[escrowHash].lastActionTs == 0) revert EscrowNotExists(escrowHash);
         if(
             allEscrow[escrowHash].status != ISettlerBase.EscrowStatus.BuyerCancelled 
@@ -212,7 +215,7 @@ contract Escrow is Ownable, Pausable, IEscrow{
         }
     }
 
-    function claim(address token, address tba, address to, uint256 amount) external{
+    function claim(address token, address tba, address to, uint256 amount) external nonReentrant{
         if(!lighterAccount.isOwnerCall(tba, msg.sender)) revert UnauthorizedCaller(msg.sender);
         
         if(userCredit[tba][token] < amount) revert InsufficientBalance(userCredit[tba][token]);
