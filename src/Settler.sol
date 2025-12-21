@@ -24,7 +24,7 @@ import {SettlerAbstract} from "./SettlerAbstract.sol";
 // import {console} from "forge-std/console.sol";
 
 
-abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, SettlerBase {
+abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent {
 
     using UnsafeMath for uint256;
     using CalldataDecoder for bytes[];
@@ -39,18 +39,10 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
         return 2;
     }
 
-    function _hasMetaTxn() internal pure override returns (bool) {
-        return false;
-    }
-
-
     // function _myAddress() internal view virtual returns (address);
 
-    function _dispatch(uint256 index, uint256 action, bytes calldata data) internal virtual override(SettlerBase,SettlerAbstract) returns (bool) {
-        if(super._dispatch(index, action, data)) {
-            return true;
-        }
-        else if(action == uint32(ISettlerActions.ESCROW_PARAMS_CHECK.selector)) {
+    function _dispatch(uint256 index, uint256 action, bytes calldata data) internal virtual override returns (bool) {
+        if(action == uint32(ISettlerActions.ESCROW_PARAMS_CHECK.selector)) {
             // console.logString("------------ESCROW_PARAMS_CHECK--------------------");
             (ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) = abi.decode(data, (ISettlerBase.EscrowParams, bytes));
             // makesure escrow params come from relayer signature.
@@ -162,8 +154,6 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
         }
         return true;
     }
-
-    function _dispatchVIP(uint256 action, bytes calldata data) internal virtual returns (bool);
 
     function execute(address payer, bytes32 tokenPermissionsHash, bytes32 escrowTypedHash, bytes32 intentTypeHash, bytes[] calldata actions)
         public

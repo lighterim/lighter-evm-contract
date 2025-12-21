@@ -171,6 +171,7 @@ contract LocalTakeIntentTest is Permit2Signature {
         });
 
         ISettlerBase.EscrowParams memory escrowParams = getEscrowParams(1);
+        bytes32 tokenPermissionsHash = settler.getTokenPermissionsHash(permit.permitted);
         bytes32 escrowTypedDataHash = settler.getEscrowTypedHash(escrowParams);
         bytes32 intentTypedDataHash = settler.getIntentTypedHash(intentParams);
         bytes memory escrowSignature = getEscrowSignature(
@@ -200,6 +201,7 @@ contract LocalTakeIntentTest is Permit2Signature {
         // snapStartName("TakeIntent_takeSellerIntent");
         _settler.execute(
             eoaSeller,
+            tokenPermissionsHash,
             escrowTypedDataHash,
             intentTypedDataHash,
             actions
@@ -243,6 +245,12 @@ contract LocalTakeIntentTest is Permit2Signature {
             from: eoaSeller
         });
 
+        bytes32 tokenPermissionsHash = settler.getTokenPermissionsHash(
+            ISignatureTransfer.TokenPermissions({
+                token: address(fromToken()), amount: amount()}
+            )
+        );
+
         bytes[] memory actions = ActionDataBuilder.build(
             abi.encodeCall(ISettlerActions.ESCROW_AND_INTENT_CHECK, (escrowParams, intentParams, makerIntentSignature)),
             abi.encodeCall(ISettlerActions.ESCROW_PARAMS_CHECK, (escrowParams, escrowSignature)),
@@ -253,6 +261,7 @@ contract LocalTakeIntentTest is Permit2Signature {
         vm.startPrank(eoaBuyer);
         _settler.execute(
             eoaSeller,
+            tokenPermissionsHash,
             escrowTypedDataHash,
             intentTypedDataHash,
             actions
@@ -288,6 +297,7 @@ contract LocalTakeIntentTest is Permit2Signature {
             to: address(escrow),
             requestedAmount: amount()
         });
+        bytes32 tokenPermissionsHash = settler.getTokenPermissionsHash(permit.permitted);
         bytes memory transferSignature = getPermitTransferSignature(
             permit, address(escrow), sellerPrivKey, permit2Domain
             );
@@ -310,6 +320,7 @@ contract LocalTakeIntentTest is Permit2Signature {
         vm.startPrank(eoaSeller);
         _settler.execute(
             eoaSeller,
+            tokenPermissionsHash,
             escrowTypedDataHash,
             intentTypedDataHash,
             actions

@@ -8,7 +8,7 @@ import {IAllowanceHolder} from "../../allowanceholder/IAllowanceHolder.sol";
 import {MainnetMixin} from "./Common.sol";
 import {SettlerWaypoint} from "../../SettlerWaypoint.sol";
 import {ISettlerActions} from "../../ISettlerActions.sol";
-import {EscrowAbstract} from "../../core/EscrowAbstract.sol";
+
 
 import {SettlerAbstract} from "../../SettlerAbstract.sol";
 import {SettlerBase} from "../../SettlerBase.sol";
@@ -29,11 +29,11 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
 
 
     
-    function _dispatch(uint256 i, uint256 action, bytes calldata data) internal virtual override(MainnetMixin, SettlerWaypoint) returns (bool) {
-        return super._dispatch(i, action, data);
+    function _dispatch(uint256 i, uint256 action, bytes calldata data) internal virtual override(SettlerAbstract) DANGEROUS_freeMemory returns (bool) {
+        return false;
     }
 
-    function _dispatchVIP(uint256 action, bytes calldata data) internal virtual override(SettlerWaypoint) returns (bool) {
+    function _dispatchVIP(uint256 action, bytes calldata data) internal virtual override DANGEROUS_freeMemory returns (bool) {
         return false;
     }
 

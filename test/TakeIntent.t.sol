@@ -142,6 +142,7 @@ contract TakeIntentTest is BasePairTest, Utils {
         ISettlerBase.EscrowParams memory escrowParams = getEscrowParams();
         bytes32 escrowTypedDataHash = settler.getEscrowTypedHash(escrowParams);
         bytes32 intentTypedDataHash = settler.getIntentTypedHash(intentParams);
+        bytes32 tokenPermissionsHash = settler.getTokenPermissionsHash(permit.permitted);
         bytes memory escrowSignature = getEscrowSignature(
             escrowParams, relayerPrivKey, takeIntentDomain
             );
@@ -208,6 +209,7 @@ contract TakeIntentTest is BasePairTest, Utils {
         // );
         _settler.execute(
             eoaSeller,
+            tokenPermissionsHash,
             escrowTypedDataHash,
             intentTypedDataHash,
             actions
@@ -251,6 +253,7 @@ contract TakeIntentTest is BasePairTest, Utils {
         ISettlerBase.EscrowParams memory escrowParams = getEscrowParams();
         bytes32 escrowTypedDataHash = settler.getEscrowTypedHash(escrowParams);
         bytes32 intentTypedDataHash = settler.getIntentTypedHash(intentParams);
+        bytes32 tokenPermissionsHash = settler.getTokenPermissionsHash(permit.permitted);
         bytes memory escrowSignature = getEscrowSignature(
             escrowParams, relayerPrivKey, takeIntentDomain
             );
@@ -268,6 +271,7 @@ contract TakeIntentTest is BasePairTest, Utils {
         vm.startPrank(eoaSeller);
         _settler.execute(
             eoaSeller,
+            tokenPermissionsHash,
             escrowTypedDataHash,
             intentTypedDataHash,
             actions
@@ -306,6 +310,11 @@ contract TakeIntentTest is BasePairTest, Utils {
         console.log("details");
         console.logBytes(abi.encode(details));
 
+        bytes32 tokenPermissionsHash = settler.getTokenPermissionsHash(
+            ISignatureTransfer.TokenPermissions({
+                token: address(fromToken()), amount: amount()})
+        );
+
         // maker: seller
         ISettlerBase.IntentParams memory intentParams = getIntentParams();
         bytes memory intentSignature = getIntentSignature(
@@ -335,6 +344,7 @@ contract TakeIntentTest is BasePairTest, Utils {
         vm.startPrank(eoaBuyer);
         _settler.execute(
             eoaSeller,
+            tokenPermissionsHash,
             escrowTypedDataHash,
             intentTypedDataHash,
             actions

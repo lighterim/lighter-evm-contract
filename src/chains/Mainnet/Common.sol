@@ -9,7 +9,6 @@ import {SafeTransferLib} from "../../vendor/SafeTransferLib.sol";
 import {ISettlerActions} from "../../ISettlerActions.sol";
 import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
 import {SettlerAbstract} from "../../SettlerAbstract.sol";
-import {Permit2PaymentBase} from "../../core/Permit2Payment.sol";
 import {FreeMemory} from "../../utils/FreeMemory.sol";
 import {IEscrow} from "../../interfaces/IEscrow.sol";
 import {LighterAccount} from "../../account/LighterAccount.sol";
@@ -36,11 +35,6 @@ abstract contract MainnetMixin is SettlerBase, FreeMemory{
     function _getRelayer() internal view override returns (address) {
         return lighterRelayer;
     }
-
-    function _dispatch(uint256 i, uint256 action, bytes calldata data) internal virtual override(SettlerBase) DANGEROUS_freeMemory returns (bool) {
-        return super._dispatch(i, action, data);
-    }
-
 
     function _makeEscrow(bytes32 escrowTypedDataHash, ISettlerBase.EscrowParams memory escrowParams, uint256 gasSpentForBuyer, uint256 gasSpentForSeller) internal {
         lighterAccount.addPendingTx(escrowParams.buyer);

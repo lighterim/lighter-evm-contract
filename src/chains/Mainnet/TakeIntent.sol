@@ -28,6 +28,7 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
 
     using ParamsHash for ISettlerBase.EscrowParams;
     using ParamsHash for ISettlerBase.IntentParams;
+    using ParamsHash for ISignatureTransfer.TokenPermissions;
     
     constructor(
         address lighterRelayer, IEscrow escrow, LighterAccount lighterAccount,
@@ -50,6 +51,10 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
         return _hashTypedDataV4(intentHash);
     }
 
+    function getTokenPermissionsHash(ISignatureTransfer.TokenPermissions memory tokenPermissions) public view returns (bytes32) {   
+        return tokenPermissions.hash();
+    }
+
     function getDomainSeparator() public view returns (bytes32) {
         return super._domainSeparatorV4();
     }
@@ -63,7 +68,7 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
 
     function _dispatch(uint256 i, uint256 action, bytes calldata data)
         internal
-        override(Settler, MainnetMixin) DANGEROUS_freeMemory
+        override(Settler, SettlerAbstract) DANGEROUS_freeMemory
         returns (bool)
     {
         if (super._dispatch(i, action, data)) {

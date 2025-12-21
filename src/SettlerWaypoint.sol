@@ -5,7 +5,6 @@ import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer
 import {ISettlerWaypoint} from "./interfaces/ISettlerWaypoint.sol";
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
 
-import {Permit2PaymentWaypoint} from "./core/Permit2Payment.sol";
 import {SettlerAbstract} from "./SettlerAbstract.sol";
 
 import {CalldataDecoder, SettlerBase} from "./SettlerBase.sol";
@@ -22,25 +21,6 @@ abstract contract SettlerWaypoint is ISettlerWaypoint, WaypointAbstract, Settler
     function _tokenId() internal pure virtual override returns (uint256) {
         return 3;
     }
-
-    function _hasMetaTxn() internal pure override returns (bool) {
-        return true;
-    }
-
-    function _dispatch(uint256 index, uint256 action, bytes calldata data) internal virtual override(SettlerBase) returns (bool) {
-        if(super._dispatch(index, action, data)) {
-            return true;
-        }
-        else if(action == uint32(ISettlerActions.NATIVE_CHECK.selector)) {
-            (address recipient, ISignatureTransfer.PermitTransferFrom memory permit) =
-                abi.decode(data, (address, ISignatureTransfer.PermitTransferFrom));
-                return true;
-        }
-        return false;
-    }
-
-    function _dispatchVIP(uint256 action, bytes calldata data) internal virtual returns (bool);
-
 
     /**
      * The payment has been made by the buyer
