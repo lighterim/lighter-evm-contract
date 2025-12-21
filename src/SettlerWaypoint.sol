@@ -3,6 +3,7 @@ pragma solidity ^0.8.25;
 
 import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
 import {ISettlerWaypoint} from "./interfaces/ISettlerWaypoint.sol";
+import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
 
 import {Permit2PaymentWaypoint} from "./core/Permit2Payment.sol";
 import {SettlerAbstract} from "./SettlerAbstract.sol";
@@ -11,9 +12,10 @@ import {CalldataDecoder, SettlerBase} from "./SettlerBase.sol";
 import {UnsafeMath} from "./utils/UnsafeMath.sol";
 
 import {ISettlerActions} from "./ISettlerActions.sol";
+import {WaypointAbstract} from "./core/WaypointAbstract.sol";
 import {revertActionInvalid} from "./core/SettlerErrors.sol";
 
-abstract contract SettlerWaypoint is ISettlerWaypoint, Permit2PaymentWaypoint, SettlerBase {
+abstract contract SettlerWaypoint is ISettlerWaypoint, WaypointAbstract, SettlerBase {
     using UnsafeMath for uint256;
     using CalldataDecoder for bytes[];
 
@@ -25,51 +27,7 @@ abstract contract SettlerWaypoint is ISettlerWaypoint, Permit2PaymentWaypoint, S
         return true;
     }
 
-    function _hashArrayOfBytes(bytes[] calldata actions) internal pure returns (bytes32 result) {
-        // This function deliberately does no bounds checking on `actions` for
-        // gas efficiency. We assume that `actions` will get used elsewhere in
-        // this context and any OOB or other malformed calldata will result in a
-        // revert later.
-        assembly ("memory-safe") {
-            let ptr := mload(0x40)
-            let hashesLength := shl(0x05, actions.length)
-            for {
-                let i := actions.offset
-                let dst := ptr
-                let end := add(i, hashesLength)
-            } lt(i, end) {
-                i := add(0x20, i)
-                dst := add(0x20, dst)
-            } {
-                let src := add(calldataload(i), actions.offset)
-                let length := calldataload(src)
-                calldatacopy(dst, add(0x20, src), length)
-                mstore(dst, keccak256(dst, length))
-            }
-            result := keccak256(ptr, hashesLength)
-        }
-    }
-
-    function _hashActionsAndSlippage(bytes[] calldata actions)
-        internal
-        pure
-        returns (bytes32 result)
-    {
-        // This function does not check for or clean any dirty bits that might
-        // exist in `slippage`. We assume that `slippage` will be used elsewhere
-        // in this context and that if there are dirty bits it will result in a
-        // revert later.
-        bytes32 arrayOfBytesHash = _hashArrayOfBytes(actions);
-        assembly ("memory-safe") {
-            let ptr := mload(0x40)
-            // mstore(ptr, SLIPPAGE_AND_ACTIONS_TYPEHASH)
-            // calldatacopy(add(0x20, ptr), slippage, 0x60)
-            mstore(add(0x80, ptr), arrayOfBytesHash)
-            result := keccak256(ptr, 0xa0)
-        }
-    }
-
-    function _dispatch(uint256 index, uint256 action, bytes calldata data) internal virtual override(SettlerBase,SettlerAbstract) returns (bool) {
+    function _dispatch(uint256 index, uint256 action, bytes calldata data) internal virtual override(SettlerBase) returns (bool) {
         if(super._dispatch(index, action, data)) {
             return true;
         }
@@ -82,6 +40,70 @@ abstract contract SettlerWaypoint is ISettlerWaypoint, Permit2PaymentWaypoint, S
     }
 
     function _dispatchVIP(uint256 action, bytes calldata data) internal virtual returns (bool);
+
+
+    /**
+     * The payment has been made by the buyer
+     * @param sender sender
+     * @param escrowParams escrow parameters
+     */
+    function _madePayment(address sender, ISettlerBase.EscrowParams memory escrowParams) internal virtual override{
+
+    }
+
+    /**
+     * The seller requests to cancel the escrow
+     * @param sender sender
+     * @param escrowParams escrow parameters
+     */
+    function _requestCancelBySeller(address sender, ISettlerBase.EscrowParams memory escrowParams) internal virtual override{
+
+    }
+
+    /**
+     * The buyer cancels the escrow
+     * @param sender sender
+     * @param escrowParams escrow parameters
+     */
+    function _cancelByBuyer(address sender, ISettlerBase.EscrowParams memory escrowParams) internal virtual override{
+
+    }
+
+    /**
+     * The seller cancels the escrow
+     * @param sender sender
+     * @param escrowParams escrow parameters
+     */
+    function _cancelBySeller(address sender, ISettlerBase.EscrowParams memory escrowParams) internal virtual override{
+
+    }
+
+    /**
+     * The buyer disputes the escrow
+     * @param sender sender
+     * @param escrowParams escrow parameters
+     */
+    function _disputeByBuyer(address sender, ISettlerBase.EscrowParams memory escrowParams) internal virtual override{
+
+    }
+
+    /**
+     * The seller disputes the escrow
+     * @param sender sender
+     * @param escrowParams escrow parameters
+     */
+    function _disputeBySeller(address sender, ISettlerBase.EscrowParams memory escrowParams) internal virtual override{
+
+    }
+
+    /**
+     * processing escrow transaction
+     * @param escrowTypedHash escrow typed hash
+     */
+    modifier placeWaypoint(address sender, bytes32 escrowTypedHash) virtual override{
+        _;
+    }
+    
     
 
     function _executeWaypoint(bytes[] calldata actions)
@@ -111,7 +133,7 @@ abstract contract SettlerWaypoint is ISettlerWaypoint, Permit2PaymentWaypoint, S
         bytes32 /*affiliate*/
     )
         public payable override
-        placeWaypoint(escrowTypedDataHash)
+        placeWaypoint(msg.sender, escrowTypedDataHash)
         returns (bool) {
         return _executeWaypoint(actions);
     }

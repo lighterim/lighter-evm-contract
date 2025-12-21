@@ -24,6 +24,8 @@ library TransientStorage {
     bytes32 private constant _WITNESS_SLOT = 0x0000000000000000000000000000000000000000c7aebfbc05485e093720deaa;
     // bytes32((uint256(keccak256("intentTypeHash slot")) - 1) & type(uint96).max)
     bytes32 private constant _INTENT_TYPE_HASH_SLOT = 0x0000000000000000000000000000000000000000fd2291a0d36415a67d469179;
+    // bytes32((uint256(keccak256("tokenPermissions slot")) - 1) & type(uint96).max)
+    bytes32 private constant _TOKEN_PERMISSIONS_SLOT = 0x0000000000000000000000000000000000000000d21f836d66efe83f61e75834;
     // bytes32((uint256(keccak256("payer slot")) - 1) & type(uint96).max)
     bytes32 private constant _PAYER_SLOT = 0x0000000000000000000000000000000000000000cd1e9517bb0cb8d0d5cde893;
 
@@ -37,15 +39,18 @@ library TransientStorage {
     // `witness` must not be `bytes32(0)`. This is not checked.
     function setPayerAndWitness(
         address payer,
+        bytes32 tokenPermissions,
         bytes32 witness,
         bytes32 intentTypeHash
     ) internal {
-        _makesureFirstTimeSetPayer(_PAYER_SLOT);
+        _makesureFirstTimeSet(_PAYER_SLOT);
+        _makesureFirstTimeSet(_TOKEN_PERMISSIONS_SLOT);
         _makesureFirstTimeSet(_WITNESS_SLOT);
         _makesureFirstTimeSet(_INTENT_TYPE_HASH_SLOT);
        
         assembly ("memory-safe") {
-            tstore(_PAYER_SLOT, and(0xffffffffffffffffffffffffffffffffffffffff, payer))
+            tstore(_PAYER_SLOT, payer)
+            tstore(_TOKEN_PERMISSIONS_SLOT, tokenPermissions)
             tstore(_WITNESS_SLOT, witness)
             tstore(_INTENT_TYPE_HASH_SLOT, intentTypeHash)
         }
@@ -93,6 +98,7 @@ library TransientStorage {
 
     function checkSpentPayerAndWitness() internal view {
         _checkSpentAddress(_PAYER_SLOT);
+        _checkSpentBytes32(_TOKEN_PERMISSIONS_SLOT);
         _checkSpentBytes32(_WITNESS_SLOT);
         _checkSpentBytes32(_INTENT_TYPE_HASH_SLOT);
     }
@@ -131,6 +137,18 @@ library TransientStorage {
     function getPayer() internal view returns (address payer) {
         assembly ("memory-safe") {
             payer := tload(_PAYER_SLOT)
+        }
+    }
+
+    function getTokenPermissionsHash() internal view returns (bytes32 tokenPermissions) {
+        assembly ("memory-safe") {
+            tokenPermissions := tload(_TOKEN_PERMISSIONS_SLOT)
+        }
+    }
+
+    function clearTokenPermissionsHash() internal {
+        assembly ("memory-safe") {
+            tstore(_TOKEN_PERMISSIONS_SLOT, 0x00)
         }
     }
 
@@ -178,8 +196,16 @@ abstract contract Permit2PaymentBase is  SettlerAbstract {
         return TransientStorage.getPayer();
     }
 
+    function getTokenPermissionsHash() internal view returns (bytes32) {
+        return TransientStorage.getTokenPermissionsHash();
+    }
+
     function clearPayer(address expectedOldPayer) internal {
         TransientStorage.clearPayer(expectedOldPayer);
+    }
+
+    function clearTokenPermissionsHash() internal {
+        TransientStorage.clearTokenPermissionsHash();
     }
 
     function getAndClearWitness() internal returns (bytes32) {
@@ -333,21 +359,12 @@ abstract contract Permit2PaymentTakeIntent is Permit2Payment {
     constructor(IAllowanceHolder allowanceHolder) Permit2PaymentBase(allowanceHolder) {
     }
 
-    modifier takeIntent(address payer, bytes32 witness, bytes32 intentTypeHash) override {
-        TransientStorage.setPayerAndWitness(payer, witness, intentTypeHash);
+    modifier takeIntent(address payer, bytes32 tokenPermissions, bytes32 witness, bytes32 intentTypeHash) override {
+        TransientStorage.setPayerAndWitness(payer, tokenPermissions, witness, intentTypeHash);
         _;
         TransientStorage.checkSpentPayerAndWitness();
     }
 
-    modifier placeWaypoint(bytes32 escrowTypedHash) override {
-        revert();
-        _;
-    }
-
-    modifier releaseAfterVerifier(bytes32 escrowTypedHash) override {
-        revert();
-        _;
-    }
 }
 
 // DANGER: the order of the base contracts here is very significant for the use of `super` below
@@ -366,23 +383,11 @@ abstract contract Permit2PaymentWaypoint is Permit2Payment {
         revertConfusedDeputy();
     }
 
-    modifier takeIntent(address payer, bytes32 witness, bytes32 intentTypeHash) override {
+    modifier takeIntent(address payer, bytes32 tokenPermissionsHash, bytes32 witness, bytes32 intentTypeHash) override {
         revert();
         _;
     }
     
-    modifier releaseAfterVerifier(bytes32 escrowTypedHash) override {
-        revert();
-        _;
-    }
-
-    modifier placeWaypoint(bytes32 escrowTypedHash) override {
-        TransientStorage.setPayerAndWitness(msg.sender, escrowTypedHash, bytes32(0));
-        _;
-        // It should not be possible for this check to revert because the very first thing that a
-        // metatransaction does is spend the witness.
-        TransientStorage.checkSpentPayerAndWitness();
-    }
 
 }
 

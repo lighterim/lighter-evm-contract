@@ -11,9 +11,15 @@ abstract contract SettlerAbstract is Permit2PaymentAbstract {
 
     IERC20 internal constant ETH_ADDRESS = IERC20(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 
+    
+
     function _hasMetaTxn() internal pure virtual returns (bool);
 
     function _tokenId() internal pure virtual returns (uint256);
+
+    function _domainSeparator() internal view virtual returns (bytes32);
+
+    function _getRelayer() internal view virtual returns (address);
 
     function _dispatch(uint256 i, uint256 action, bytes calldata data) internal virtual returns (bool);
 

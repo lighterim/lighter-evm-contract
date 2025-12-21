@@ -50,11 +50,6 @@ abstract contract Permit2PaymentAbstract {
         internal 
         virtual;
 
-    /**
-     * processing escrow transaction
-     * @param escrowTypedHash escrow typed hash
-     */
-    modifier placeWaypoint(bytes32 escrowTypedHash) virtual;
 
     /**
      * take intent with payer and witness
@@ -62,11 +57,6 @@ abstract contract Permit2PaymentAbstract {
      * @param witness witness
      * @param intentTypeHash intent type hash
      */
-    modifier takeIntent(address payer, bytes32 witness, bytes32 intentTypeHash) virtual;
+    modifier takeIntent(address payer, bytes32 tokenPermissionsHash, bytes32 witness, bytes32 intentTypeHash) virtual;
 
-    /**
-     * release after verifier
-     * @param escrowTypedHash escrow typed hash
-     */
-    modifier releaseAfterVerifier(bytes32 escrowTypedHash) virtual;
 }

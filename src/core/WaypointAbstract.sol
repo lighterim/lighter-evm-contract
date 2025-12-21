@@ -3,44 +3,51 @@ pragma solidity ^0.8.25;
 
 
 import {Context} from "../Context.sol";
+import {ISettlerBase} from "../interfaces/ISettlerBase.sol";
 
 abstract contract WaypointAbstract is Context {
     
     /**
      * The payment has been made by the buyer
-     * @param escrowTypedHash 
+     * @param sender sender
+     * @param escrowParams escrow parameters
      */
-    function _madePayment(bytes32 escrowTypedHash) internal virtual;
+    function _madePayment(address sender, ISettlerBase.EscrowParams memory escrowParams) internal virtual;
 
     /**
      * The seller requests to cancel the escrow
-     * @param escrowTypedHash 
+     * @param sender sender
+     * @param escrowParams escrow parameters
      */
-    function requestCancelBySeller(bytes32 escrowTypedHash) internal virtual;
+    function _requestCancelBySeller(address sender, ISettlerBase.EscrowParams memory escrowParams) internal virtual;
 
     /**
      * The buyer cancels the escrow
-     * @param escrowTypedHash 
+     * @param sender sender
+     * @param escrowParams escrow parameters
      */
-    function cancelByBuyer(bytes32 escrowTypedHash) internal virtual;
+    function _cancelByBuyer(address sender, ISettlerBase.EscrowParams memory escrowParams) internal virtual;
 
     /**
      * The seller cancels the escrow
-     * @param escrowTypedHash 
+     * @param sender sender
+     * @param escrowParams escrow parameters
      */
-    function cancelBySeller(bytes32 escrowTypedHash) internal virtual;
+    function _cancelBySeller(address sender, ISettlerBase.EscrowParams memory escrowParams) internal virtual;
 
     /**
      * The buyer disputes the escrow
-     * @param escrowTypedHash 
+     * @param sender sender
+     * @param escrowParams escrow parameters
      */
-    function disputeByBuyer(bytes32 escrowTypedHash) internal virtual;
+    function _disputeByBuyer(address sender, ISettlerBase.EscrowParams memory escrowParams) internal virtual;
 
     /**
      * The seller disputes the escrow
-     * @param escrowTypedHash 
+     * @param sender sender
+     * @param escrowParams escrow parameters
      */
-    function disputeBySeller(bytes32 escrowTypedHash) internal virtual;
+    function _disputeBySeller(address sender, ISettlerBase.EscrowParams memory escrowParams) internal virtual;
 
     /**
      * processing escrow transaction

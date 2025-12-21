@@ -88,6 +88,6 @@ abstract contract SettlerBase is ISettlerBase, EscrowAbstract {
         return false;
     }
 
-    function _getRelayer() internal view virtual returns (address);
+    
 
 }

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.17;
 
 // import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer.sol";
-// import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
+import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
 
 import {ISettlerBase} from "../interfaces/ISettlerBase.sol";
 
@@ -30,6 +30,7 @@ library ParamsHash {
         )
     );
 
+    bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermissions(address token,uint256 amount)");
     bytes32 public constant _INTENT_PARAMS_TYPEHASH = keccak256(abi.encodePacked(_INTENT_PARAMS_TYPE));
     bytes32 public constant _RANGE_TYPEHASH = keccak256(abi.encodePacked(_RANGE_TYPE));
 
@@ -85,6 +86,14 @@ library ParamsHash {
 
     function hash(ISettlerBase.EscrowParams memory escrowParams) internal pure returns (bytes32) {
         return keccak256(abi.encode(_ESCROW_PARAMS_TYPEHASH, escrowParams.id, escrowParams.token, escrowParams.volume, escrowParams.price, escrowParams.usdRate, escrowParams.payer, escrowParams.seller, escrowParams.sellerFeeRate, escrowParams.paymentMethod, escrowParams.currency, escrowParams.payeeDetails, escrowParams.buyer, escrowParams.buyerFeeRate));
+    }
+
+    function hash(ISignatureTransfer.TokenPermissions memory permitted)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return keccak256(abi.encode(_TOKEN_PERMISSIONS_TYPEHASH, permitted));
     }
 
     /*

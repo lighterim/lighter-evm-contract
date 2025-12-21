@@ -30,50 +30,10 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
     using CalldataDecoder for bytes[];
     using ParamsHash for ISettlerBase.IntentParams;
     using ParamsHash for ISettlerBase.EscrowParams;
+    using ParamsHash for ISignatureTransfer.TokenPermissions;
     // // using PermitHash for ISignatureTransfer.PermitTransferFrom;
     
-    // // 辅助函数：直接计算 permit hash with witness（避免 memory -> calldata 转换问题）
-    // function _hashPermitWithWitness(
-    //     ISignatureTransfer.PermitTransferFrom memory permit,
-    //     bytes32 witness
-    // ) internal view returns (bytes32) {
-    //     // 直接实现 hashWithWitness 的逻辑，使用 memory string
-    //     string memory witnessTypeString = ParamsHash._INTENT_WITNESS_TYPE_STRING;
-    //     bytes32 typeHash = keccak256(abi.encodePacked(
-    //         PermitHash._PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB,
-    //         witnessTypeString
-    //     ));
-    //     console.logString("witness.typeHash");
-    //     console.logBytes32(typeHash);
-
-    //     bytes32 tokenPermissionsHash = keccak256(abi.encode(
-    //         PermitHash._TOKEN_PERMISSIONS_TYPEHASH,
-    //         permit.permitted
-    //     ));
-    //     console.logString("tokenPermissionsHash");
-    //     console.logBytes32(tokenPermissionsHash);
-    //     console.logString("myAddress");
-    //     console.logAddress(_myAddress());
-    //     console.logString("permit.nonce");
-    //     console.logUint(permit.nonce);
-    //     console.logString("permit.deadline");
-    //     console.logUint(permit.deadline);
-    //     console.logString("witness");
-    //     console.logBytes32(witness);
-    //     console.logString("keccak256(abi.encode(typeHash, tokenPermissionsHash, _myAddress(), permit.nonce, permit.deadline, witness))");
-    //     bytes32 result = keccak256(abi.encode(
-    //         typeHash,
-    //         tokenPermissionsHash,
-    //         _myAddress(),
-    //         permit.nonce,
-    //         permit.deadline,
-    //         witness
-    //     ));
-    //     console.logString("result");
-    //     console.logBytes32(result);
-    //     return result;  
-    // }
-    
+    error InvalidTokenPermissions();
 
     function _tokenId() internal pure override returns (uint256) {
         return 2;
@@ -83,7 +43,6 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
         return false;
     }
 
-    function _domainSeparator() internal view virtual returns (bytes32);
 
     // function _myAddress() internal view virtual returns (address);
 
@@ -110,10 +69,14 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
                 ISignatureTransfer.SignatureTransferDetails memory transferDetails,
                 bytes memory sig
             ) = abi.decode(data, (ISignatureTransfer.PermitTransferFrom, ISignatureTransfer.SignatureTransferDetails, bytes));
+            bytes32 tokenPermissionsHash = permit.permitted.hash();
+            if(tokenPermissionsHash != getTokenPermissionsHash()) revert InvalidTokenPermissions();
             
             address payer = getPayer();
             _transferFrom(permit, transferDetails, payer, sig);
+            
             clearPayer(payer);
+            clearTokenPermissionsHash();
         }
         else if(action == uint32(ISettlerActions.SIGNATURE_TRANSFER_FROM_WITH_WITNESS.selector)) {
             // take seller intent
@@ -125,9 +88,11 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
             ) = abi.decode(data, (ISignatureTransfer.PermitTransferFrom, ISignatureTransfer.SignatureTransferDetails, ISettlerBase.IntentParams, bytes));
             // console.logString("------------SIGNATURE_TRANSFER_FROM_WITH_WITNESS--------------------");
             bytes32 intentParamsHash = intentParams.hash(); 
-
             bytes32 intentTypedHash = getIntentTypedHash(intentParams, _domainSeparator());
             if(intentTypedHash != getIntentTypeHash()) revert InvalidIntent();
+            
+            bytes32 tokenPermissionsHash = permit.permitted.hash();
+            if(tokenPermissionsHash != getTokenPermissionsHash()) revert InvalidTokenPermissions();
 
             address payer = getPayer();
             _transferFromIKnowWhatImDoing(permit, transferDetails, payer, intentParamsHash, ParamsHash._INTENT_WITNESS_TYPE_STRING, sig);
@@ -160,6 +125,7 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
             // console.logString("########################################################");
             clearPayer(payer);
             clearIntentTypeHash();
+            clearTokenPermissionsHash();
         }
         else if (action == uint32(ISettlerActions.BULK_SELL_TRANSFER_FROM.selector)) {
             // take bulk sell intent
@@ -177,11 +143,19 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
             // intent typed hash should be the same as the intent type hash in the intent params.
             if(intentTypeHash != getIntentTypeHash()) revert InvalidIntent();
 
+            ISignatureTransfer.TokenPermissions memory tokenPermissions = ISignatureTransfer.TokenPermissions({
+                token: details.token,
+                amount: uint256(details.amount)
+            });
+            bytes32 tokenPermissionsHash = tokenPermissions.hash();
+            if(tokenPermissionsHash != getTokenPermissionsHash()) revert InvalidTokenPermissions();
+
             // 不验证花费者额度，因为transferFrom将自动验证额度及调用关系。
             _allowanceHolderTransferFrom(details.token, payer, details.to, details.amount);
             
             clearPayer(payer);
             clearIntentTypeHash();
+            clearTokenPermissionsHash();
         } 
         else{
             return false;
@@ -191,11 +165,11 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent, Settl
 
     function _dispatchVIP(uint256 action, bytes calldata data) internal virtual returns (bool);
 
-    function execute(address payer, bytes32 escrowTypedHash, bytes32 intentTypeHash, bytes[] calldata actions)
+    function execute(address payer, bytes32 tokenPermissionsHash, bytes32 escrowTypedHash, bytes32 intentTypeHash, bytes[] calldata actions)
         public
         payable
         override
-        takeIntent(payer, escrowTypedHash, intentTypeHash)
+        takeIntent(payer, tokenPermissionsHash, escrowTypedHash, intentTypeHash)
         returns (bool)
     {
         if (actions.length != 0) {
