@@ -228,6 +228,7 @@ contract TakeIntentTest is BasePairTest, Utils {
 
     function testTakeBuyerIntent() public {
         console.log("testTakeBuyerIntent, chainId:", block.chainid);
+        ISettlerBase.EscrowParams memory escrowParams = getEscrowParams();
         // buyer: maker
         ISettlerBase.IntentParams memory intentParams = getIntentParams();
         bytes memory intentSignature = getIntentSignature(
@@ -238,13 +239,16 @@ contract TakeIntentTest is BasePairTest, Utils {
         
         // seller: taker
         ISignatureTransfer.PermitTransferFrom memory permit = ISignatureTransfer.PermitTransferFrom({
-            permitted: ISignatureTransfer.TokenPermissions({token: address(fromToken()), amount: amount()}),
+            permitted: ISignatureTransfer.TokenPermissions({
+                token: address(fromToken()), 
+                amount: settler.getAmountWithFee(amount(), escrowParams.buyerFeeRate)
+            }),
             nonce: 2,
             deadline: getDeadline()
         });
         ISignatureTransfer.SignatureTransferDetails memory transferDetails = ISignatureTransfer.SignatureTransferDetails({
             to: address(escrow),
-            requestedAmount: amount()
+            requestedAmount: settler.getAmountWithFee(amount(), escrowParams.buyerFeeRate)
         });
         bytes memory transferSignature = getPermitTransferSignature(
             permit, address(escrow), sellerPrivKey, takeIntentDomain
@@ -253,7 +257,6 @@ contract TakeIntentTest is BasePairTest, Utils {
         console.logBytes(transferSignature);
 
         // relayer: escrow
-        ISettlerBase.EscrowParams memory escrowParams = getEscrowParams();
         bytes32 escrowTypedDataHash = settler.getEscrowTypedHash(escrowParams);
         bytes32 intentTypedDataHash = settler.getIntentTypedHash(intentParams);
         bytes32 tokenPermissionsHash = settler.getTokenPermissionsHash(permit.permitted);
@@ -284,11 +287,12 @@ contract TakeIntentTest is BasePairTest, Utils {
 
     function testTakeBulkSellIntent() public {
         
+        ISettlerBase.EscrowParams memory escrowParams = getEscrowParams();
         // allowance holder: seller
         IAllowanceTransfer.PermitSingle memory permitSingle = IAllowanceTransfer.PermitSingle({
             details: IAllowanceTransfer.PermitDetails({
                 token: address(fromToken()),
-                amount: uint160(amount()),
+                amount: uint160(settler.getAmountWithFee(amount(), escrowParams.sellerFeeRate)),
                 expiration: uint48(getDeadline()),
                 nonce: uint48(0)
             }),
@@ -308,14 +312,16 @@ contract TakeIntentTest is BasePairTest, Utils {
             token: address(fromToken()),
             from: eoaSeller,
             to: address(allowanceHolder),
-            amount: uint160(amount())
+            amount: uint160(settler.getAmountWithFee(amount(), escrowParams.sellerFeeRate))
         });
         console.log("details");
         console.logBytes(abi.encode(details));
 
         bytes32 tokenPermissionsHash = settler.getTokenPermissionsHash(
             ISignatureTransfer.TokenPermissions({
-                token: address(fromToken()), amount: amount()})
+                token: address(fromToken()), 
+                amount: settler.getAmountWithFee(amount(), escrowParams.sellerFeeRate)
+            })
         );
 
         // maker: seller
@@ -327,7 +333,6 @@ contract TakeIntentTest is BasePairTest, Utils {
         console.logBytes(intentSignature);
 
         // relayer: escrow
-        ISettlerBase.EscrowParams memory escrowParams = getEscrowParams();
         bytes32 escrowTypedDataHash = settler.getEscrowTypedHash(escrowParams);
         bytes32 intentTypedDataHash = settler.getIntentTypedHash(intentParams);
         bytes memory escrowSignature = getEscrowSignature(

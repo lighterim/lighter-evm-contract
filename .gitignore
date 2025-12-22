@@ -4,6 +4,7 @@ node_modules/
 
 #env
 .env
+.script.md
 
 # Compilation output
 /dist
