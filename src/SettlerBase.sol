@@ -4,6 +4,7 @@ pragma solidity ^0.8.25;
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
 import {SafeTransferLib} from "./vendor/SafeTransferLib.sol";
+import {FullMath} from "./vendor/FullMath.sol";
 
 import {ISettlerActions} from "./ISettlerActions.sol";
 import {
@@ -202,6 +203,9 @@ library TransientStorage {
 abstract contract SettlerBase is ISettlerBase, SettlerAbstract {
     using SafeTransferLib for IERC20;
     using SafeTransferLib for address payable;
+    using FullMath for uint256;
+
+    uint256 constant FEE_RATE_BASE = 10000;
 
     receive() external payable {}
 
@@ -265,6 +269,26 @@ abstract contract SettlerBase is ISettlerBase, SettlerAbstract {
 
     function clearIntentTypeHash() internal {
         TransientStorage.clearIntentTypeHash();
+    }
+
+    /**
+     * @notice Get the amount with fee for a given amount and fee rate
+     * @param amount The amount to get the amount with fee for
+     * @param feeRate The fee rate to get the amount with fee for (e.g. 1000 for 10%)
+     * @return The amount with fee
+     */
+    function getAmountWithFee(uint256 amount, uint256 feeRate) public pure returns (uint256) {
+        return amount.mulDivUp(FEE_RATE_BASE + feeRate, FEE_RATE_BASE);
+    }
+
+    /**
+     * @notice Get the fee amount for a given amount and fee rate
+     * @param amount The amount to get the fee for
+     * @param feeRate The fee rate to get the fee for (e.g. 1000 for 10%)
+     * @return The fee amount
+     */
+    function getFeeAmount(uint256 amount, uint256 feeRate) public pure returns (uint256) {
+        return amount.mulDivUp(feeRate, FEE_RATE_BASE);
     }
 
     function _dispatchVIP(uint256 action, bytes calldata data) internal virtual returns (bool);

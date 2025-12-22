@@ -32,11 +32,12 @@ interface IEscrow {
      * @param buyer The buyer of the escrow
      * @param seller The seller of the escrow
      * @param amount The amount of the escrow
+     * @param sellerFee The fee of the seller
      * @param escrowHash The hash of the escrow data
      * @param id the id of escrow trade
      * @param escrowData The data of the escrow
      */
-    function create(address token, address buyer, address seller, uint256 amount, bytes32 escrowHash, uint256 id, ISettlerBase.EscrowData memory escrowData) external;
+    function create(address token, address buyer, address seller, uint256 amount, uint256 sellerFee, bytes32 escrowHash, uint256 id, ISettlerBase.EscrowData memory escrowData) external;
 
     /**
      * mark the escrow as paid
@@ -53,10 +54,14 @@ interface IEscrow {
      * @param id the id of escrow trade
      * @param token The token of the escrow
      * @param buyer The buyer of the escrow
+     * @param buyerFee The fee of the buyer
      * @param seller The seller of the escrow
+     * @param sellerFee The fee of the seller
      * @param amount The amount of the escrow
+     
+     
      */
-    function releaseByVerifier(bytes32 escrowHash, uint256 id, address token, address buyer, address seller, uint256 amount) external;
+    function releaseByVerifier(bytes32 escrowHash, uint256 id, address token, address buyer, uint256 buyerFee, address seller, uint256 sellerFee, uint256 amount) external;
 
     /**
      * release the escrow by executor
@@ -64,10 +69,12 @@ interface IEscrow {
      * @param id the id of escrow trade
      * @param token The token of the escrow
      * @param buyer The buyer of the escrow
+     * @param buyerFee The fee of the buyer
      * @param seller The seller of the escrow
+     * @param sellerFee The fee of the seller
      * @param amount The amount of the escrow
      */
-    function releaseByExecutor(bytes32 escrowHash, uint256 id, address token, address buyer, address seller, uint256 amount) external;
+    function releaseByExecutor(bytes32 escrowHash, uint256 id, address token, address buyer, uint256 buyerFee, address seller, uint256 sellerFee, uint256 amount) external;
 
     /**
      * cancel the escrow
@@ -77,9 +84,10 @@ interface IEscrow {
      * @param buyer The buyer of the escrow
      * @param seller The seller of the escrow
      * @param amount The amount of the escrow
+     * @param sellerFee The fee of the seller
      * @param status The status of the escrow
      */
-    function cancel( bytes32 escrowHash, uint256 id, address token, address buyer, address seller, uint256 amount, ISettlerBase.EscrowStatus status) external;
+    function cancel(bytes32 escrowHash, uint256 id, address token, address buyer, address seller, uint256 amount, uint256 sellerFee, ISettlerBase.EscrowStatus status) external;
 
     /**
      * cancel the escrow by buyer

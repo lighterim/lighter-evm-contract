@@ -39,7 +39,7 @@ contract TakeIntentTest is BasePairTest, Utils {
     }
 
     function _testBlockNumber() internal pure virtual override returns (uint256) {
-        return 9839863;
+        return 9893435;
     }
     
 
@@ -57,11 +57,11 @@ contract TakeIntentTest is BasePairTest, Utils {
     // MainnetTakeIntent internal settler = MainnetTakeIntent(
     //     payable(address(0xdc48A4702978D3Ca20DBe53D9D8a516fB9515Ff8))
     //     );
-    IAllowanceHolder allowanceHolder = IAllowanceHolder(0x585CA19bFD4fD138C8AB114E78cE01b7Fa292a68);
-    IEscrow escrow = IEscrow(0x4DffA1C1C1C49dCF6028A8651124B1Af4918d947);
-    LighterAccount lighterAccount = LighterAccount(0xAFCE91f5882a5C3A5c9A5B6C232F30c8B2D6c8a7);
+    IAllowanceHolder allowanceHolder = IAllowanceHolder(0x302950de9b74202d74DF5e29dc2B19D491AE57a3);
+    IEscrow escrow = IEscrow(0xe31527c75edc58343D702e3840a00c10c4858e25);
+    LighterAccount lighterAccount = LighterAccount(0xD18e648B1CBee795f100ca450cc13CcC6849Be64);
     MainnetTakeIntent internal settler = MainnetTakeIntent(
-        payable(address(0x67F07A38f8Cafaa9f8f4a624480c0a863e510D9C))
+        payable(address(0x3DB826B7063bf8e51832B7350F7cbe359AEA3f60))
         );
 
     
@@ -103,11 +103,11 @@ contract TakeIntentTest is BasePairTest, Utils {
     }
 
     function buyerFeeRate() internal pure override returns (uint256) {
-        return 0;
+        return 20;
     }
 
     function sellerFeeRate() internal pure override returns (uint256) {
-        return 0;
+        return 20;
     }
 
     function getBuyer() internal view override returns (address) {
@@ -116,7 +116,7 @@ contract TakeIntentTest is BasePairTest, Utils {
 
     function amount() internal pure override returns (uint256) {
         // return 1 ether;
-        return 100000;
+        return 1000000;
     }
 
     function getSeller() internal view override returns (address) {
@@ -125,9 +125,13 @@ contract TakeIntentTest is BasePairTest, Utils {
 
     function testTakeSellerIntent() public {
         ISettlerBase.IntentParams memory intentParams = getIntentParams();
+        ISettlerBase.EscrowParams memory escrowParams = getEscrowParams();
 
         ISignatureTransfer.PermitTransferFrom memory permit = ISignatureTransfer.PermitTransferFrom({
-            permitted: ISignatureTransfer.TokenPermissions({token: address(fromToken()), amount: amount()}),
+            permitted: ISignatureTransfer.TokenPermissions({
+                token: address(fromToken()), 
+                amount: settler.getAmountWithFee(amount(), escrowParams.sellerFeeRate)
+            }),
             nonce: 2,
             deadline: getDeadline()
         });
@@ -136,10 +140,9 @@ contract TakeIntentTest is BasePairTest, Utils {
             );
         ISignatureTransfer.SignatureTransferDetails memory transferDetails = ISignatureTransfer.SignatureTransferDetails({
             to: address(escrow),
-            requestedAmount: amount()
+            requestedAmount: settler.getAmountWithFee(amount(), escrowParams.sellerFeeRate)
         });
 
-        ISettlerBase.EscrowParams memory escrowParams = getEscrowParams();
         bytes32 escrowTypedDataHash = settler.getEscrowTypedHash(escrowParams);
         bytes32 intentTypedDataHash = settler.getIntentTypedHash(intentParams);
         bytes32 tokenPermissionsHash = settler.getTokenPermissionsHash(permit.permitted);

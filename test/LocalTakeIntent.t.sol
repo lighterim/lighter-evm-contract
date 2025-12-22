@@ -73,7 +73,7 @@ contract LocalTakeIntentTest is Permit2Signature {
         vm.deal(eoaSeller, 1 ether);
 
         vm.prank(eoaBuyer);
-        (, buyer) = lighterAccount.createAccount{value: rentPrice}(eoaBuyer, buyerNostrPubKey);
+        (, buyer) = lighterAccount.createAccount{value: rentPrice*2}(eoaBuyer, buyerNostrPubKey);
         vm.prank(eoaSeller);
         (, seller) = lighterAccount.createAccount{value: rentPrice}(eoaSeller, sellerNostrPubKey);
         console.log("buyer", buyer);
@@ -156,9 +156,13 @@ contract LocalTakeIntentTest is Permit2Signature {
 
     function testTakeSellerIntent() public {
         ISettlerBase.IntentParams memory intentParams = getIntentParams();
+        ISettlerBase.EscrowParams memory escrowParams = getEscrowParams(1);
 
         ISignatureTransfer.PermitTransferFrom memory permit = ISignatureTransfer.PermitTransferFrom({
-            permitted: ISignatureTransfer.TokenPermissions({token: address(fromToken()), amount: amount()}),
+            permitted: ISignatureTransfer.TokenPermissions({
+                token: address(fromToken()), 
+                amount: settler.getAmountWithFee(amount(), escrowParams.sellerFeeRate)
+            }),
             nonce: 1,
             deadline: getDeadline()
         });
@@ -167,10 +171,10 @@ contract LocalTakeIntentTest is Permit2Signature {
             );
         ISignatureTransfer.SignatureTransferDetails memory transferDetails = ISignatureTransfer.SignatureTransferDetails({
             to: address(escrow),
-            requestedAmount: amount()
+            requestedAmount: settler.getAmountWithFee(amount(), escrowParams.sellerFeeRate)
         });
 
-        ISettlerBase.EscrowParams memory escrowParams = getEscrowParams(1);
+        
         bytes32 tokenPermissionsHash = settler.getTokenPermissionsHash(permit.permitted);
         bytes32 escrowTypedDataHash = settler.getEscrowTypedHash(escrowParams);
         bytes32 intentTypedDataHash = settler.getIntentTypedHash(intentParams);
@@ -240,14 +244,14 @@ contract LocalTakeIntentTest is Permit2Signature {
         
        IAllowanceTransfer.AllowanceTransferDetails memory details = IAllowanceTransfer.AllowanceTransferDetails({
             token: address(fromToken()),
-            amount: uint160(amount()),
+            amount: uint160(settler.getAmountWithFee(amount(), escrowParams.sellerFeeRate)),
             to: address(escrow),
             from: eoaSeller
         });
 
         bytes32 tokenPermissionsHash = settler.getTokenPermissionsHash(
             ISignatureTransfer.TokenPermissions({
-                token: address(fromToken()), amount: amount()}
+                token: address(fromToken()), amount: settler.getAmountWithFee(amount(), escrowParams.sellerFeeRate)}
             )
         );
 
@@ -287,21 +291,6 @@ contract LocalTakeIntentTest is Permit2Signature {
             intentParams, buyerPrivKey, takeIntentDomain
             );
         
-        // seller: taker
-        ISignatureTransfer.PermitTransferFrom memory permit = ISignatureTransfer.PermitTransferFrom({
-            permitted: ISignatureTransfer.TokenPermissions({token: address(fromToken()), amount: amount()}),
-            nonce: 1,
-            deadline: getDeadline()
-        });
-        ISignatureTransfer.SignatureTransferDetails memory transferDetails = ISignatureTransfer.SignatureTransferDetails({
-            to: address(escrow),
-            requestedAmount: amount()
-        });
-        bytes32 tokenPermissionsHash = settler.getTokenPermissionsHash(permit.permitted);
-        bytes memory transferSignature = getPermitTransferSignature(
-            permit, address(escrow), sellerPrivKey, permit2Domain
-            );
-        
         // relayer: relayer
         ISettlerBase.EscrowParams memory escrowParams = getEscrowParams(3);
         bytes32 escrowTypedDataHash = settler.getEscrowTypedHash(escrowParams);
@@ -309,6 +298,23 @@ contract LocalTakeIntentTest is Permit2Signature {
             escrowParams, relayerPrivKey, takeIntentDomain
             );
         
+        // seller: taker
+        ISignatureTransfer.PermitTransferFrom memory permit = ISignatureTransfer.PermitTransferFrom({
+            permitted: ISignatureTransfer.TokenPermissions({
+                token: address(fromToken()),
+                amount: settler.getAmountWithFee(amount(), escrowParams.sellerFeeRate)
+            }),
+            nonce: 1,
+            deadline: getDeadline()
+        });
+        ISignatureTransfer.SignatureTransferDetails memory transferDetails = ISignatureTransfer.SignatureTransferDetails({
+            to: address(escrow),
+            requestedAmount: settler.getAmountWithFee(amount(), escrowParams.sellerFeeRate)
+        });
+        bytes32 tokenPermissionsHash = settler.getTokenPermissionsHash(permit.permitted);
+        bytes memory transferSignature = getPermitTransferSignature(
+            permit, address(escrow), sellerPrivKey, permit2Domain
+            );
 
         bytes[] memory actions  = ActionDataBuilder.build(
             abi.encodeCall(ISettlerActions.ESCROW_AND_INTENT_CHECK, (escrowParams, intentParams, makerIntentSignature)),

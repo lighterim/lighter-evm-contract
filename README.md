@@ -64,3 +64,39 @@ export USDC=0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238
 # --rpc-url http://127.0.0.1:8545 --broadcast 
 export RPC_URL=
 forge script script/Deploy.s.sol --rpc-url $RPC_URL --broadcast --private-key $PRIV_KEY 
+
+forge verify-contract \
+  --rpc-url https://sepolia.drpc.org \
+  --verifier blockscout \
+  --verifier-url 'https://eth-sepolia.blockscout.com/api/' \
+  $LighterAccount \
+  src/account/LighterAccount.sol:LighterAccount
+
+
+forge test --match-path test/TakeIntent.t.sol --match-test testTakeSellerIntent -vvvvv
+
+
+export LighterAccount=0xD18e648B1CBee795f100ca450cc13CcC6849Be64
+export Escrow=0xe31527c75edc58343D702e3840a00c10c4858e25
+export AllowanceHolder=0x302950de9b74202d74DF5e29dc2B19D491AE57a3
+export TakenIntent=0x3DB826B7063bf8e51832B7350F7cbe359AEA3f60
+export nostrSeller=0x2a9716cdd08bd7b14c94119c8259c89f3baab64d7b161eb03ad43dc1c1ccec68
+export nostrBuyer=0x36bd5b22605899659cb1053737316096195b3ceb37c851645efd23e4497d7097
+
+
+
+export PRIV_KEY=
+export DEPLOYER=0xD58382f295f5c98BAeB525FAbb7FEBcCc62bc63B
+
+cast send $LighterAccount 'createAccount(address,bytes32)' $DEPLOYER $nostrSeller --value 0.00001ether --private-key $PRIV_KEY
+export seller=0x39246289fF8A80fFd396C401C1cA1864A89BCEfd
+export buyer=0x4Ec864B529fA42A01488f363572429FEA573ed5D
+
+export BUYER_PRIVATE_KEY=0x1688fea31b46a99193d45efa4a074740db943c0aee1334aaa8f2d86bb51705e8
+export SELLER_PRIVATE_KEY=0x199b1a34d5cd548314842f6996456bb2a930c3763193dbe900192f993321ea43
+export RELAYER_PRIVATE_KEY=0x199b1a34d5cd548314842f6996456bb2a930c3763193dbe900192f993321ea43
+export BUYER_TBA=0x4Ec864B529fA42A01488f363572429FEA573ed5D
+export SELLER_TBA=0x39246289fF8A80fFd396C401C1cA1864A89BCEfd
+export USDC=0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238
+
+forge test --match-path test/TakeIntent.t.sol --match-test testTakeSellerIntent -vvvvv --ffi

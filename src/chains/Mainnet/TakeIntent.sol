@@ -122,7 +122,7 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
 
             ISignatureTransfer.TokenPermissions memory tokenPermissions = ISignatureTransfer.TokenPermissions({
                 token: escrowParams.token,
-                amount: escrowParams.volume
+                amount: getAmountWithFee(escrowParams.volume, escrowParams.sellerFeeRate)
             });
 
             bytes32 tokenPermissionsHash = tokenPermissions.hash();

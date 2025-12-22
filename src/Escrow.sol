@@ -108,7 +108,9 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         else emit RemoveAuthorizedVerifier(verifier);
     }
 
-    function create(address token, address buyer, address seller, uint256 amount, bytes32 escrowHash, uint256 id, ISettlerBase.EscrowData memory escrowData) external 
+    function create(address token, address buyer, address seller, uint256 amount, 
+        uint256 sellerFee,
+        bytes32 escrowHash, uint256 id, ISettlerBase.EscrowData memory escrowData) external 
         onlyWhitelistedToken(token) onlyAuthorizedCreator whenNotPaused {
         
         if(allEscrow[escrowHash].lastActionTs > 0) revert EscrowAlreadyExists(escrowHash);
@@ -116,7 +118,7 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         if(escrowData.status != ISettlerBase.EscrowStatus.Escrowed) revert InvalidEscrowStatus(escrowHash, escrowData.status);
 
         allEscrow[escrowHash] = escrowData;
-        sellerEscrow[seller][token] += amount;
+        sellerEscrow[seller][token] += amount + sellerFee;
 
         emit Created(token, buyer, seller, escrowHash, id, amount);
     }
@@ -131,29 +133,33 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         uint64 timestamp = uint64(block.timestamp);
         uint64 paidSeconds = timestamp - allEscrow[escrowHash].lastActionTs;
         allEscrow[escrowHash].paidSeconds = paidSeconds;
-        allEscrow[escrowHash].lastActionTs = timestamp;
-        allEscrow[escrowHash].status = ISettlerBase.EscrowStatus.Paid;
+        _setStatus(escrowHash, timestamp, ISettlerBase.EscrowStatus.Paid);
 
         emit Paid(token, buyer, escrowHash, paidSeconds, id);
     }
 
-    function releaseByVerifier( bytes32 escrowHash, uint256 id, address token, address buyer, address seller, uint256 amount) external onlyAuthorizedVerifier{
-        _release(escrowHash, id, token, buyer, seller, amount, ISettlerBase.EscrowStatus.ThresholdReachedReleased);
+    function releaseByVerifier( bytes32 escrowHash, uint256 id, address token, address buyer, uint256 buyerFee, address seller, uint256 sellerFee, uint256 amount) external nonReentrant onlyAuthorizedVerifier{
+        _release(escrowHash, id, token, buyer, buyerFee, seller, sellerFee, amount, ISettlerBase.EscrowStatus.ThresholdReachedReleased);
     }
 
-    function releaseByExecutor( bytes32 escrowHash, uint256 id, address token, address buyer, address seller, uint256 amount) external onlyAuthorizedExecutor{
-        _release(escrowHash, id, token, buyer, seller, amount, ISettlerBase.EscrowStatus.SellerReleased);
+    function releaseByExecutor( bytes32 escrowHash, uint256 id, address token, address buyer, uint256 buyerFee, address seller, uint256 sellerFee, uint256 amount) external nonReentrant onlyAuthorizedExecutor{
+        _release(escrowHash, id, token, buyer, buyerFee, seller, sellerFee, amount, ISettlerBase.EscrowStatus.SellerReleased);
     }
 
-    function _release(bytes32 escrowHash, uint256 id, address token, address buyer, address seller, uint256 amount, ISettlerBase.EscrowStatus status) internal nonReentrant{
+    function _release(bytes32 escrowHash, uint256 id, address token, 
+        address buyer, uint256 buyerFee, address seller, uint256 sellerFee, uint256 amount, 
+        ISettlerBase.EscrowStatus status) private {
+        
         if(allEscrow[escrowHash].lastActionTs == 0) revert EscrowNotExists(escrowHash);
 
         allEscrow[escrowHash].releaseSeconds = allEscrow[escrowHash].paidSeconds > 0 ? uint64(block.timestamp) - allEscrow[escrowHash].lastActionTs : 0;
-        allEscrow[escrowHash].lastActionTs = uint64(block.timestamp);
-        allEscrow[escrowHash].status = status;
+        _setStatus(escrowHash, uint64(block.timestamp), status);
 
-        sellerEscrow[seller][token] -= amount;
-        userCredit[buyer][token] += amount;
+        // uint256 sellerFee = amount * sellerFeeRate / 10000;
+        sellerEscrow[seller][token] -= (amount + sellerFee);
+        // uint256 buyerFee = amount * buyerFeeRate / 10000;
+        userCredit[buyer][token] += (amount - buyerFee);
+        userCredit[feeCollector][token] += (buyerFee + sellerFee);
 
         emit Released(token, buyer, seller, escrowHash, id, amount, status);
     }
@@ -162,8 +168,7 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         if(allEscrow[escrowHash].lastActionTs == 0) revert EscrowNotExists(escrowHash);
         if(allEscrow[escrowHash].status != ISettlerBase.EscrowStatus.Escrowed) revert InvalidEscrowStatus(escrowHash, allEscrow[escrowHash].status);
         
-        allEscrow[escrowHash].lastActionTs = uint64(block.timestamp);
-        allEscrow[escrowHash].status = ISettlerBase.EscrowStatus.SellerRequestCancel;
+        _setStatus(escrowHash, uint64(block.timestamp), ISettlerBase.EscrowStatus.SellerRequestCancel);
         
         emit RequestCancelled(token, buyer, seller, escrowHash, id);
     }
@@ -172,24 +177,25 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         if(allEscrow[escrowHash].lastActionTs == 0) revert EscrowNotExists(escrowHash);
         if(allEscrow[escrowHash].status != ISettlerBase.EscrowStatus.Escrowed) revert InvalidEscrowStatus(escrowHash, allEscrow[escrowHash].status);
         
-        allEscrow[escrowHash].lastActionTs = uint64(block.timestamp);
-        allEscrow[escrowHash].status = ISettlerBase.EscrowStatus.BuyerCancelled;
-        
+        _setStatus(escrowHash, uint64(block.timestamp), ISettlerBase.EscrowStatus.BuyerCancelled);
+
         emit CancelledByBuyer(token, buyer, seller, escrowHash, id);
     }
 
-    function cancel(bytes32 escrowHash, uint256 id, address token, address buyer, address seller, uint256 amount, ISettlerBase.EscrowStatus status) external onlyAuthorizedExecutor nonReentrant{
+    function cancel(bytes32 escrowHash, uint256 id, address token, address buyer, address seller, uint256 amount, 
+        uint256 sellerFee,
+        ISettlerBase.EscrowStatus status) external onlyAuthorizedExecutor nonReentrant{
         if(allEscrow[escrowHash].lastActionTs == 0) revert EscrowNotExists(escrowHash);
         if(
             allEscrow[escrowHash].status != ISettlerBase.EscrowStatus.BuyerCancelled 
             && allEscrow[escrowHash].status != ISettlerBase.EscrowStatus.SellerRequestCancel
         ) revert InvalidEscrowStatus(escrowHash, allEscrow[escrowHash].status);
         
-        allEscrow[escrowHash].lastActionTs = uint64(block.timestamp);
-        allEscrow[escrowHash].status = status;
+        _setStatus(escrowHash, uint64(block.timestamp), status);
 
-        sellerEscrow[seller][token] -= amount;
-        IERC20(token).safeTransfer(seller, amount);
+        uint256 refundAmount = amount + sellerFee;
+        sellerEscrow[seller][token] -= refundAmount;
+        IERC20(token).safeTransfer(seller, refundAmount);
 
         emit Cancelled(token, buyer, seller, escrowHash, id, amount, status);
     }
@@ -205,14 +211,18 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
                 )
         ) revert InvalidEscrowStatus(escrowHash, allEscrow[escrowHash].status);
         
-        allEscrow[escrowHash].lastActionTs = uint64(block.timestamp);
-        allEscrow[escrowHash].status = status;
+        _setStatus(escrowHash, uint64(block.timestamp), status);
 
         if(status == ISettlerBase.EscrowStatus.BuyerDisputed) {
             emit DisputedByBuyer(token, buyer, seller, escrowHash, id);
         } else {
             emit DisputedBySeller(token, buyer, seller, escrowHash, id);
         }
+    }
+
+    function _setStatus(bytes32 escrowHash, uint64 timestamp, ISettlerBase.EscrowStatus status) private {
+        allEscrow[escrowHash].lastActionTs = timestamp;
+        allEscrow[escrowHash].status = status;
     }
 
     function claim(address token, address tba, address to, uint256 amount) external nonReentrant{

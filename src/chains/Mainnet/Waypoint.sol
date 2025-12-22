@@ -96,7 +96,11 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
         if(!lighterAccount.isOwnerCall(escrowParams.seller, sender)) revert UnauthorizedCaller(sender);
         //TODO: check the window for payment method
         
-        escrow.cancel(escrowTypedHash, escrowParams.id, escrowParams.token, escrowParams.buyer, escrowParams.seller, escrowParams.volume, ISettlerBase.EscrowStatus.SellerCancelled);
+        uint256 sellerFee = getFeeAmount(escrowParams.volume, escrowParams.sellerFeeRate);
+        escrow.cancel(
+            escrowTypedHash, escrowParams.id, escrowParams.token, escrowParams.buyer, escrowParams.seller,
+            escrowParams.volume, sellerFee, ISettlerBase.EscrowStatus.SellerCancelled
+        );
 
     }
 

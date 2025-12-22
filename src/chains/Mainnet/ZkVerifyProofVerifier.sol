@@ -47,13 +47,17 @@ contract ZkVerifyProofVerifier is IProofVerifier {
             zkProof.index
         );
         if(!isValid) revert InvalidZkProof();
+        uint256 sellerFee = 0;  //getFeeAmount(escrowParams.volume, escrowParams.sellerFeeRate);
+        uint256 buyerFee = 0;  //getFeeAmount(escrowParams.volume, escrowParams.buyerFeeRate);
 
         escrow.releaseByVerifier(
             bytes32(""), 
             escrowParams.id, 
             address(escrowParams.token), 
-            escrowParams.buyer, 
-            escrowParams.seller, 
+            escrowParams.buyer,
+            buyerFee,
+            escrowParams.seller,
+            sellerFee,
             escrowParams.volume
             );
         return true;
