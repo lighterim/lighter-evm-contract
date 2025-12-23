@@ -39,7 +39,7 @@ contract TakeIntentTest is BasePairTest, Utils {
     }
 
     function _testBlockNumber() internal pure virtual override returns (uint256) {
-        return 9893435;
+        return 9899482;
     }
     
 
@@ -57,12 +57,10 @@ contract TakeIntentTest is BasePairTest, Utils {
     // MainnetTakeIntent internal settler = MainnetTakeIntent(
     //     payable(address(0xdc48A4702978D3Ca20DBe53D9D8a516fB9515Ff8))
     //     );
-    IAllowanceHolder allowanceHolder = IAllowanceHolder(0x302950de9b74202d74DF5e29dc2B19D491AE57a3);
-    IEscrow escrow = IEscrow(0xe31527c75edc58343D702e3840a00c10c4858e25);
-    LighterAccount lighterAccount = LighterAccount(0xD18e648B1CBee795f100ca450cc13CcC6849Be64);
-    MainnetTakeIntent internal settler = MainnetTakeIntent(
-        payable(address(0x3DB826B7063bf8e51832B7350F7cbe359AEA3f60))
-        );
+    IAllowanceHolder allowanceHolder = IAllowanceHolder(vm.envAddress("AllowanceHolder"));
+    IEscrow escrow = IEscrow(vm.envAddress("Escrow"));
+    LighterAccount lighterAccount = LighterAccount(vm.envAddress("LighterAccount"));
+    MainnetTakeIntent internal settler = MainnetTakeIntent(payable(vm.envAddress("TakeIntent")));
 
     
 
