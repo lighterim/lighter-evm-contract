@@ -30,31 +30,5 @@ abstract contract MainnetMixin is SettlerBase, FreeMemory{
         return lighterAccount;
     }
 
-    function _makeEscrow(bytes32 escrowTypedDataHash, ISettlerBase.EscrowParams memory escrowParams, uint256 gasSpentForBuyer, uint256 gasSpentForSeller) internal {
-        lighterAccount.addPendingTx(escrowParams.buyer);
-        lighterAccount.addPendingTx(escrowParams.seller);
-        uint256 sellerFee = getFeeAmount(escrowParams.volume, escrowParams.sellerFeeRate);
-        escrow.create(
-            address(escrowParams.token), 
-            escrowParams.buyer, 
-            escrowParams.seller, 
-            escrowParams.volume,
-            sellerFee, 
-            escrowTypedDataHash, 
-            escrowParams.id,
-            ISettlerBase.EscrowData(
-                {
-                    status: ISettlerBase.EscrowStatus.Escrowed,
-                    paidSeconds: 0,
-                    releaseSeconds: 0,
-                    cancelTs: 0,
-                    lastActionTs: uint64(block.timestamp),
-                    gasSpentForBuyer: gasSpentForBuyer,
-                    gasSpentForSeller: gasSpentForSeller
-                }
-            )
-        );
-        // console.logString("------------#### _makeEscrow### --------------------");
-    }
 
 }

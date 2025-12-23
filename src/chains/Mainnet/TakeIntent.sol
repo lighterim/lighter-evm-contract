@@ -67,36 +67,36 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
         return _domainSeparatorV4();
     }
 
-    function _dispatch(uint256 i, uint256 action, bytes calldata data)
-        internal
-        override(Settler, SettlerAbstract) DANGEROUS_freeMemory
-        returns (bool)
-    {
-        if (super._dispatch(i, action, data)) {
-            return true;
-        } else if (action == uint32(ISettlerActions.NATIVE_CHECK.selector)) {
-            (uint256 deadline, uint256 msgValue) = abi.decode(data, (uint256, uint256));
-            if (block.timestamp > deadline) {
-                assembly ("memory-safe") {
-                    mstore(0x00, 0xcd21db4f) // selector for `SignatureExpired(uint256)`
-                    mstore(0x20, deadline)
-                    revert(0x1c, 0x24)
-                }
-            }
-            if (msg.value > msgValue) {
-                assembly ("memory-safe") {
-                    mstore(0x00, 0x4a094431) // selector for `MsgValueMismatch(uint256,uint256)`
-                    mstore(0x20, msgValue)
-                    mstore(0x40, callvalue())
-                    revert(0x1c, 0x44)
-                }
-            }
-            return true;
+    // function _dispatch(uint256 i, uint256 action, bytes calldata data)
+    //     internal
+    //     override(Settler, SettlerAbstract) DANGEROUS_freeMemory
+    //     returns (bool)
+    // {
+    //     if (super._dispatch(i, action, data)) {
+    //         return true;
+    //     } else if (action == uint32(ISettlerActions.NATIVE_CHECK.selector)) {
+    //         (uint256 deadline, uint256 msgValue) = abi.decode(data, (uint256, uint256));
+    //         if (block.timestamp > deadline) {
+    //             assembly ("memory-safe") {
+    //                 mstore(0x00, 0xcd21db4f) // selector for `SignatureExpired(uint256)`
+    //                 mstore(0x20, deadline)
+    //                 revert(0x1c, 0x24)
+    //             }
+    //         }
+    //         if (msg.value > msgValue) {
+    //             assembly ("memory-safe") {
+    //                 mstore(0x00, 0x4a094431) // selector for `MsgValueMismatch(uint256,uint256)`
+    //                 mstore(0x20, msgValue)
+    //                 mstore(0x40, callvalue())
+    //                 revert(0x1c, 0x44)
+    //             }
+    //         }
+    //         return true;
 
-        } else {
-            return false;
-        }
-    }
+    //     } else {
+    //         return false;
+    //     }
+    // }
 
 
     function _dispatchVIP(uint256 action, bytes calldata data) internal virtual override DANGEROUS_freeMemory returns (bool) {
@@ -151,8 +151,35 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
         return false;
     }
 
-    // function _myAddress() internal view override returns (address) {
-    //     return address(this);
-    // }
-
+    function _makeEscrow(
+        bytes32 escrowTypedDataHash,
+        ISettlerBase.EscrowParams memory escrowParams,
+        uint256 gasSpentForBuyer,
+        uint256 gasSpentForSeller
+    ) internal {
+        lighterAccount.addPendingTx(escrowParams.buyer);
+        lighterAccount.addPendingTx(escrowParams.seller);
+        uint256 sellerFee = getFeeAmount(escrowParams.volume, escrowParams.sellerFeeRate);
+        escrow.create(
+            address(escrowParams.token), 
+            escrowParams.buyer, 
+            escrowParams.seller, 
+            escrowParams.volume,
+            sellerFee, 
+            escrowTypedDataHash, 
+            escrowParams.id,
+            ISettlerBase.EscrowData(
+                {
+                    status: ISettlerBase.EscrowStatus.Escrowed,
+                    paidSeconds: 0,
+                    releaseSeconds: 0,
+                    cancelTs: 0,
+                    lastActionTs: uint64(block.timestamp),
+                    gasSpentForBuyer: gasSpentForBuyer,
+                    gasSpentForSeller: gasSpentForSeller
+                }
+            )
+        );
+        // console.logString("------------#### _makeEscrow### --------------------");
+    }
 }
