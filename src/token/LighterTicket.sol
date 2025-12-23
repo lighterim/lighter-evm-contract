@@ -31,14 +31,14 @@ contract LighterTicket is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
      * @dev Constructor to initialize the NFT collection
      * @param name_ Name of the NFT collection
      * @param symbol_ Symbol of the NFT collection
-     * @param baseURI_ Base URI for token metadata
+     * @param baseUri_ Base URI for token metadata
      */
     constructor(
         string memory name_,
         string memory symbol_,
-        string memory baseURI_
+        string memory baseUri_
     ) ERC721(name_, symbol_) Ownable(msg.sender) {
-        _baseTokenUri = baseURI_;
+        _baseTokenUri = baseUri_;
         _tokenIdCounter = 1; // Start token IDs from 1
     }
 

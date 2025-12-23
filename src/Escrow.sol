@@ -231,8 +231,8 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         if(!lighterAccount.isOwnerCall(tba, msg.sender)) revert UnauthorizedCaller(msg.sender);
         
         if(userCredit[tba][token] < amount) revert InsufficientBalance(userCredit[tba][token]);
+        
         userCredit[tba][token] -= amount;
-
         IERC20(token).safeTransfer(to, amount);
 
         emit Claimed(token, tba, to, amount);
@@ -242,9 +242,9 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         if (msg.sender != feeCollector) revert UnauthorizedCaller(msg.sender);
         
         if(userCredit[feeCollector][token] < amount) revert InsufficientBalance(userCredit[feeCollector][token]);
-
         userCredit[feeCollector][token] -= amount;
         IERC20(token).safeTransfer(to, amount);
+
         emit CollectedFee(token, to, amount);
     }
 
