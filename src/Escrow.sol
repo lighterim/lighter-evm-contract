@@ -48,17 +48,10 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         _;
     }
 
-    function _onlyWhitelistedToken(address token) private view {
-        if(!isTokenWhitelisted[token]) revert TokenNotWhitelisted(token);
-    }
 
     modifier onlyAuthorizedCreator(){
         _onlyAuthorizedCreator();
         _;
-    }
-
-    function _onlyAuthorizedCreator() private view {
-        if(!_authorizedCreator[msg.sender]) revert UnauthorizedCreator(msg.sender);
     }
 
     modifier onlyAuthorizedExecutor(){
@@ -66,22 +59,30 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         _;
     }
 
-    function _onlyAuthorizedExecutor() private view {
-        if(!_authorizedExecutor[msg.sender]) revert UnauthorizedExecutor(msg.sender);
-    }
-
     modifier onlyAuthorizedVerifier(){
         _onlyAuthorizedVerifier();
         _;
     }
 
-    function _onlyAuthorizedVerifier() private view {
-        if(!_authorizedVerifier[msg.sender]) revert UnauthorizedVerifier(msg.sender);
-    }
-
     constructor(address owner_, LighterAccount lighterAccount_, address feeCollector_) Ownable(owner_) {
         lighterAccount = lighterAccount_;
         feeCollector = feeCollector_;
+    }
+
+    function _onlyAuthorizedCreator() private view {
+        if(!_authorizedCreator[msg.sender]) revert UnauthorizedCreator(msg.sender);
+    }
+    
+    function _onlyWhitelistedToken(address token) private view {
+        if(!isTokenWhitelisted[token]) revert TokenNotWhitelisted(token);
+    }
+
+    function _onlyAuthorizedExecutor() private view {
+        if(!_authorizedExecutor[msg.sender]) revert UnauthorizedExecutor(msg.sender);
+    }
+
+    function _onlyAuthorizedVerifier() private view {
+        if(!_authorizedVerifier[msg.sender]) revert UnauthorizedVerifier(msg.sender);
     }
 
     function whitelistToken(address token, bool isWhitelisted) external onlyOwner{
@@ -107,6 +108,7 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         if(isAuthorized) emit AddAuthorizedVerifier(verifier);
         else emit RemoveAuthorizedVerifier(verifier);
     }
+
 
     function create(address token, address buyer, address seller, uint256 amount, 
         uint256 sellerFee,
@@ -234,6 +236,16 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         IERC20(token).safeTransfer(to, amount);
 
         emit Claimed(token, tba, to, amount);
+    }
+
+    function collectFee(address token, address to, uint256 amount) external onlyAuthorizedExecutor{
+        if (msg.sender != feeCollector) revert UnauthorizedCaller(msg.sender);
+        
+        if(userCredit[feeCollector][token] < amount) revert InsufficientBalance(userCredit[feeCollector][token]);
+
+        userCredit[feeCollector][token] -= amount;
+        IERC20(token).safeTransfer(to, amount);
+        emit CollectedFee(token, to, amount);
     }
 
     function escrowOf(address token, address account) external view returns (uint256){

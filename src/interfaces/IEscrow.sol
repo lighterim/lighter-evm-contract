@@ -129,6 +129,13 @@ interface IEscrow {
      */
     function claim(address token, address tba, address to, uint256 amount) external;
 
+    /**
+     * collect the fee from the fee collector   
+     * @param token The token to collect the fee
+     * @param to The recipient of the fee
+     * @param amount The amount of the fee to collect
+     */
+    function collectFee(address token, address to, uint256 amount) external;
 
     //event
     event Created(address indexed token, address indexed buyer, address indexed seller, bytes32 escrowHash, uint256 id,uint256 amount);
@@ -140,6 +147,8 @@ interface IEscrow {
     event DisputedByBuyer(address indexed token, address indexed buyer, address indexed seller, bytes32 escrowHash, uint256 id);
     event DisputedBySeller(address indexed token, address indexed buyer, address indexed seller, bytes32 escrowHash, uint256 id);
     event Claimed(address indexed token, address indexed tba, address indexed to, uint256 amount);
+    event CollectedFee(address indexed token, address indexed to, uint256 amount);
+
 
     event AddAuthorizedCreator(address indexed creator);
     event AddAuthorizedExecutor(address indexed executor);

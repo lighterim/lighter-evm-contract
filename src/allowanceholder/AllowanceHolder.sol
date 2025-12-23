@@ -3,8 +3,6 @@ pragma solidity ^0.8.25;
 
 import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer.sol";
 import {IAllowanceHolder} from "./IAllowanceHolder.sol";
-import {InvalidSpender} from "../core/SettlerErrors.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @custom:security-contact security@0x.org
 contract AllowanceHolder is IAllowanceHolder {

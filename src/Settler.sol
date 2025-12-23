@@ -61,8 +61,8 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent {
                 ISignatureTransfer.SignatureTransferDetails memory transferDetails,
                 bytes memory sig
             ) = abi.decode(data, (ISignatureTransfer.PermitTransferFrom, ISignatureTransfer.SignatureTransferDetails, bytes));
-            bytes32 tokenPermissionsHash = permit.permitted.hash();
-            if(tokenPermissionsHash != getTokenPermissionsHash()) revert InvalidTokenPermissions();
+            
+            _makesureTokenPermissions(permit.permitted);
             
             address payer = getPayer();
             _transferFrom(permit, transferDetails, payer, sig);
@@ -83,8 +83,7 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent {
             bytes32 intentTypedHash = getIntentTypedHash(intentParams, _domainSeparator());
             if(intentTypedHash != getIntentTypeHash()) revert InvalidIntent();
             
-            bytes32 tokenPermissionsHash = permit.permitted.hash();
-            if(tokenPermissionsHash != getTokenPermissionsHash()) revert InvalidTokenPermissions();
+            _makesureTokenPermissions(permit.permitted);
 
             address payer = getPayer();
             _transferFromIKnowWhatImDoing(permit, transferDetails, payer, intentParamsHash, ParamsHash._INTENT_WITNESS_TYPE_STRING, sig);
@@ -135,12 +134,10 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent {
             // intent typed hash should be the same as the intent type hash in the intent params.
             if(intentTypeHash != getIntentTypeHash()) revert InvalidIntent();
 
-            ISignatureTransfer.TokenPermissions memory tokenPermissions = ISignatureTransfer.TokenPermissions({
+            _makesureTokenPermissions(ISignatureTransfer.TokenPermissions({
                 token: details.token,
                 amount: uint256(details.amount)
-            });
-            bytes32 tokenPermissionsHash = tokenPermissions.hash();
-            if(tokenPermissionsHash != getTokenPermissionsHash()) revert InvalidTokenPermissions();
+            }));
 
             // 不验证花费者额度，因为transferFrom将自动验证额度及调用关系。
             _allowanceHolderTransferFrom(details.token, payer, details.to, details.amount);
@@ -152,6 +149,12 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent {
         else{
             return false;
         }
+        return true;
+    }
+
+    function _makesureTokenPermissions(ISignatureTransfer.TokenPermissions memory tokenPermissions) internal view returns (bool) {
+        bytes32 tokenPermissionsHash = tokenPermissions.hash();
+        if(tokenPermissionsHash != getTokenPermissionsHash()) revert InvalidTokenPermissions();
         return true;
     }
 

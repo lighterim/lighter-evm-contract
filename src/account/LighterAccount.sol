@@ -11,7 +11,7 @@ import "../token/LighterTicket.sol";
 import {
     PendingTxExists, ZeroAddress, ZeroFunds, InvalidRecipient, InvalidRentPrice, HasPendingTx,
     InsufficientPayment, WithdrawalFailed, PendingTxNotExists, InvalidSender, InvalidTokenId,
-    UnauthorizedExecutor,MaxPendingTxReached, NoPendingTx, InsufficientQuota
+    UnauthorizedExecutor, NoPendingTx, InsufficientQuota
     } from "../core/SettlerErrors.sol";
 
 /**
