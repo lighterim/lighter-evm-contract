@@ -107,7 +107,7 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
                 bytes memory makerIntentSig
             ) = abi.decode(data, (ISettlerBase.EscrowParams, ISettlerBase.IntentParams, bytes));
             // console.logString("------------ESCROW_AND_INTENT_CHECK--------------------");
-            bytes32 escrowTypedHash = getEscrowTypedHash(escrowParams, _domainSeparator());
+            (bytes32 escrowHash, bytes32 escrowTypedHash) = getEscrowTypedHash(escrowParams, _domainSeparator());
             // escrow typed hash(takeIntent modifier) should be the same as the escrow typed hash in the escrow params.
             if (escrowTypedHash != getWitness()) {
                 revert InvalidWitness();
@@ -144,7 +144,7 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
 
             
             makesureTradeValidation(escrowParams, intentParams);
-            _makeEscrow(escrowTypedHash, escrowParams, 0, 0);
+            _makeEscrow(escrowHash, escrowParams, 0, 0);
             return true;
         }
 
@@ -152,7 +152,7 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
     }
 
     function _makeEscrow(
-        bytes32 escrowTypedDataHash,
+        bytes32 escrowHash,
         ISettlerBase.EscrowParams memory escrowParams,
         uint256 gasSpentForBuyer,
         uint256 gasSpentForSeller
@@ -166,7 +166,7 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
             escrowParams.seller, 
             escrowParams.volume,
             sellerFee, 
-            escrowTypedDataHash, 
+            escrowHash, 
             escrowParams.id,
             ISettlerBase.EscrowData(
                 {

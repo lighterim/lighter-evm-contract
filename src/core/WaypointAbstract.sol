@@ -49,10 +49,10 @@ abstract contract WaypointAbstract is Context {
      */
     function _disputeBySeller(address sender, ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) internal virtual;
 
-    /**
-     * processing escrow transaction
-     * @param escrowTypedHash escrow typed hash
-     */
-    modifier placeWaypoint(address sender, bytes32 escrowTypedHash) virtual;
+    // /**
+    //  * processing escrow transaction
+    //  * @param escrowTypedHash escrow typed hash
+    //  */
+    // modifier placeWaypoint(address sender, bytes32 escrowTypedHash) virtual;
     
 }

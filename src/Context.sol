@@ -36,10 +36,11 @@ abstract contract Context is AbstractContext {
      * 计算担保交易参数的EIP-712类型化数据哈希。
      * @param params 担保交易参数
      * @param domainSeparator 域分隔符
-     * @return escrowTypedHash 担保交易参数的EIP-712类型化数据哈希
+     * @return escrowHash 是担保交易参数的哈希, escrowTypedHash 是担保交易参数的EIP-712类型化数据哈希，用于验证签名
      */
-    function getEscrowTypedHash(ISettlerBase.EscrowParams memory params, bytes32 domainSeparator) internal pure returns (bytes32 escrowTypedHash) {
-        bytes32 escrowHash = params.hash();
+    function getEscrowTypedHash(ISettlerBase.EscrowParams memory params, bytes32 domainSeparator)
+    internal pure returns (bytes32 escrowHash, bytes32 escrowTypedHash) {
+        escrowHash = params.hash();
         escrowTypedHash = MessageHashUtils.toTypedDataHash(domainSeparator, escrowHash);
     }
 
@@ -72,8 +73,14 @@ abstract contract Context is AbstractContext {
      * @param params 担保交易参数
      * @param sig 担保交易参数的签名
      */
-    function makesureEscrowParams(bytes32 domainSeparator, ISettlerBase.EscrowParams memory params, bytes memory sig) internal view virtual returns (bytes32 escrowTypedHash){
-        escrowTypedHash = getEscrowTypedHash(params, domainSeparator);
+    function makesureEscrowParams(
+        bytes32 domainSeparator, 
+        ISettlerBase.EscrowParams memory params, 
+        bytes memory sig
+    ) internal view virtual returns (bytes32 escrowHash, bytes32 escrowTypedHash){
+        (escrowHash, escrowTypedHash) = getEscrowTypedHash(params, domainSeparator);
+        // console.logString("escrowHash=");
+        // console.logBytes32(escrowHash);
         // console.logString("escrowTypedHash=");
         // console.logBytes32(escrowTypedHash);
         // console.logString("sig=");

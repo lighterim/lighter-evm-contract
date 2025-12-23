@@ -9,6 +9,7 @@ import {LighterAccount} from "../src/account/LighterAccount.sol";
 import {Escrow} from "../src/Escrow.sol";
 import {AllowanceHolder} from "../src/allowanceholder/AllowanceHolder.sol";
 import {MainnetTakeIntent} from "../src/chains/Mainnet/TakeIntent.sol";
+import {MainnetWaypoint} from "../src/chains/Mainnet/Waypoint.sol";
 import {MockUSDC} from "../src/utils/TokenMock.sol";
 import {ZkVerifyProofVerifier} from "../src/chains/Mainnet/ZkVerifyProofVerifier.sol";
 
@@ -20,7 +21,7 @@ contract DeployerContract is Script {
     LighterAccount public lighterAccount;
     Escrow public escrow;
     AllowanceHolder public allowanceHolder;
-    // MainnetUserTxn public userTxn;
+    MainnetWaypoint public mainnetWaypoint;
     MainnetTakeIntent public takeIntent;
     ZkVerifyProofVerifier public zkVerifyProofVerifier;
 
@@ -81,6 +82,12 @@ contract DeployerContract is Script {
         escrow.authorizeCreator(address(takeIntent), true);
         lighterAccount.authorizeOperator(address(takeIntent), true);
         console.log("MainnetTakeIntent deployed at:", address(takeIntent));
+
+        console.log("Deploying MainnetWaypoint...");
+        mainnetWaypoint = new MainnetWaypoint(deployer, escrow, lighterAccount, bytes20(0));
+        escrow.authorizeExecutor(address(mainnetWaypoint), true);
+        lighterAccount.authorizeOperator(address(mainnetWaypoint), true);
+        console.log("MainnetWaypoint deployed at:", address(mainnetWaypoint));
         
         console.log("Deploying ZkVerifyProofVerifier...");
         zkVerifyProofVerifier = new ZkVerifyProofVerifier(escrow, zkVerify);

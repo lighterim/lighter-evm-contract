@@ -25,7 +25,7 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
 
     using ParamsHash for ISettlerBase.EscrowParams;
 
-    constructor(address lighterRelayer, IEscrow escrow, LighterAccount lighterAccount, bytes20 gitCommit, IAllowanceHolder allowanceHolder) 
+    constructor(address lighterRelayer, IEscrow escrow, LighterAccount lighterAccount, bytes20 gitCommit) 
     MainnetMixin(lighterRelayer, escrow, lighterAccount, gitCommit)
     EIP712("MainnetWaypoint", "1")
     {
@@ -54,10 +54,10 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
      * @param escrowParams escrow parameters
      */
     function _madePayment(address sender, ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) internal virtual override{
-        bytes32 escrowTypedHash = makesureEscrowParams(_domainSeparator(), escrowParams, sig);
+        (bytes32 escrowHash,) = makesureEscrowParams(_domainSeparator(), escrowParams, sig);
         if(!lighterAccount.isOwnerCall(escrowParams.buyer, sender)) revert UnauthorizedCaller(sender);
 
-        escrow.paid(escrowTypedHash, escrowParams.id, escrowParams.token, escrowParams.buyer);
+        escrow.paid(escrowHash, escrowParams.id, escrowParams.token, escrowParams.buyer);
     }
 
     /**
@@ -66,11 +66,11 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
      * @param escrowParams escrow parameters
      */
     function _requestCancelBySeller(address sender, ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) internal virtual override{
-        bytes32 escrowTypedHash = makesureEscrowParams(_domainSeparator(), escrowParams, sig);
+        (bytes32 escrowHash,) = makesureEscrowParams(_domainSeparator(), escrowParams, sig);
         if(!lighterAccount.isOwnerCall(escrowParams.seller, sender)) revert UnauthorizedCaller(sender);
         //TODO: check the window for payment method
 
-        escrow.requestCancel(escrowTypedHash, escrowParams.id, escrowParams.token, escrowParams.buyer, escrowParams.seller);
+        escrow.requestCancel(escrowHash, escrowParams.id, escrowParams.token, escrowParams.buyer, escrowParams.seller);
     }
 
     /**
@@ -79,10 +79,10 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
      * @param escrowParams escrow parameters
      */
     function _cancelByBuyer(address sender, ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) internal virtual override{
-        bytes32 escrowTypedHash = makesureEscrowParams(_domainSeparator(), escrowParams, sig);
+        (bytes32 escrowHash,) = makesureEscrowParams(_domainSeparator(), escrowParams, sig);
         if(!lighterAccount.isOwnerCall(escrowParams.buyer, sender)) revert UnauthorizedCaller(sender);
         
-        escrow.cancelByBuyer(escrowTypedHash, escrowParams.id, escrowParams.token, escrowParams.buyer, escrowParams.seller);
+        escrow.cancelByBuyer(escrowHash, escrowParams.id, escrowParams.token, escrowParams.buyer, escrowParams.seller);
 
     }
 
@@ -92,13 +92,13 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
      * @param escrowParams escrow parameters
      */
     function _cancelBySeller(address sender, ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) internal virtual override{
-        bytes32 escrowTypedHash = makesureEscrowParams(_domainSeparator(), escrowParams, sig);
+        (bytes32 escrowHash,) = makesureEscrowParams(_domainSeparator(), escrowParams, sig);
         if(!lighterAccount.isOwnerCall(escrowParams.seller, sender)) revert UnauthorizedCaller(sender);
         //TODO: check the window for payment method
         
         uint256 sellerFee = getFeeAmount(escrowParams.volume, escrowParams.sellerFeeRate);
         escrow.cancel(
-            escrowTypedHash, escrowParams.id, escrowParams.token, escrowParams.buyer, escrowParams.seller,
+            escrowHash, escrowParams.id, escrowParams.token, escrowParams.buyer, escrowParams.seller,
             escrowParams.volume, sellerFee, ISettlerBase.EscrowStatus.SellerCancelled
         );
 
@@ -110,10 +110,10 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
      * @param escrowParams escrow parameters
      */
     function _disputeByBuyer(address sender, ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) internal virtual override{
-        bytes32 escrowTypedHash = makesureEscrowParams(_domainSeparator(), escrowParams, sig);
+        (bytes32 escrowHash,) = makesureEscrowParams(_domainSeparator(), escrowParams, sig);
         if(!lighterAccount.isOwnerCall(escrowParams.buyer, sender)) revert UnauthorizedCaller(sender);
         
-        escrow.dispute(escrowTypedHash, escrowParams.id, escrowParams.token, escrowParams.buyer, escrowParams.seller, ISettlerBase.EscrowStatus.BuyerDisputed);
+        escrow.dispute(escrowHash, escrowParams.id, escrowParams.token, escrowParams.buyer, escrowParams.seller, ISettlerBase.EscrowStatus.BuyerDisputed);
 
     }
 
@@ -123,10 +123,10 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
      * @param escrowParams escrow parameters
      */
     function _disputeBySeller(address sender, ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) internal virtual override{
-        bytes32 escrowTypedHash = makesureEscrowParams(_domainSeparator(), escrowParams, sig);
+        (bytes32 escrowHash,) = makesureEscrowParams(_domainSeparator(), escrowParams, sig);
         if(!lighterAccount.isOwnerCall(escrowParams.seller, sender)) revert UnauthorizedCaller(sender);
 
-        escrow.dispute(escrowTypedHash, escrowParams.id, escrowParams.token, escrowParams.buyer, escrowParams.seller, ISettlerBase.EscrowStatus.SellerDisputed);
+        escrow.dispute(escrowHash, escrowParams.id, escrowParams.token, escrowParams.buyer, escrowParams.seller, ISettlerBase.EscrowStatus.SellerDisputed);
 
     }
 

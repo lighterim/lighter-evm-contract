@@ -9,7 +9,6 @@ import {AllowanceHolder} from "../allowanceholder/AllowanceHolder.sol";
 import {FullMath} from "../vendor/FullMath.sol";
 import {SafeTransferLib} from "../vendor/SafeTransferLib.sol";
 import {Panic} from "../utils/Panic.sol";
-import {Revert} from "../utils/Revert.sol";
 import {ParamsHash} from "../utils/ParamsHash.sol";
 import {SettlerBase} from "../SettlerBase.sol";
 import {Context} from "../Context.sol";

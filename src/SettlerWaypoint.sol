@@ -61,13 +61,13 @@ abstract contract SettlerWaypoint is ISettlerWaypoint, WaypointAbstract, Settler
     }
 
 
-    /**
-     * processing escrow transaction
-     * @param escrowTypedHash escrow typed hash
-     */
-    modifier placeWaypoint(address sender, bytes32 escrowTypedHash) virtual override{
-        _;
-    }
+    // /**
+    //  * processing escrow transaction
+    //  * @param escrowTypedHash escrow typed hash
+    //  */
+    // modifier placeWaypoint(address sender, bytes32 escrowTypedHash) virtual override{
+    //     _;
+    // }
     
     
 
@@ -97,7 +97,7 @@ abstract contract SettlerWaypoint is ISettlerWaypoint, WaypointAbstract, Settler
         bytes[] calldata actions
     )
         external payable override
-        placeWaypoint(msg.sender, escrowTypedDataHash)
+        //placeWaypoint(msg.sender, escrowTypedDataHash)
         returns (bool) {
         return _executeWaypoint(actions);
     }
