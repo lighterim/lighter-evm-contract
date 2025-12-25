@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Take Intent DApp - Lighter</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Take Intent DApp</h1>
+            <p>基于 MainnetTakeIntent.execute 的交互界面 (使用 viem)</p>
+        </header>
+
+        <div class="wallet-section">
+            <button id="connectWallet" class="btn btn-primary">连接钱包</button>
+            <div id="walletInfo" class="wallet-info hidden"></div>
+        </div>
+
+        <!-- 标签页切换 -->
+        <div class="tabs-container">
+            <button class="tab-btn active" data-tab="seller-intent">Take Seller Intent</button>
+            <button class="tab-btn" data-tab="buyer-intent">Take Buyer Intent</button>
+            <button class="tab-btn" data-tab="bulk-sell-intent">Take Bulk Sell Intent</button>
+        </div>
+
+        <!-- Seller Intent 标签页 -->
+        <div id="seller-intent-tab" class="tab-content active">
+        <div class="form-container">
+            <!-- 合约配置 -->
+            <section class="form-section">
+                <h2>合约配置</h2>
+                <div class="form-group">
+                    <label for="settlerAddress">MainnetTakeIntent 合约地址:</label>
+                    <input type="text" id="settlerAddress" placeholder="0x...">
+                </div>
+                <div class="form-group">
+                    <label for="escrowAddress">Escrow 合约地址:</label>
+                    <input type="text" id="escrowAddress" placeholder="0x...">
+                </div>
+                <div class="form-group">
+                    <label for="permit2Address">Permit2 合约地址:</label>
+                    <input type="text" id="permit2Address" value="0x000000000022D473030F116dDEE9F6B43aC78BA3" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="chainId">Chain ID:</label>
+                    <input type="number" id="chainId" placeholder="11155111" value="11155111">
+                </div>
+            </section>
+
+            <!-- IntentParams -->
+            <section class="form-section">
+                <h2>IntentParams (意图参数)</h2>
+                <div class="form-group">
+                    <label for="intentToken">代币地址 (token):</label>
+                    <input type="text" id="intentToken" placeholder="0x...">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="intentRangeMin">数量范围 - 最小值 (range.min):</label>
+                        <input type="text" id="intentRangeMin" placeholder="1000000" value="1000000">
+                    </div>
+                    <div class="form-group">
+                        <label for="intentRangeMax">数量范围 - 最大值 (range.max):</label>
+                        <input type="text" id="intentRangeMax" placeholder="1000000" value="1000000">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="intentExpiryTime">过期时间 (expiryTime, Unix timestamp):</label>
+                    <input type="number" id="intentExpiryTime" placeholder="自动计算">
+                    <button type="button" id="calcExpiryTime" class="btn btn-small">计算 (当前时间 + 7天)</button>
+                </div>
+                <div class="form-group">
+                    <label for="intentCurrency">货币类型 (currency, 将转换为 keccak256):</label>
+                    <input type="text" id="intentCurrency" placeholder="USD" value="USD">
+                </div>
+                <div class="form-group">
+                    <label for="intentPaymentMethod">支付方式 (paymentMethod, 将转换为 keccak256):</label>
+                    <input type="text" id="intentPaymentMethod" placeholder="wechat" value="wechat">
+                </div>
+                <div class="form-group">
+                    <label for="intentPayeeAccount">收款人账户 (payeeDetails - account):</label>
+                    <input type="text" id="intentPayeeAccount" placeholder="dust" value="dust">
+                </div>
+                <div class="form-group">
+                    <label for="intentPayeeQrCode">收款二维码 (payeeDetails - qrCode):</label>
+                    <input type="text" id="intentPayeeQrCode" placeholder="wxp://..." value="wxp://f2f0in9xnsA4G_eXWBRORK63ixD6bMQcP11eKGFz1VS4Kf0">
+                </div>
+                <div class="form-group">
+                    <label for="intentPayeeMemo">备注 (payeeDetails - memo):</label>
+                    <input type="text" id="intentPayeeMemo" placeholder="memo" value="memo">
+                </div>
+                <div class="form-group">
+                    <label for="intentPrice">价格 (price, in wei):</label>
+                    <input type="text" id="intentPrice" placeholder="1000000000000000000" value="1000000000000000000">
+                </div>
+                <div class="form-group">
+                    <button type="button" id="generateIntentHash" class="btn btn-secondary">生成 Intent Hash</button>
+                    <div id="intentHashResult" class="hash-result"></div>
+                </div>
+            </section>
+
+            <!-- EscrowParams -->
+            <section class="form-section">
+                <h2>EscrowParams (托管参数)</h2>
+                <div class="form-group">
+                    <label for="escrowId">托管ID (id):</label>
+                    <input type="number" id="escrowId" placeholder="1" value="1">
+                </div>
+                <div class="form-group">
+                    <label for="escrowToken">代币地址 (token):</label>
+                    <input type="text" id="escrowToken" placeholder="0x..." value="0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238">
+                </div>
+                <div class="form-group">
+                    <label for="escrowVolume">数量 (volume, in wei):</label>
+                    <input type="text" id="escrowVolume" placeholder="1000000" value="1000000">
+                </div>
+                <div class="form-group">
+                    <label for="escrowPrice">价格 (price, in wei):</label>
+                    <input type="text" id="escrowPrice" placeholder="1000000000000000000" value="1000000000000000000">
+                </div>
+                <div class="form-group">
+                    <label for="escrowUsdRate">USD汇率 (usdRate):</label>
+                    <input type="number" id="escrowUsdRate" placeholder="1000" value="1000">
+                </div>
+                <div class="form-group">
+                    <label for="escrowPayer">付款人地址 (payer):</label>
+                    <input type="text" id="escrowPayer" placeholder="0x..." value="0xD58382f295f5c98BAeB525FAbb7FEBcCc62bc63B">
+                </div>
+                <div class="form-group">
+                    <label for="escrowSeller">卖家地址 (seller, TBA账户):</label>
+                    <input type="text" id="escrowSeller" placeholder="0x..." value="0x76765e993557Ce0687d9DFd2B78cd99A742EB02C">
+                </div>
+                <div class="form-group">
+                    <label for="escrowSellerFeeRate">卖家费率 (sellerFeeRate):</label>
+                    <input type="number" id="escrowSellerFeeRate" placeholder="0" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="escrowPaymentMethod">支付方式 (paymentMethod, 将转换为 keccak256):</label>
+                    <input type="text" id="escrowPaymentMethod" placeholder="wechat" value="wechat">
+                </div>
+                <div class="form-group">
+                    <label for="escrowCurrency">货币类型 (currency, 将转换为 keccak256):</label>
+                    <input type="text" id="escrowCurrency" placeholder="USD" value="USD">
+                </div>
+                <div class="form-group">
+                    <label for="escrowPayeeAccount">收款人账户 (payeeDetails - account):</label>
+                    <input type="text" id="escrowPayeeAccount" placeholder="dust" value="dust">
+                </div>
+                <div class="form-group">
+                    <label for="escrowPayeeQrCode">收款二维码 (payeeDetails - qrCode):</label>
+                    <input type="text" id="escrowPayeeQrCode" placeholder="wxp://..." value="wxp://f2f0in9xnsA4G_eXWBRORK63ixD6bMQcP11eKGFz1VS4Kf0">
+                </div>
+                <div class="form-group">
+                    <label for="escrowPayeeMemo">备注 (payeeDetails - memo):</label>
+                    <input type="text" id="escrowPayeeMemo" placeholder="memo" value="memo">
+                </div>
+                <div class="form-group">
+                    <label for="escrowBuyer">买家地址 (buyer, TBA账户):</label>
+                    <input type="text" id="escrowBuyer" placeholder="0x..." value="0xc67949F3959Ba85cAc8Aa6F06D2191f7cFEBa8ab">
+                </div>
+                <div class="form-group">
+                    <label for="escrowBuyerFeeRate">买家费率 (buyerFeeRate):</label>
+                    <input type="number" id="escrowBuyerFeeRate" placeholder="0" value="0">
+                </div>
+                <div class="form-group">
+                    <button type="button" id="generateEscrowHash" class="btn btn-secondary">生成 Escrow Hash</button>
+                    <div id="escrowHashResult" class="hash-result"></div>
+                </div>
+            </section>
+
+            <!-- Permit2 Transfer -->
+            <section class="form-section">
+                <h2>Permit2 Transfer (转账许可)</h2>
+                <div class="form-group">
+                    <label for="permitToken">代币地址 (permitted.token):</label>
+                    <input type="text" id="permitToken" placeholder="0x..." value="0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238">
+                </div>
+                <div class="form-group">
+                    <label for="permitAmount">数量 (permitted.amount, in wei):</label>
+                    <input type="text" id="permitAmount" placeholder="1000000" value="1000000">
+                </div>
+                <div class="form-group">
+                    <label for="permitNonce">Nonce:</label>
+                    <input type="number" id="permitNonce" placeholder="1" value="1">
+                </div>
+                <div class="form-group">
+                    <label for="permitDeadline">截止时间 (deadline, Unix timestamp):</label>
+                    <input type="number" id="permitDeadline" placeholder="自动计算">
+                    <button type="button" id="calcPermitDeadline" class="btn btn-small">计算 (当前时间 + 7天)</button>
+                </div>
+                <div class="form-group">
+                    <label for="transferTo">转账目标地址 (transferDetails.to):</label>
+                    <input type="text" id="transferTo" placeholder="Escrow合约地址">
+                </div>
+                <div class="form-group">
+                    <label for="transferRequestedAmount">请求数量 (transferDetails.requestedAmount, in wei):</label>
+                    <input type="text" id="transferRequestedAmount" placeholder="1000000" value="1000000">
+                </div>
+            </section>
+
+            <!-- 签名部分 -->
+            <section class="form-section">
+                <h2>签名生成</h2>
+                
+                <div class="signature-group">
+                    <h3>1. Escrow 签名 (Relayer 签名)</h3>
+                    <div class="form-group">
+                        <label>使用当前连接的钱包签名（Relayer 钱包）</label>
+                        <button type="button" id="signEscrow" class="btn btn-secondary">使用钱包签名 Escrow</button>
+                    </div>
+                    <div class="form-group">
+                        <label for="escrowSignature">Escrow 签名:</label>
+                        <textarea id="escrowSignature" rows="3" ></textarea>
+                    </div>
+                </div>
+
+                <div class="signature-group">
+                    <h3>2. Intent Witness Transfer 签名 (Seller 签名)</h3>
+                    <div class="form-group">
+                        <label>使用连接的钱包签名</label>
+                        <button type="button" id="signIntentWitness" class="btn btn-secondary">使用钱包签名 Intent Witness Transfer</button>
+                    </div>
+                    <div class="form-group">
+                        <label for="intentWitnessSignature">Intent Witness Transfer 签名:</label>
+                        <textarea id="intentWitnessSignature" rows="3"></textarea>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 执行交易 -->
+            <section class="form-section">
+                <h2>执行交易</h2>
+                <div class="form-group">
+                    <button type="button" id="buildActions" class="btn btn-secondary">构建 Actions 数组</button>
+                    <div id="actionsPreview" class="actions-preview"></div>
+                </div>
+                <div class="form-group">
+                    <button type="button" id="executeTransaction" class="btn btn-primary btn-large">执行 execute 交易</button>
+                </div>
+                <div id="transactionResult" class="transaction-result"></div>
+            </section>
+        </div>
+        </div>
+
+        <!-- Buyer Intent 标签页 -->
+        <div id="buyer-intent-tab" class="tab-content">
+        <div class="form-container">
+            <!-- 合约配置（共享） -->
+            <section class="form-section">
+                <h2>合约配置</h2>
+                <div class="form-group">
+                    <label for="buyerIntentSettlerAddress">MainnetTakeIntent 合约地址:</label>
+                    <input type="text" id="buyerIntentSettlerAddress" placeholder="0x..." value="0x6Cd90338966872522Ed24CB2A4b756FC36556a60">
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentEscrowAddress">Escrow 合约地址:</label>
+                    <input type="text" id="buyerIntentEscrowAddress" placeholder="0x..." value="0xD336000b7004c9F1F0f608058523eF5C00DC78a6">
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentPermit2Address">Permit2 合约地址:</label>
+                    <input type="text" id="buyerIntentPermit2Address" value="0x000000000022D473030F116dDEE9F6B43aC78BA3" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentChainId">Chain ID:</label>
+                    <input type="number" id="buyerIntentChainId" placeholder="11155111" value="11155111">
+                </div>
+            </section>
+
+            <!-- IntentParams (Buyer 作为 Maker) -->
+            <section class="form-section">
+                <h2>IntentParams (意图参数 - Buyer 作为 Maker)</h2>
+                <div class="form-group">
+                    <label for="buyerIntentToken">代币地址 (token):</label>
+                    <input type="text" id="buyerIntentToken" placeholder="0x...">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="buyerIntentRangeMin">范围最小值 (range.min):</label>
+                        <input type="text" id="buyerIntentRangeMin" placeholder="0" value="1000000">
+                    </div>
+                    <div class="form-group">
+                        <label for="buyerIntentRangeMax">范围最大值 (range.max):</label>
+                        <input type="text" id="buyerIntentRangeMax" placeholder="1000000" value="1000000">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentExpiryTime">过期时间 (expiryTime, Unix timestamp):</label>
+                    <input type="number" id="buyerIntentExpiryTime" placeholder="自动计算">
+                    <button type="button" id="calcBuyerIntentExpiryTime" class="btn btn-small">计算 (当前时间 + 7天)</button>
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentCurrency">货币 (currency):</label>
+                    <input type="text" id="buyerIntentCurrency" placeholder="USD" value="USD">
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentPaymentMethod">支付方式 (paymentMethod):</label>
+                    <input type="text" id="buyerIntentPaymentMethod" placeholder="wechat" value="wechat">
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentPayeeAccount">收款账户 (payeeDetails.account):</label>
+                    <input type="text" id="buyerIntentPayeeAccount" placeholder="account">
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentPayeeQrCode">收款二维码 (payeeDetails.qrCode):</label>
+                    <input type="text" id="buyerIntentPayeeQrCode" placeholder="qrCode">
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentPayeeMemo">备注 (payeeDetails.memo):</label>
+                    <input type="text" id="buyerIntentPayeeMemo" placeholder="memo">
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentPrice">价格 (price, in wei):</label>
+                    <input type="text" id="buyerIntentPrice" placeholder="1000000000000000000" value="1000000000000000000">
+                </div>
+                <div class="form-group">
+                    <button type="button" id="generateBuyerIntentHash" class="btn btn-secondary">生成 Intent Hash</button>
+                    <div id="buyerIntentHashResult" class="hash-result"></div>
+                </div>
+            </section>
+
+            <!-- EscrowParams -->
+            <section class="form-section">
+                <h2>EscrowParams (托管参数)</h2>
+                <div class="form-group">
+                    <label for="buyerIntentEscrowId">ID:</label>
+                    <input type="number" id="buyerIntentEscrowId" placeholder="1" value="1">
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentEscrowToken">代币地址 (token):</label>
+                    <input type="text" id="buyerIntentEscrowToken" placeholder="0x...">
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentEscrowVolume">数量 (volume, in wei):</label>
+                    <input type="text" id="buyerIntentEscrowVolume" placeholder="10000000" value="10000000">
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentEscrowPrice">价格 (price, in wei):</label>
+                    <input type="text" id="buyerIntentEscrowPrice" placeholder="1000000000000000000">
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentEscrowUsdRate">USD 汇率 (usdRate, in wei):</label>
+                    <input type="text" id="buyerIntentEscrowUsdRate" placeholder="1000000000000000000">
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentEscrowPayer">付款人地址 (payer):</label>
+                    <input type="text" id="buyerIntentEscrowPayer" placeholder="0x..." value="0xD58382f295f5c98BAeB525FAbb7FEBcCc62bc63B">
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentEscrowSeller">卖家地址 (seller, TBA账户):</label>
+                    <input type="text" id="buyerIntentEscrowSeller" placeholder="0x..." value="0x76765e993557Ce0687d9DFd2B78cd99A742EB02C">
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentEscrowSellerFeeRate">卖家费率 (sellerFeeRate):</label>
+                    <input type="number" id="buyerIntentEscrowSellerFeeRate" placeholder="0" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentEscrowPaymentMethod">支付方式 (paymentMethod):</label>
+                    <input type="text" id="buyerIntentEscrowPaymentMethod" placeholder="wechat" value="wechat">
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentEscrowCurrency">货币 (currency):</label>
+                    <input type="text" id="buyerIntentEscrowCurrency" placeholder="USD" value="USD">
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentEscrowPayeeAccount">收款账户 (payeeDetails.account):</label>
+                    <input type="text" id="buyerIntentEscrowPayeeAccount" placeholder="account" value="dust">
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentEscrowPayeeQrCode">收款二维码 (payeeDetails.qrCode):</label>
+                    <input type="text" id="buyerIntentEscrowPayeeQrCode" placeholder="qrCode" value="wxp://f2f0in9xnsA4G_eXWBRORK63ixD6bMQcP11eKGFz1VS4Kf0">
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentEscrowPayeeMemo">备注 (payeeDetails.memo):</label>
+                    <input type="text" id="buyerIntentEscrowPayeeMemo" placeholder="memo" value="memo">
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentEscrowBuyer">买家地址 (buyer, TBA账户):</label>
+                    <input type="text" id="buyerIntentEscrowBuyer" placeholder="0x..." value="0xc67949F3959Ba85cAc8Aa6F06D2191f7cFEBa8ab">
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentEscrowBuyerFeeRate">买家费率 (buyerFeeRate):</label>
+                    <input type="number" id="buyerIntentEscrowBuyerFeeRate" placeholder="0" value="0">
+                </div>
+                <div class="form-group">
+                    <button type="button" id="generateBuyerIntentEscrowHash" class="btn btn-secondary">生成 Escrow Hash</button>
+                    <div id="buyerIntentEscrowHashResult" class="hash-result"></div>
+                </div>
+            </section>
+
+            <!-- Permit2 Transfer (Seller 作为 Taker) -->
+            <section class="form-section">
+                <h2>Permit2 Transfer (Seller 作为 Taker)</h2>
+                <div class="form-group">
+                    <label for="buyerIntentPermitToken">代币地址 (permitted.token):</label>
+                    <input type="text" id="buyerIntentPermitToken" placeholder="0x...">
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentPermitAmount">数量 (permitted.amount, in wei):</label>
+                    <input type="text" id="buyerIntentPermitAmount" placeholder="1000000" value="1000000">
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentPermitNonce">Nonce:</label>
+                    <input type="number" id="buyerIntentPermitNonce" placeholder="2" value="2">
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentPermitDeadline">截止时间 (deadline, Unix timestamp):</label>
+                    <input type="number" id="buyerIntentPermitDeadline" placeholder="自动计算">
+                    <button type="button" id="calcBuyerIntentPermitDeadline" class="btn btn-small">计算 (当前时间 + 7天)</button>
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentTransferTo">转账目标地址 (transferDetails.to):</label>
+                    <input type="text" id="buyerIntentTransferTo" placeholder="Escrow合约地址" value="0xD336000b7004c9F1F0f608058523eF5C00DC78a6">
+                </div>
+                <div class="form-group">
+                    <label for="buyerIntentTransferRequestedAmount">请求数量 (transferDetails.requestedAmount, in wei):</label>
+                    <input type="text" id="buyerIntentTransferRequestedAmount" placeholder="1000000" value="1000000">
+                </div>
+            </section>
+
+            <!-- 签名部分 -->
+            <section class="form-section">
+                <h2>签名生成</h2>
+                
+                <div class="signature-group">
+                    <h3>1. Intent 签名 (Buyer 作为 Maker 签名)</h3>
+                    <div class="form-group">
+                        <label>使用当前连接的钱包签名（Buyer 钱包）</label>
+                        <button type="button" id="signBuyerIntent" class="btn btn-secondary">使用钱包签名 Intent</button>
+                    </div>
+                    <div class="form-group">
+                        <label for="buyerIntentSignature">Intent 签名:</label>
+                        <textarea id="buyerIntentSignature" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <div class="signature-group">
+                    <h3>2. Permit Transfer 签名 (Seller 作为 Taker 签名)</h3>
+                    <div class="form-group">
+                        <label>使用连接的钱包签名（Seller 钱包）</label>
+                        <button type="button" id="signBuyerIntentPermitTransfer" class="btn btn-secondary">使用钱包签名 Permit Transfer</button>
+                    </div>
+                    <div class="form-group">
+                        <label for="buyerIntentPermitTransferSignature">Permit Transfer 签名:</label>
+                        <textarea id="buyerIntentPermitTransferSignature" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <div class="signature-group">
+                    <h3>3. Escrow 签名 (Relayer 签名)</h3>
+                    <div class="form-group">
+                        <label>使用连接的钱包签名（Relayer 钱包）</label>
+                        <button type="button" id="signBuyerIntentEscrow" class="btn btn-secondary">使用钱包签名 Escrow</button>
+                    </div>
+                    <div class="form-group">
+                        <label for="buyerIntentEscrowSignature">Escrow 签名:</label>
+                        <textarea id="buyerIntentEscrowSignature" rows="3" ></textarea>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 执行交易 -->
+            <section class="form-section">
+                <h2>执行交易</h2>
+                <div class="form-group">
+                    <label for="buyerIntentPayerAddress">执行者地址 (payer, Seller 地址):</label>
+                    <input type="text" id="buyerIntentPayerAddress" placeholder="0x...">
+                </div>
+                <div class="form-group">
+                    <button type="button" id="buildBuyerIntentActions" class="btn btn-secondary">构建 Actions 数组</button>
+                    <div id="buyerIntentActionsPreview" class="actions-preview"></div>
+                </div>
+                <div class="form-group">
+                    <button type="button" id="executeBuyerIntentTransaction" class="btn btn-primary btn-large">执行 execute 交易</button>
+                </div>
+                <div id="buyerIntentTransactionResult" class="transaction-result"></div>
+            </section>
+        </div>
+        </div>
+
+        <!-- Bulk Sell Intent 标签页 -->
+        <div id="bulk-sell-intent-tab" class="tab-content">
+        <div class="form-container">
+            <!-- 合约配置 -->
+            <section class="form-section">
+                <h2>合约配置</h2>
+                <div class="form-group">
+                    <label for="bulkSellSettlerAddress">MainnetTakeIntent 合约地址:</label>
+                    <input type="text" id="bulkSellSettlerAddress" placeholder="0x..." value="0x6Cd90338966872522Ed24CB2A4b756FC36556a60">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellEscrowAddress">Escrow 合约地址:</label>
+                    <input type="text" id="bulkSellEscrowAddress" placeholder="0x..." value="0xD336000b7004c9F1F0f608058523eF5C00DC78a6">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellAllowanceHolderAddress">AllowanceHolder 合约地址:</label>
+                    <input type="text" id="bulkSellAllowanceHolderAddress" placeholder="0x..." value="0x18F7D46AD58D7338CADc52Edd35CD96EB90AFD36">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellPermit2Address">Permit2 合约地址:</label>
+                    <input type="text" id="bulkSellPermit2Address" value="0x000000000022D473030F116dDEE9F6B43aC78BA3" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellChainId">Chain ID:</label>
+                    <input type="number" id="bulkSellChainId" placeholder="11155111" value="11155111">
+                </div>
+            </section>
+
+            <!-- Permit2 授权检查 -->
+            <section class="form-section">
+                <h2>Permit2 授权检查与设置</h2>
+                <div class="form-group">
+                    <label for="bulkSellPermitOwner">授权所有者 (owner, Seller 地址):</label>
+                    <input type="text" id="bulkSellPermitOwner" placeholder="0x...">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellPermitToken">代币地址 (token):</label>
+                    <input type="text" id="bulkSellPermitToken" placeholder="0x...">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellPermitAmount">授权数量 (amount, uint160):</label>
+                    <input type="text" id="bulkSellPermitAmount" placeholder="1000000">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellPermitExpiration">过期时间 (expiration, uint48, Unix timestamp):</label>
+                    <input type="number" id="bulkSellPermitExpiration" placeholder="自动计算">
+                    <button type="button" id="calcBulkSellPermitExpiration" class="btn btn-small">计算 (当前时间 + 7天)</button>
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellPermitNonce">Nonce (uint48):</label>
+                    <input type="number" id="bulkSellPermitNonce" placeholder="0" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellPermitSigDeadline">签名截止时间 (sigDeadline, Unix timestamp):</label>
+                    <input type="number" id="bulkSellPermitSigDeadline" placeholder="自动计算">
+                    <button type="button" id="calcBulkSellPermitSigDeadline" class="btn btn-small">计算 (当前时间 + 7天)</button>
+                </div>
+                <div class="form-group">
+                    <button type="button" id="checkBulkSellAllowance" class="btn btn-secondary">检查当前授权</button>
+                    <div id="bulkSellAllowanceResult" class="hash-result"></div>
+                </div>
+                <div class="form-group">
+                    <label>使用当前连接的钱包签名（Seller 钱包）</label>
+                    <button type="button" id="signBulkSellPermit" class="btn btn-secondary">签名 PermitSingle</button>
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellPermitSignature">PermitSingle 签名:</label>
+                    <textarea id="bulkSellPermitSignature" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <button type="button" id="submitBulkSellPermit" class="btn btn-secondary">提交 Permit 授权</button>
+                    <div id="bulkSellPermitSubmitResult" class="transaction-result"></div>
+                </div>
+            </section>
+
+            <!-- IntentParams (Seller 作为 Maker) -->
+            <section class="form-section">
+                <h2>IntentParams (意图参数 - Seller 作为 Maker)</h2>
+                <div class="form-group">
+                    <label for="bulkSellIntentToken">代币地址 (token):</label>
+                    <input type="text" id="bulkSellIntentToken" placeholder="0x...">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="bulkSellIntentRangeMin">范围最小值 (range.min):</label>
+                        <input type="text" id="bulkSellIntentRangeMin" placeholder="0" value="1000000">
+                    </div>
+                    <div class="form-group">
+                        <label for="bulkSellIntentRangeMax">范围最大值 (range.max):</label>
+                        <input type="text" id="bulkSellIntentRangeMax" placeholder="1000000" value="1000000">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellIntentExpiryTime">过期时间 (expiryTime, Unix timestamp):</label>
+                    <input type="number" id="bulkSellIntentExpiryTime" placeholder="自动计算">
+                    <button type="button" id="calcBulkSellIntentExpiryTime" class="btn btn-small">计算 (当前时间 + 7天)</button>
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellIntentCurrency">货币 (currency):</label>
+                    <input type="text" id="bulkSellIntentCurrency" placeholder="USD" value="USD">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellIntentPaymentMethod">支付方式 (paymentMethod):</label>
+                    <input type="text" id="bulkSellIntentPaymentMethod" placeholder="wechat" value="wechat">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellIntentPayeeAccount">收款账户 (payeeDetails.account):</label>
+                    <input type="text" id="bulkSellIntentPayeeAccount" placeholder="account" value="dust">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellIntentPayeeQrCode">收款二维码 (payeeDetails.qrCode):</label>
+                    <input type="text" id="bulkSellIntentPayeeQrCode" placeholder="qrCode" value="wxp://f2f0in9xnsA4G_eXWBRORK63ixD6bMQcP11eKGFz1VS4Kf0">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellIntentPayeeMemo">备注 (payeeDetails.memo):</label>
+                    <input type="text" id="bulkSellIntentPayeeMemo" placeholder="memo" value="memo">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellIntentPrice">价格 (price, in wei):</label>
+                    <input type="text" id="bulkSellIntentPrice" placeholder="1000000000000000000" value="1000000000000000000">
+                </div>
+                <div class="form-group">
+                    <button type="button" id="generateBulkSellIntentHash" class="btn btn-secondary">生成 Intent Hash</button>
+                    <div id="bulkSellIntentHashResult" class="hash-result"></div>
+                </div>
+            </section>
+
+            <!-- EscrowParams -->
+            <section class="form-section">
+                <h2>EscrowParams (托管参数)</h2>
+                <div class="form-group">
+                    <label for="bulkSellEscrowId">ID:</label>
+                    <input type="number" id="bulkSellEscrowId" placeholder="1" value="1">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellEscrowToken">代币地址 (token):</label>
+                    <input type="text" id="bulkSellEscrowToken" placeholder="0x...">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellEscrowVolume">数量 (volume, in wei):</label>
+                    <input type="text" id="bulkSellEscrowVolume" placeholder="1000000" value="1000000">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellEscrowPrice">价格 (price, in wei):</label>
+                    <input type="text" id="bulkSellEscrowPrice" placeholder="1000000000000000000" value="1000000000000000000">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellEscrowUsdRate">USD 汇率 (usdRate, in wei):</label>
+                    <input type="text" id="bulkSellEscrowUsdRate" placeholder="1000000000000000000" value="1000000000000000000">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellEscrowPayer">付款人地址 (payer):</label>
+                    <input type="text" id="bulkSellEscrowPayer" placeholder="0x..." value="0xD58382f295f5c98BAeB525FAbb7FEBcCc62bc63B">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellEscrowSeller">卖家地址 (seller, TBA账户):</label>
+                    <input type="text" id="bulkSellEscrowSeller" placeholder="0x..." value="0x76765e993557Ce0687d9DFd2B78cd99A742EB02C">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellEscrowSellerFeeRate">卖家费率 (sellerFeeRate):</label>
+                    <input type="number" id="bulkSellEscrowSellerFeeRate" placeholder="0" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellEscrowPaymentMethod">支付方式 (paymentMethod):</label>
+                    <input type="text" id="bulkSellEscrowPaymentMethod" placeholder="wechat" value="wechat">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellEscrowCurrency">货币 (currency):</label>
+                    <input type="text" id="bulkSellEscrowCurrency" placeholder="USD" value="USD">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellEscrowPayeeAccount">收款账户 (payeeDetails.account):</label>
+                    <input type="text" id="bulkSellEscrowPayeeAccount" placeholder="account" value="dust">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellEscrowPayeeQrCode">收款二维码 (payeeDetails.qrCode):</label>
+                    <input type="text" id="bulkSellEscrowPayeeQrCode" placeholder="qrCode" value="wxp://f2f0in9xnsA4G_eXWBRORK63ixD6bMQcP11eKGFz1VS4Kf0">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellEscrowPayeeMemo">备注 (payeeDetails.memo):</label>
+                    <input type="text" id="bulkSellEscrowPayeeMemo" placeholder="memo" value="memo">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellEscrowBuyer">买家地址 (buyer, TBA账户):</label>
+                    <input type="text" id="bulkSellEscrowBuyer" placeholder="0x..." value="0xc67949F3959Ba85cAc8Aa6F06D2191f7cFEBa8ab">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellEscrowBuyerFeeRate">买家费率 (buyerFeeRate):</label>
+                    <input type="number" id="bulkSellEscrowBuyerFeeRate" placeholder="0" value="0">
+                </div>
+                <div class="form-group">
+                    <button type="button" id="generateBulkSellEscrowHash" class="btn btn-secondary">生成 Escrow Hash</button>
+                    <div id="bulkSellEscrowHashResult" class="hash-result"></div>
+                </div>
+            </section>
+
+            <!-- AllowanceTransferDetails -->
+            <section class="form-section">
+                <h2>AllowanceTransferDetails (转账详情)</h2>
+                <div class="form-group">
+                    <label for="bulkSellTransferToken">代币地址 (token):</label>
+                    <input type="text" id="bulkSellTransferToken" placeholder="0x...">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellTransferFrom">转出地址 (from, Seller 地址):</label>
+                    <input type="text" id="bulkSellTransferFrom" placeholder="0x...">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellTransferTo">转入地址 (to, Escrow 合约地址):</label>
+                    <input type="text" id="bulkSellTransferTo" placeholder="0x...">
+                </div>
+                <div class="form-group">
+                    <label for="bulkSellTransferAmount">数量 (amount, uint160):</label>
+                    <input type="text" id="bulkSellTransferAmount" placeholder="1000000">
+                </div>
+            </section>
+
+            <!-- 签名部分 -->
+            <section class="form-section">
+                <h2>签名生成</h2>
+                
+                <div class="signature-group">
+                    <h3>1. Intent 签名 (Seller 作为 Maker 签名)</h3>
+                    <div class="form-group">
+                        <label>使用当前连接的钱包签名（Seller 钱包）</label>
+                        <button type="button" id="signBulkSellIntent" class="btn btn-secondary">使用钱包签名 Intent</button>
+                    </div>
+                    <div class="form-group">
+                        <label for="bulkSellIntentSignature">Intent 签名:</label>
+                        <textarea id="bulkSellIntentSignature" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <div class="signature-group">
+                    <h3>2. Escrow 签名 (Relayer 签名)</h3>
+                    <div class="form-group">
+                        <label>使用连接的钱包签名（Relayer 钱包）</label>
+                        <button type="button" id="signBulkSellEscrow" class="btn btn-secondary">使用钱包签名 Escrow</button>
+                    </div>
+                    <div class="form-group">
+                        <label for="bulkSellEscrowSignature">Escrow 签名:</label>
+                        <textarea id="bulkSellEscrowSignature" rows="3"></textarea>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 执行交易 -->
+            <section class="form-section">
+                <h2>执行交易</h2>
+                <div class="form-group">
+                    <label for="bulkSellPayerAddress">执行者地址 (payer, Buyer 地址):</label>
+                    <input type="text" id="bulkSellPayerAddress" placeholder="0x...">
+                </div>
+                <div class="form-group">
+                    <button type="button" id="buildBulkSellActions" class="btn btn-secondary">构建 Actions 数组</button>
+                    <div id="bulkSellActionsPreview" class="actions-preview"></div>
+                </div>
+                <div class="form-group">
+                    <button type="button" id="executeBulkSellTransaction" class="btn btn-primary btn-large">执行 execute 交易</button>
+                </div>
+                <div id="bulkSellTransactionResult" class="transaction-result"></div>
+            </section>
+        </div>
+        </div>
+    </div>
+
+    <script type="module" src="/main.js"></script>
+</body>
+</html>

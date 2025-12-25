@@ -18,7 +18,7 @@ build/
 
 # Hardhat Project dictory
 contracts/
-dapp/
+#dapp/
 ignition/
 scripts/
 
