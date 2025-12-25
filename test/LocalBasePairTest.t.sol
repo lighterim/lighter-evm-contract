@@ -36,8 +36,8 @@ abstract contract BasePairTest is Test, GasSnapshot, Permit2Signature, LocalFork
 
     constructor() {
         permit2Domain = bytes32("");
-        // 注意：移除构造函数中的 vm.label() 调用，因为它可能触发 FFI
-        // 标签设置移到 setUp() 中进行
+        // Note: Remove vm.label() call in constructor as it may trigger FFI
+        // Label setting moved to setUp()
         // vm.label(address(PERMIT2), "LocalPermit2");
     }
 
@@ -71,7 +71,7 @@ abstract contract BasePairTest is Test, GasSnapshot, Permit2Signature, LocalFork
     }
 
     function setUp() public virtual {
-        // 本地模式：不进行 fork，跳过 vm.createSelectFork 调用
+        // Local mode: do not fork, skip vm.createSelectFork call
         // if(bytes(_testChainId()).length > 0) {
         //     vm.createSelectFork(_testChainId(), _testBlockNumber());
         // }

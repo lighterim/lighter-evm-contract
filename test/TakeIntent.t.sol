@@ -179,11 +179,11 @@ contract TakeIntentTest is BasePairTest, Utils {
         string calldata witnessTypeString,
         bytes calldata signature
          */
-        // 明确指定使用单个 permitWitnessTransferFrom 重载（不是批量版本）
-        // 使用函数选择器常量来避免重载歧义
-        // 单个版本: permitWitnessTransferFrom(PermitTransferFrom,SignatureTransferDetails,address,bytes32,string,bytes) = 0x137c29fe
-        // 批量版本: permitWitnessTransferFrom(PermitBatchTransferFrom,SignatureTransferDetails[],address,bytes32,string,bytes) = 0xfe8ec1a7
-        bytes4 selector = 0x137c29fe; // 单个版本的选择器
+        // Explicitly specify using single permitWitnessTransferFrom overload (not batch version)
+        // Use function selector constant to avoid overload ambiguity
+        // Single version: permitWitnessTransferFrom(PermitTransferFrom,SignatureTransferDetails,address,bytes32,string,bytes) = 0x137c29fe
+        // Batch version: permitWitnessTransferFrom(PermitBatchTransferFrom,SignatureTransferDetails[],address,bytes32,string,bytes) = 0xfe8ec1a7
+        bytes4 selector = 0x137c29fe; // Selector for single version
    
         vm.startPrank(eoaBuyer);
         // snapStartName("TakeIntent_takeSellerIntent");

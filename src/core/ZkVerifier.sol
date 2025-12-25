@@ -4,15 +4,15 @@ pragma solidity ^0.8.20;
 import {IVerifyProofAggregation} from "../interfaces/IVerifyProofAggregation.sol";
 
 contract ZkVerifier {
-    // zkVerify 合约地址
+    // zkVerify contract address
     address public zkVerify;
 
-    // 构造函数，初始化 zkVerify 合约地址和验证密钥
+    // Constructor, initialize zkVerify contract address and verification key
     constructor(address _zkVerify) {
         zkVerify = _zkVerify;
     }
 
-    // 验证聚合证明
+    // Verify aggregation proof
     function verifyAggregation(
         uint256 _domainId,
         uint256 _aggregationId,

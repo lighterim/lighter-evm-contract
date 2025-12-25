@@ -131,9 +131,10 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
             }
 
             /**
-             * 1. takeBulkSell, maker: seller(tba), maker intent signature(seller tba), check it in _dispatch(transferFrom).
-             * 2. takeSellerIntent, maker: seller(tba),  check it in permit2 transferFrom.
-             * 3. takeBuyerIntent, maker: buyer(tba), maker intent signature(buyer tba)
+             * @dev Intent verification logic:
+             * 1. takeBulkSell: maker is seller(tba), maker intent signature from seller tba, checked in _dispatch(transferFrom)
+             * 2. takeSellerIntent: maker is seller(tba), checked in permit2 transferFrom
+             * 3. takeBuyerIntent: maker is buyer(tba), maker intent signature from buyer tba
              */
             if(lighterAccount.isOwnerCall(escrowParams.seller, msg.sender)){
                 /// the call is from seller ==> 3. takeBuyerIntent

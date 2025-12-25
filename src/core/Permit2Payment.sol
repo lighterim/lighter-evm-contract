@@ -37,7 +37,7 @@ abstract contract Permit2PaymentTakeIntent is SettlerBase, Permit2PaymentAbstrac
     }
     
     /**
-     * TODO: 是否支持转发？ 应该支持转发。
+     * @dev TODO: Should forwarding be supported? It should support forwarding.
      */
     function _transferFromIKnowWhatImDoing(
         ISignatureTransfer.PermitTransferFrom memory permit,

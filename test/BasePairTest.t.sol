@@ -80,7 +80,7 @@ abstract contract BasePairTest is Test, GasSnapshot, Permit2Signature, MainnetDe
     }
 
     function setUp() public virtual {
-        // 只在 chainId 非空时才进行 fork
+        // Only fork when chainId is not empty
         
         vm.createSelectFork(_testChainId(), _testBlockNumber());
         

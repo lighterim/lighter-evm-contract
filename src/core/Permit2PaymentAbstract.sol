@@ -61,10 +61,10 @@ abstract contract Permit2PaymentAbstract is Context {
         virtual;
     
     /**
-     * 计算受托意向参数的EIP-712类型化数据哈希。
-     * @param params 受托意向参数
-     * @param domainSeparator 域分隔符
-     * @return intentTypedHash 受托意向参数的EIP-712类型化数据哈希
+     * @notice Calculate the EIP-712 typed data hash of intent parameters
+     * @param params Intent parameters
+     * @param domainSeparator Domain separator
+     * @return intentTypedHash EIP-712 typed data hash of intent parameters
      */ 
     function getIntentTypedHash(ISettlerBase.IntentParams memory params, bytes32 domainSeparator) internal pure returns (bytes32 intentTypedHash) {
         bytes32 intentHash = params.hash();
@@ -72,11 +72,11 @@ abstract contract Permit2PaymentAbstract is Context {
     }
 
     /**
-     * 确认受托意向是否完整有效。
-     * @param signer 可信的签名者地址
-     * @param domainSeparator 域分隔符
-     * @param params 受托意向参数
-     * @param sig 受托意向参数的签名
+     * @notice Verify that the intent parameters are complete and valid
+     * @param signer Trusted signer address
+     * @param domainSeparator Domain separator
+     * @param params Intent parameters
+     * @param sig Signature of intent parameters
      */
     function makesureIntentParams(
         address signer, 
@@ -90,9 +90,10 @@ abstract contract Permit2PaymentAbstract is Context {
     }
 
      /**
-     * 确认成交参数是否符合受托意向，它们通常分别是买家意向和卖家提交 或 买家提交和卖家意向。
-     * @param escrowParams 提交的担保交易参数
-     * @param intentParams 提交的受托意向参数
+     * @notice Verify that escrow parameters match the intent parameters
+     * @dev They are typically buyer intent and seller submission, or buyer submission and seller intent
+     * @param escrowParams Submitted escrow transaction parameters
+     * @param intentParams Submitted intent parameters
      */
     function makesureTradeValidation(ISettlerBase.EscrowParams memory escrowParams, ISettlerBase.IntentParams memory intentParams) internal view virtual{
         if(block.timestamp > intentParams.expiryTime) revert IntentExpired(intentParams.expiryTime);

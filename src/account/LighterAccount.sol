@@ -16,31 +16,31 @@ import {
 
 /**
  * @title LighterAccount
- * @dev 业务合约：铸造 Ticket NFT 并自动创建对应的 TokenBound AccountV3 (TBA)
+ * @dev Business contract: Mints Ticket NFT and automatically creates corresponding TokenBound AccountV3 (TBA)
  * 
- * 功能：
- * 1. 按照售卖价格 mint Ticket NFT
- * 2. 自动为每个 mint 的 NFT 创建 TBA（AccountV3 实例）
- * 3. 支持批量 mint
- * 4. 价格管理和收益提取
+ * Features:
+ * 1. Mint Ticket NFT at sale price
+ * 2. Automatically create TBA (AccountV3 instance) for each minted NFT
+ * 3. Support batch minting
+ * 4. Price management and revenue extraction
  */
 contract LighterAccount is Ownable, ReentrancyGuard {
 
-    /// @notice LighterTicket 合约实例
+    /// @notice LighterTicket contract instance
     LighterTicket public immutable ticketContract;
     
-    /// @notice ERC6551Registry 地址
+    /// @notice ERC6551Registry address
     address public immutable registry;
     
-    /// @notice AccountV3 实现合约地址
+    /// @notice AccountV3 implementation contract address
     address public immutable accountImpl;
 
     bytes32 public immutable salt;
     
-    /// @notice 单个票券的租借价格
+    /// @notice Rent price for a single ticket
     uint256 public rentPrice;
     
-    /// @notice 票券租借记录
+    /// @notice Ticket rental records
     mapping(address => uint256) public ticketRents;
 
     // pending tx list [user => [tradeId...]]
@@ -49,21 +49,21 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     // authorized list [operator => isAuthorized]
     mapping(address => bool) public authorizedOperators;
 
-    // / @notice 租借者地址
+    // / @notice Renter address
     // address payable public rentee;
 
-    /// @notice 已租借的票券数量
+    /// @notice Total number of rented tickets
     uint256 public totalRented;
 
     // ============ Events ============
     
     /**
-     * @notice 当 NFT mint 并创建 TBA 时触发
-     * @param renter 购买者地址
-     * @param tokenId 票券 token ID
-     * @param tbaAddress 创建的 TBA 地址
+     * @notice Emitted when NFT is minted and TBA is created
+     * @param renter Purchaser address
+     * @param tokenId Ticket token ID
+     * @param tbaAddress Created TBA address
      * @param nostrPubKey NIP-05
-     * @param rent 支付的价格
+     * @param rent Price paid
      */
     event TicketRentedWithTBA(
         address indexed renter,
@@ -90,9 +90,9 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     );
     
     /**
-     * @notice 当 mint 价格更新时触发
-     * @param oldPrice 旧价格
-     * @param newPrice 新价格
+     * @notice Emitted when mint price is updated
+     * @param oldPrice Old price
+     * @param newPrice New price
      */
     event RentPriceUpdated(uint256 oldPrice, uint256 newPrice);
     
@@ -112,10 +112,10 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     // ============ Constructor ============
 
     /**
-     * @param ticketContract_ LighterTicket 合约地址
-     * @param registry_ ERC6551Registry 地址
-     * @param accountImplementation_ AccountV3 实现地址
-     * @param rentPrice_ 初始 mint 价格
+     * @param ticketContract_ LighterTicket contract address
+     * @param registry_ ERC6551Registry address
+     * @param accountImplementation_ AccountV3 implementation address
+     * @param rentPrice_ Initial mint price
      */
     constructor(
         address ticketContract_,
@@ -138,11 +138,11 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     // ============ Public Functions ============
 
     /**
-     * @notice Mint 单个 NFT 并创建对应的 TBA
-     * @param recipient NFT 接收者地址
+     * @notice Mint a single NFT and create corresponding TBA
+     * @param recipient NFT recipient address
      * @param nostrPubKey NOSTR pubkey
-     * @return tokenId mint 的 token ID
-     * @return tbaAddress 创建的 TBA 地址
+     * @return tokenId Minted token ID
+     * @return tbaAddress Created TBA address
      */
     function createAccount(address recipient, bytes32 nostrPubKey) 
         external 
@@ -159,7 +159,7 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         tokenId = ticketContract.mintWithURI(recipient, nostrPubKey);
         
         
-        // 2. 创建 TBA (AccountV3 实例)
+        // 2. Create TBA (AccountV3 instance)
         tbaAddress = IERC6551Registry(registry).createAccount(
             accountImpl,
             salt,
@@ -168,7 +168,7 @@ contract LighterAccount is Ownable, ReentrancyGuard {
             tokenId
         );
         
-        // 3. 更新统计
+        // 3. Update statistics
         unchecked {
             totalRented++;
         }
@@ -180,9 +180,9 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         return (tokenId, tbaAddress);
     }
 
-    /// @notice 销毁票券，也会失去去TBA的控制权，退回租借资产。
-    /// @param nftId token id
-    /// @param recipient recipient address
+    /// @notice Destroy ticket, also lose control of TBA, return rental assets
+    /// @param nftId Token ID
+    /// @param recipient Recipient address
     function destroyAccount(uint256 nftId, address payable recipient) external nonReentrant {
         if (nftId == 0) revert InvalidTokenId();
         if (recipient == address(0)) revert ZeroAddress();
@@ -279,9 +279,9 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice 计算指定 NFT 的 TBA 地址（不创建）
+     * @notice Calculate TBA address for specified NFT (without creating)
      * @param tokenId NFT token ID
-     * @return TBA 地址
+     * @return TBA address
      */
     function getAccountAddress(uint256 tokenId) external view returns (address) {
         return IERC6551Registry(registry).account(
@@ -294,9 +294,9 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice 批量计算多个 NFT 的 TBA 地址
-     * @param tokenIds NFT token ID 数组
-     * @return TBA 地址数组
+     * @notice Batch calculate TBA addresses for multiple NFTs
+     * @param tokenIds Array of NFT token IDs
+     * @return Array of TBA addresses
      */
     function batchGetAccountAddresses(uint256[] calldata tokenIds) 
         external 
@@ -340,8 +340,8 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     // ============ Admin Functions ============
 
     /**
-     * @notice 更新 mint 价格
-     * @param newPrice 新价格
+     * @notice Update mint price
+     * @param newPrice New price
      */
     function setRentPrice(uint256 newPrice) external onlyOwner {
         uint256 oldPrice = rentPrice;
@@ -350,7 +350,7 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     }
 
     // /**
-    //  * @notice 提取合约中的 ETH
+    //  * @notice Withdraw ETH from contract
     //  */
     // function withdraw() external onlyOwner {
     //     uint256 balance = address(this).balance;
@@ -363,8 +363,8 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     // }
 
     // /**
-    //  * @notice 提取指定金额的 ETH
-    //  * @param amount 提取金额
+    //  * @notice Withdraw specified amount of ETH
+    //  * @param amount Amount to withdraw
     //  */
     // function withdrawAmount(uint256 amount) external onlyOwner {
     //     require(amount > 0 && amount <= address(this).balance, "Invalid amount");
@@ -378,17 +378,17 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     // ============ View Functions ============
 
     /**
-     * @notice 获取合约余额
-     * @return 合约中的 ETH 余额
+     * @notice Get contract balance
+     * @return ETH balance in contract
      */
     function getBalance() external view returns (uint256) {
         return address(this).balance;
     }
 
     // /**
-    //  * @notice 计算批量 mint 的总价格
-    //  * @param count mint 数量
-    //  * @return 总价格
+    //  * @notice Calculate total price for batch minting
+    //  * @param count Number of mints
+    //  * @return Total price
     //  */
     // function calculateTotalPrice(uint256 count) external view returns (uint256) {
     //     return mintPrice * count;

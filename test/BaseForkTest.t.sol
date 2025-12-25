@@ -16,13 +16,13 @@ contract MainnetDefaultFork is BaseForkTest {
     }
 }
 
-// 本地测试模式：不进行 fork，返回空字符串
+// Local test mode: do not fork, return empty string
 contract LocalFork is BaseForkTest {
     function _testChainId() internal pure virtual override returns (string memory) {
-        return ""; // 空字符串表示不进行 fork
+        return ""; // Empty string means do not fork
     }
 
     function _testBlockNumber() internal pure virtual override returns (uint256) {
-        return 0; // 本地模式下不使用区块号
+        return 0; // Block number not used in local mode
     }
 }

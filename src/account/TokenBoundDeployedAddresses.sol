@@ -3,18 +3,18 @@ pragma solidity ^0.8.25;
 
 /**
  * @title TokenBound Deployed Addresses
- * @dev TokenBound 官方在各网络上已部署的 AccountV3 相关合约地址
+ * @dev TokenBound official AccountV3 related contract addresses deployed on various networks
  * 
- * 这些地址通过 CREATE2 部署，使用固定的 salt：
+ * These addresses are deployed via CREATE2 using a fixed salt:
  * 0x6551655165516551655165516551655165516551655165516551655165516551
  * 
  * Factory: 0x4e59b44847b379578588920cA78FbF26c0B4956C
  * 
- * 参考: https://github.com/tokenbound/contracts
+ * Reference: https://github.com/tokenbound/contracts
  */
 library TokenBoundDeployedAddresses {
     /**
-     * @dev Ethereum Mainnet 部署地址
+     * @dev Ethereum Mainnet deployment addresses
      */
     struct MainnetAddresses {
         address accountGuardian;
@@ -23,21 +23,21 @@ library TokenBoundDeployedAddresses {
     }
     
     /**
-     * @dev 获取主网地址
-     * 注意：这些是预计算的地址，实际部署地址请参考 TokenBound 官方文档
+     * @dev Get mainnet addresses
+     * @notice These are precomputed addresses, actual deployment addresses please refer to TokenBound official documentation
      */
     function getMainnetAddresses() internal pure returns (MainnetAddresses memory) {
-        // 这些地址需要从 TokenBound 官方获取或通过 CREATE2 计算
-        // 暂时使用占位符，实际使用时需要更新
+        // These addresses need to be obtained from TokenBound official or calculated via CREATE2
+        // Temporarily using placeholders, need to update when actually used
         return MainnetAddresses({
-            accountGuardian: address(0), // 需要更新
-            accountV3Implementation: address(0), // 需要更新
-            accountProxy: address(0) // 需要更新
+            accountGuardian: address(0), // Needs update
+            accountV3Implementation: address(0), // Needs update
+            accountProxy: address(0) // Needs update
         });
     }
     
     /**
-     * @dev 检查给定地址是否为已部署的 TokenBound 合约
+     * @dev Check if given address is a deployed TokenBound contract
      */
     function isDeployedContract(address addr) internal view returns (bool) {
         uint256 size;

@@ -97,10 +97,10 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent {
             // console.logString("sig");
             // console.logBytes(sig);
             
-            // // 使用辅助函数来处理 memory -> calldata 转换
+            // // Use helper function to handle memory -> calldata conversion
             // bytes32 dataHash = _hashPermitWithWitness(permit, intentParamsHash);
             
-            // // 调试：输出 Permit2 地址和 DOMAIN_SEPARATOR
+            // // Debug: output Permit2 address and DOMAIN_SEPARATOR
             // console.logString("_PERMIT2 address");
             // console.logAddress(address(_PERMIT2));
             // bytes32 permit2DomainSeparator = _PERMIT2.DOMAIN_SEPARATOR();
@@ -126,12 +126,12 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent {
                 bytes memory sig
             ) = abi.decode(data, (IAllowanceTransfer.AllowanceTransferDetails, ISettlerBase.IntentParams, bytes));
 
-            // 付款方
+            // Payer
             address payer = getPayer();
             if(details.from != payer) revert InvalidPayer();
-            // makesure intent params come from payer signature.
+            // Ensure intent params come from payer signature
             bytes32 intentTypeHash = makesureIntentParams(payer, _domainSeparator(), intentParams, sig);
-            // intent typed hash should be the same as the intent type hash in the intent params.
+            // Intent typed hash should be the same as the intent type hash in the intent params
             if(intentTypeHash != getIntentTypeHash()) revert InvalidIntent();
 
             _makesureTokenPermissions(ISignatureTransfer.TokenPermissions({
@@ -139,7 +139,7 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent {
                 amount: uint256(details.amount)
             }));
 
-            // 不验证花费者额度，因为transferFrom将自动验证额度及调用关系。
+            // Do not verify spender allowance, as transferFrom will automatically verify allowance and call relationship
             _allowanceHolderTransferFrom(details.token, payer, details.to, details.amount);
             
             clearPayer(payer);

@@ -33,10 +33,11 @@ abstract contract Context is AbstractContext {
     }
 
     /**
-     * 计算担保交易参数的EIP-712类型化数据哈希。
-     * @param params 担保交易参数
-     * @param domainSeparator 域分隔符
-     * @return escrowHash 是担保交易参数的哈希, escrowTypedHash 是担保交易参数的EIP-712类型化数据哈希，用于验证签名
+     * @notice Calculate the EIP-712 typed data hash of escrow parameters
+     * @param params Escrow transaction parameters
+     * @param domainSeparator Domain separator
+     * @return escrowHash Hash of escrow parameters
+     * @return escrowTypedHash EIP-712 typed data hash of escrow parameters, used for signature verification
      */
     function getEscrowTypedHash(ISettlerBase.EscrowParams memory params, bytes32 domainSeparator)
     internal pure returns (bytes32 escrowHash, bytes32 escrowTypedHash) {
@@ -57,21 +58,21 @@ abstract contract Context is AbstractContext {
     }
 
     /**
-     * 确认签名是否有效。支持EIP-1271和EIP-2098签名。
-     * @param signer 签名者地址
-     * @param hash 要验证的哈希
-     * @param sig 签名
-     * @return isValid 签名是否有效
+     * @notice Verify that the signature is valid. Supports EIP-1271 and EIP-2098 signatures
+     * @param signer Signer address
+     * @param hash Hash to verify
+     * @param sig Signature
+     * @return isValid Whether the signature is valid
      */
     function isValidSignature(address signer, bytes32 hash, bytes memory sig) internal view returns (bool){
         return SignatureChecker.isValidSignatureNow(signer, hash, sig);
     }
 
     /**
-     * 确认担保交易参数是否完整有效。
-     * @param domainSeparator 域分隔符
-     * @param params 担保交易参数
-     * @param sig 担保交易参数的签名
+     * @notice Verify that escrow parameters are complete and valid
+     * @param domainSeparator Domain separator
+     * @param params Escrow transaction parameters
+     * @param sig Signature of escrow parameters
      */
     function makesureEscrowParams(
         bytes32 domainSeparator, 
