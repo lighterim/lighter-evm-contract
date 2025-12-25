@@ -55,13 +55,13 @@ The buyer publishes a purchase intent, and the seller authorizes tokens via Perm
 
 ### 3. Take Bulk Sell Intent
 
-The seller authorizes all tokens in the intent to AllowanceHolder at once via Permit2's `permit` function, supporting batch transactions.
+The seller authorizes all tokens in the intent to `$AllowanceHolder` at once via Permit2's `permit` function, supporting batch transactions.
 
 **Process**:
-1. The seller authorizes all tokens in the intent to AllowanceHolder at once via Permit2's `permit` function
+1. The seller authorizes all tokens in the intent to `$AllowanceHolder` at once via Permit2's `permit` function
 2. The seller signs `IntentParams`
 3. The relayer signs `EscrowParams`
-4. The buyer can execute the `execute` function multiple times, transferring tokens through AllowanceHolder, with each execution initiating a bilateral transaction based on the intent. This continues until the intent no longer meets execution conditions (quantity exhausted or deadline reached)
+4. The buyer can execute the `execute` function multiple times, transferring tokens through `$AllowanceHolder`, with each execution initiating a bilateral transaction based on the intent. This continues until the intent no longer meets execution conditions (quantity exhausted or deadline reached)
 
 ## 🏗️ Architecture
 
