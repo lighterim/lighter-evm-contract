@@ -97,14 +97,15 @@ contract DeployerContract is Script {
         console.log("Deploying completed!");
         console.log("Deployer:", deployer);
         console.log("ZkVerify:", zkVerify);
-        console.log("LighterAccount:", address(lighterAccount));
-        console.log("LighterTicket:", address(ticket)); 
+        console.log("export LighterAccount=", address(lighterAccount));
+        console.log("export LighterTicket=", address(ticket)); 
         console.log("ERC6551Registry:", address(registry));
         console.log("AccountV3Simplified:", address(accountImpl));
-        console.log("Escrow:", address(escrow));
-        console.log("AllowanceHolder:", address(allowanceHolder));
-        console.log("MainnetTakeIntent:", address(takeIntent));
-        console.log("ZkVerifyProofVerifier:", address(zkVerifyProofVerifier));
+        console.log("export Escrow=", address(escrow));
+        console.log("export AllowanceHolder=", address(allowanceHolder));
+        console.log("export TakeIntent=", address(takeIntent));
+        console.log("export SetWaypoint=", address(mainnetWaypoint));
+        console.log("export ZkVerifyProofVerifier=", address(zkVerifyProofVerifier));
         
         vm.stopBroadcast();
     }

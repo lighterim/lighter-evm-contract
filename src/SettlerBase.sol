@@ -74,36 +74,41 @@ library TransientStorage {
         bytes32 witness,
         bytes32 intentTypeHash
     ) internal {
-        _makesureFirstTimeSet(_PAYER_SLOT);
-        _makesureFirstTimeSet(_TOKEN_PERMISSIONS_SLOT);
-        _makesureFirstTimeSet(_WITNESS_SLOT);
-        _makesureFirstTimeSet(_INTENT_TYPE_HASH_SLOT);
-       
+        _makesureFirstTimeSetPayer(payer);
+        _makesureFirstTimeSet(_TOKEN_PERMISSIONS_SLOT, tokenPermissions);
+        _makesureFirstTimeSet(_WITNESS_SLOT, witness);
+        _makesureFirstTimeSet(_INTENT_TYPE_HASH_SLOT, intentTypeHash);
+    }
+
+    function _makesureFirstTimeSetPayer(address payer) private {
         assembly ("memory-safe") {
-            tstore(_PAYER_SLOT, payer)
-            tstore(_TOKEN_PERMISSIONS_SLOT, tokenPermissions)
-            tstore(_WITNESS_SLOT, witness)
-            tstore(_INTENT_TYPE_HASH_SLOT, intentTypeHash)
+            if iszero(shl(0x60, payer)) {
+                mstore(0x00, 0xe758b8d5) // selector for `ConfusedDeputy()`
+                revert(0x1c, 0x04)
+            }
+            let slotValue := tload(_PAYER_SLOT)
+            if shl(0x60, slotValue) {
+                mstore(0x14, slotValue)
+                mstore(0x00, 0x7407c0f8000000000000000000000000) // selector for `ReentrantPayer(address)` with `oldPayer`'s padding
+                revert(0x10, 0x24)
+            }
+
+            tstore(_PAYER_SLOT, and(0xffffffffffffffffffffffffffffffffffffffff, payer))
         }
     }
 
-    function _makesureFirstTimeSetPayer(bytes32 slot) private view {
-        address currentPayer;
+    function _makesureFirstTimeSet(bytes32 slot, bytes32 newValue) private {
         assembly ("memory-safe") {
-            currentPayer := tload(slot)
-        }
-        if (currentPayer != address(0)) {
-            revertConfusedDeputy();
-        }
-    }
+            let slotValue := tload(slot)
+            if slotValue {
+                // It should be impossible to reach this error because the first thing a
+                // transaction does on entry is to spend the slot value
+                mstore(0x00, 0x9936cbab) // selector for `ReentrantMetatransaction(bytes32)`
+                mstore(0x20, slotValue)
+                revert(0x1c, 0x24)
+            }
 
-    function _makesureFirstTimeSet(bytes32 slot) private view {
-        bytes32 currentValue;
-        assembly ("memory-safe") {
-            currentValue := tload(slot)
-        }
-        if (currentValue != bytes32(0)) {
-            revertConfusedDeputy();
+            tstore(slot, newValue)
         }
     }
 
