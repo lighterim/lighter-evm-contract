@@ -10,6 +10,8 @@ import {Escrow} from "../src/Escrow.sol";
 import {AllowanceHolder} from "../src/allowanceholder/AllowanceHolder.sol";
 import {MainnetTakeIntent} from "../src/chains/Mainnet/TakeIntent.sol";
 import {MainnetWaypoint} from "../src/chains/Mainnet/Waypoint.sol";
+import {PaymentMethodRegistry} from "../src/PaymentMethodRegistry.sol";
+import {ISettlerBase} from "../src/interfaces/ISettlerBase.sol";
 import {MockUSDC} from "../src/utils/TokenMock.sol";
 import {ZkVerifyProofVerifier} from "../src/chains/Mainnet/ZkVerifyProofVerifier.sol";
 
@@ -23,6 +25,7 @@ contract DeployerContract is Script {
     AllowanceHolder public allowanceHolder;
     MainnetWaypoint public mainnetWaypoint;
     MainnetTakeIntent public takeIntent;
+    PaymentMethodRegistry public paymentMethodRegistry;
     ZkVerifyProofVerifier public zkVerifyProofVerifier;
 
     uint256 public rentPrice = 0.00001 ether;
@@ -73,9 +76,22 @@ contract DeployerContract is Script {
         allowanceHolder = new AllowanceHolder();
         console.log("AllowanceHolder deployed at:", address(allowanceHolder));
         
-        // console.log("Deploying MainnetUserTxn...");
-        // userTxn = new MainnetUserTxn(deployer, escrow, lighterAccount, allowanceHolder);
-        // console.log("MainnetUserTxn deployed at:", address(userTxn));
+        console.log("Deploying PaymentMethodRegistry...");
+        paymentMethodRegistry = new PaymentMethodRegistry();
+        console.log("PaymentMethodRegistry deployed at:", address(paymentMethodRegistry));
+        paymentMethodRegistry.addPaymentMethodConfig(keccak256("wechat"), ISettlerBase.PaymentMethodConfig({
+            windowSeconds: 300,
+            isEnabled: true
+        }));
+        paymentMethodRegistry.addPaymentMethodConfig(keccak256("wise"), ISettlerBase.PaymentMethodConfig({
+            windowSeconds: 300,
+            isEnabled: true
+        }));
+        paymentMethodRegistry.addPaymentMethodConfig(keccak256("alipay"), ISettlerBase.PaymentMethodConfig({
+            windowSeconds: 300,
+            isEnabled: true
+        }));
+        // paymentMethodRegistry.addVerifier(bytes32(0), ISettlerBase.Stage.MANUAL, address(zkVerifyProofVerifier));
 
         console.log("Deploying MainnetTakeIntent...");
         takeIntent = new MainnetTakeIntent(deployer, escrow, lighterAccount, bytes20(0), allowanceHolder);
@@ -84,7 +100,7 @@ contract DeployerContract is Script {
         console.log("MainnetTakeIntent deployed at:", address(takeIntent));
 
         console.log("Deploying MainnetWaypoint...");
-        mainnetWaypoint = new MainnetWaypoint(deployer, escrow, lighterAccount, bytes20(0));
+        mainnetWaypoint = new MainnetWaypoint(deployer, escrow, lighterAccount, bytes20(0), paymentMethodRegistry);
         escrow.authorizeExecutor(address(mainnetWaypoint), true);
         lighterAccount.authorizeOperator(address(mainnetWaypoint), true);
         console.log("MainnetWaypoint deployed at:", address(mainnetWaypoint));

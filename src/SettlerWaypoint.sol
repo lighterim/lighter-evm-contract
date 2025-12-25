@@ -93,7 +93,7 @@ abstract contract SettlerWaypoint is ISettlerWaypoint, WaypointAbstract, Settler
     }
 
     function executeWaypoint(
-        bytes32 escrowTypedDataHash,
+        bytes32 /*escrowTypedDataHash*/,
         bytes[] calldata actions
     )
         external payable override

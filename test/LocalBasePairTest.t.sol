@@ -35,7 +35,7 @@ abstract contract BasePairTest is Test, GasSnapshot, Permit2Signature, LocalFork
     bytes32 internal immutable permit2Domain;
 
     constructor() {
-        permit2Domain = bytes32("");
+        permit2Domain = bytes32(0x94c1dec87927751697bfc9ebf6fc4ca506bed30308b518f0e9d6c5f74bbafdb8);
         // Note: Remove vm.label() call in constructor as it may trigger FFI
         // Label setting moved to setUp()
         // vm.label(address(PERMIT2), "LocalPermit2");

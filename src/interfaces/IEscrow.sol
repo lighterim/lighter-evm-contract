@@ -85,9 +85,9 @@ interface IEscrow {
      * @param seller The seller of the escrow
      * @param amount The amount of the escrow
      * @param sellerFee The fee of the seller
-     * @param status The status of the escrow
+     * @param windowSeconds The window seconds for the payment method
      */
-    function cancel(bytes32 escrowHash, uint256 id, address token, address buyer, address seller, uint256 amount, uint256 sellerFee, ISettlerBase.EscrowStatus status) external;
+    function cancel(bytes32 escrowHash, uint256 id, address token, address buyer, address seller, uint256 amount, uint256 sellerFee, uint256 windowSeconds) external;
 
     /**
      * cancel the escrow by buyer
@@ -106,8 +106,9 @@ interface IEscrow {
      * @param token The token of the escrow
      * @param buyer The buyer of the escrow
      * @param seller The seller of the escrow
+     * @param windowSeconds The window seconds for the payment method
      */
-    function requestCancel(bytes32 escrowHash, uint256 id, address token, address buyer, address seller) external;
+    function requestCancel(bytes32 escrowHash, uint256 id, address token, address buyer, address seller, uint256 windowSeconds) external;
 
     /**
      * dispute the escrow

@@ -5,24 +5,17 @@ pragma solidity ^0.8.25;
 import {MainnetMixin} from "./Common.sol";
 import {Settler} from "../../Settler.sol";
 
-import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
-import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
-import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import {ISettlerActions} from "../../ISettlerActions.sol";
 import {ISettlerBase} from "../../interfaces/ISettlerBase.sol";
-import {InvalidSpender, InvalidSignature, InvalidWitness, InvalidIntent, InsufficientQuota} from "../../core/SettlerErrors.sol";
+import {InvalidWitness, InvalidIntent} from "../../core/SettlerErrors.sol";
 
-import {SettlerAbstract} from "../../SettlerAbstract.sol";
-import {SettlerBase} from "../../SettlerBase.sol";
 import {ParamsHash} from "../../utils/ParamsHash.sol";
-import {Permit2PaymentAbstract} from "../../core/Permit2PaymentAbstract.sol";
 import {Permit2PaymentTakeIntent} from "../../core/Permit2Payment.sol";
 import {IAllowanceHolder} from "../../allowanceholder/IAllowanceHolder.sol";
 import {IEscrow} from "../../interfaces/IEscrow.sol";
 import {LighterAccount} from "../../account/LighterAccount.sol";
-import {Context} from "../../Context.sol";
 // import {console} from "forge-std/console.sol";
 
 contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {

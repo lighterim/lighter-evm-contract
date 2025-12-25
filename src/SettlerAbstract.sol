@@ -9,7 +9,7 @@ import {ParamsHash} from "./utils/ParamsHash.sol";
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
 
 import {
-    InvalidIntentSignature, IntentExpired, InvalidToken, InvalidAmount, InvalidPayment, InvalidPrice
+    InvalidIntentSignature, IntentExpired, InvalidToken, InvalidAmount
     } from "./core/SettlerErrors.sol";
 
 abstract contract SettlerAbstract is Context {

@@ -8,6 +8,7 @@ import {IAllowanceHolder} from "../../allowanceholder/IAllowanceHolder.sol";
 import {MainnetMixin} from "./Common.sol";
 import {SettlerWaypoint} from "../../SettlerWaypoint.sol";
 import {ISettlerActions} from "../../ISettlerActions.sol";
+import {IPaymentMethodRegistry} from "../../interfaces/IPaymentMethodRegistry.sol";
 
 
 import {SettlerAbstract} from "../../SettlerAbstract.sol";
@@ -25,11 +26,13 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
 
     using ParamsHash for ISettlerBase.EscrowParams;
 
-    constructor(address lighterRelayer, IEscrow escrow, LighterAccount lighterAccount, bytes20 gitCommit) 
+    IPaymentMethodRegistry public paymentMethodRegistry;
+
+    constructor(address lighterRelayer, IEscrow escrow, LighterAccount lighterAccount, bytes20 gitCommit, IPaymentMethodRegistry paymentMethodRegistry_) 
     MainnetMixin(lighterRelayer, escrow, lighterAccount, gitCommit)
     EIP712("MainnetWaypoint", "1")
     {
-
+        paymentMethodRegistry = paymentMethodRegistry_;
     } 
 
     function getDomainSeparator() public view returns (bytes32) {
@@ -68,9 +71,9 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
     function _requestCancelBySeller(address sender, ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) internal virtual override{
         (bytes32 escrowHash,) = makesureEscrowParams(_domainSeparator(), escrowParams, sig);
         if(!lighterAccount.isOwnerCall(escrowParams.seller, sender)) revert UnauthorizedCaller(sender);
-        //TODO: check the window for payment method
 
-        escrow.requestCancel(escrowHash, escrowParams.id, escrowParams.token, escrowParams.buyer, escrowParams.seller);
+        ISettlerBase.PaymentMethodConfig memory cfg = paymentMethodRegistry.getPaymentMethodConfig(escrowParams.paymentMethod);
+        escrow.requestCancel(escrowHash, escrowParams.id, escrowParams.token, escrowParams.buyer, escrowParams.seller, cfg.windowSeconds);
     }
 
     /**
@@ -94,12 +97,12 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
     function _cancelBySeller(address sender, ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) internal virtual override{
         (bytes32 escrowHash,) = makesureEscrowParams(_domainSeparator(), escrowParams, sig);
         if(!lighterAccount.isOwnerCall(escrowParams.seller, sender)) revert UnauthorizedCaller(sender);
-        //TODO: check the window for payment method
         
+        ISettlerBase.PaymentMethodConfig memory cfg = paymentMethodRegistry.getPaymentMethodConfig(escrowParams.paymentMethod);
         uint256 sellerFee = getFeeAmount(escrowParams.volume, escrowParams.sellerFeeRate);
         escrow.cancel(
             escrowHash, escrowParams.id, escrowParams.token, escrowParams.buyer, escrowParams.seller,
-            escrowParams.volume, sellerFee, ISettlerBase.EscrowStatus.SellerCancelled
+            escrowParams.volume, sellerFee, cfg.windowSeconds
         );
 
     }

@@ -4,23 +4,20 @@ pragma solidity ^0.8.25;
 
 import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
 import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer.sol";
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {ISettlerTakeIntent} from "./interfaces/ISettlerTakeIntent.sol";
 import {Permit2PaymentTakeIntent} from "./core/Permit2Payment.sol";
-import {Permit2PaymentAbstract} from "./core/Permit2PaymentAbstract.sol";
+
 // import {PermitHash} from "@uniswap/permit2/libraries/PermitHash.sol";
 
-import {CalldataDecoder, SettlerBase} from "./SettlerBase.sol";
+import {CalldataDecoder} from "./SettlerBase.sol";
 import {UnsafeMath} from "./utils/UnsafeMath.sol";
 
 import {ISettlerActions} from "./ISettlerActions.sol";
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
 import {ParamsHash} from "./utils/ParamsHash.sol";
 import {
-    revertActionInvalid, SignatureExpired, MsgValueMismatch, InvalidWitness, InvalidToken, InvalidAmount, 
-    InvalidPayment, InvalidPrice, InvalidPayer, InvalidIntent
+    revertActionInvalid, InvalidWitness, InvalidPayer, InvalidIntent
     } from "./core/SettlerErrors.sol";
-import {SettlerAbstract} from "./SettlerAbstract.sol";
 // import {console} from "forge-std/console.sol";
 
 

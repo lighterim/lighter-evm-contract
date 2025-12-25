@@ -3,14 +3,13 @@ pragma solidity ^0.8.25;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {LibString} from "solady/src/utils/LibString.sol";
 import "erc6551/src/interfaces/IERC6551Registry.sol";
 import "erc6551/src/interfaces/IERC6551Account.sol";
 import "../token/LighterTicket.sol";
 // import {console} from "forge-std/console.sol";
 import {
-    PendingTxExists, ZeroAddress, ZeroFunds, InvalidRecipient, InvalidRentPrice, HasPendingTx,
-    InsufficientPayment, WithdrawalFailed, PendingTxNotExists, InvalidSender, InvalidTokenId,
+    ZeroAddress, InvalidRecipient, InvalidRentPrice, HasPendingTx,
+    InsufficientPayment, WithdrawalFailed, InvalidSender, InvalidTokenId,
     UnauthorizedExecutor, NoPendingTx, InsufficientQuota
     } from "../core/SettlerErrors.sol";
 

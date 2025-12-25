@@ -95,6 +95,11 @@ error IntentExpired(uint256 expiryTime);
 
 error InvalidPaymentMethod();
 
+error CancelWithinWindow(uint256 canCancelTs);
+
+error SellerCancelWithinWindow(uint256 canCancelTs);
+
+
 
 /// @notice Thrown when a slippage limit is exceeded
 error TooMuchSlippage(IERC20 token, uint256 expected, uint256 actual);
