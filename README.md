@@ -313,7 +313,7 @@ forge test --match-path test/TakeIntent.t.sol --match-test testTakeSellerIntent 
 ```bash
 # Set environment variables
 export PRIV_KEY=your_private_key
-export DEPLOYER=0xD58382f295f5c98BAeB525FAbb7FEBcCc62bc63B
+export DEPLOYER=your_deployer_address
 export RPC_URL=your_rpc_url
 
 # Deploy contracts
@@ -333,7 +333,7 @@ forge verify-contract \
 ```bash
 # Deployment related
 export PRIV_KEY=your_private_key
-export DEPLOYER=0xD58382f295f5c98BAeB525FAbb7FEBcCc62bc63B
+export DEPLOYER=$deployer
 export RPC_URL=your_rpc_url
 
 # Contract addresses (update after deployment)
@@ -346,8 +346,8 @@ export TakeIntent=0x3DB826B7063bf8e51832B7350F7cbe359AEA3f60
 export BUYER_PRIVATE_KEY=your_buyer_private_key
 export SELLER_PRIVATE_KEY=your_seller_private_key
 export RELAYER_PRIVATE_KEY=your_relayer_private_key
-export BUYER_TBA=0x4Ec864B529fA42A01488f363572429FEA573ed5D
-export SELLER_TBA=0x39246289fF8A80fFd396C401C1cA1864A89BCEfd
+export BUYER_TBA=$your_tba_for_buyer
+export SELLER_TBA=$your_tba_for_seller
 export USDC=0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238
 
 # Create TBA account example
