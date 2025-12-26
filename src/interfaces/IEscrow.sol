@@ -58,10 +58,12 @@ interface IEscrow {
      * @param seller The seller of the escrow
      * @param sellerFee The fee of the seller
      * @param amount The amount of the escrow
-     
-     
      */
-    function releaseByVerifier(bytes32 escrowHash, uint256 id, address token, address buyer, uint256 buyerFee, address seller, uint256 sellerFee, uint256 amount) external;
+    function releaseByVerifier(
+        bytes32 escrowHash, uint256 id, address token,
+        address buyer, uint256 buyerFee, address seller, uint256 sellerFee,
+        uint256 amount
+        ) external;
 
     /**
      * release the escrow by executor
@@ -74,7 +76,11 @@ interface IEscrow {
      * @param sellerFee The fee of the seller
      * @param amount The amount of the escrow
      */
-    function releaseByExecutor(bytes32 escrowHash, uint256 id, address token, address buyer, uint256 buyerFee, address seller, uint256 sellerFee, uint256 amount) external;
+    function releaseBySeller(
+        bytes32 escrowHash, uint256 id, address token,
+        address buyer, uint256 buyerFee, address seller, uint256 sellerFee,
+        uint256 amount
+        ) external;
 
     /**
      * cancel the escrow
@@ -120,6 +126,9 @@ interface IEscrow {
      * @param status The status of the escrow
      */
     function dispute(bytes32 escrowHash, uint256 id, address token, address buyer, address seller, ISettlerBase.EscrowStatus status) external;
+
+    function resolve(bytes32 escrowHash, uint256 id, address token, address buyer, address seller) external;
+
 
     /**
      * claim token from credit of the buyer

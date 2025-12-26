@@ -49,6 +49,20 @@ abstract contract WaypointAbstract is Context {
      */
     function _disputeBySeller(address sender, ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) internal virtual;
 
+    /**
+     * The seller releases the escrow
+     * @param sender sender
+     * @param escrowParams escrow parameters
+     */
+    function _releaseBySeller(address sender, ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) internal virtual;
+
+    /**
+     * The resolver resolves the escrow
+     * @param sender sender
+     * @param escrowParams escrow parameters
+     */
+    function _resolve(address sender, ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) internal virtual;
+
     // /**
     //  * processing escrow transaction
     //  * @param escrowTypedHash escrow typed hash

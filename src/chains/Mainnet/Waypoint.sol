@@ -133,4 +133,21 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
 
     }
 
+    function _releaseBySeller(address sender, ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) internal virtual override{
+        (bytes32 escrowHash,) = makesureEscrowParams(_domainSeparator(), escrowParams, sig);
+        if(!lighterAccount.isOwnerCall(escrowParams.seller, sender)) revert UnauthorizedCaller(sender);
+
+        uint256 sellerFee = getFeeAmount(escrowParams.volume, escrowParams.sellerFeeRate);
+        uint256 buyerFee = getFeeAmount(escrowParams.volume, escrowParams.buyerFeeRate);
+
+        escrow.releaseBySeller(escrowHash, escrowParams.id, escrowParams.token, escrowParams.buyer, buyerFee, escrowParams.seller, sellerFee, escrowParams.volume);
+
+    }
+    
+    function _resolve(address sender, ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) internal virtual override{
+        (bytes32 escrowHash,) = makesureEscrowParams(_domainSeparator(), escrowParams, sig);
+        //TODO: check sender.
+
+        escrow.resolve(escrowHash, escrowParams.id, escrowParams.token, escrowParams.buyer, escrowParams.seller);
+    }
 }

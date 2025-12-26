@@ -53,6 +53,16 @@ abstract contract SettlerWaypoint is ISettlerWaypoint, WaypointAbstract, Settler
             _disputeBySeller(_msgSender(), escrowParams, sig);
             return true;
         }
+        else if(action == uint32(ISettlerActions.RELEASE_BY_SELLER.selector)) {
+            (ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) = abi.decode(data, (ISettlerBase.EscrowParams, bytes));
+            _releaseBySeller(_msgSender(), escrowParams, sig);
+            return true;
+        }
+        else if(action == uint32(ISettlerActions.RESOLVE.selector)) {
+            (ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) = abi.decode(data, (ISettlerBase.EscrowParams, bytes));
+            _resolve(_msgSender(), escrowParams, sig);
+            return true;
+        }
         return false;
     }
 
