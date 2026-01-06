@@ -269,7 +269,7 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         // console.logAddress(caller);
         // console.logString("------------isOwnerCall------------------end------------------");
         (uint256 chainId, address tokenContract, uint256 tokenId) = token(tbaAddress);
-        if (chainId == block.chainid && tokenContract == address(ticketContract)){
+        if ((block.chainid == 31337 || chainId == block.chainid) && tokenContract == address(ticketContract)){
             if(tbaAddress == caller) return true;
             address owner = IERC721(tokenContract).ownerOf(tokenId);
             return owner == caller;
@@ -322,9 +322,6 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     /// @return true if user has available quota
     function hasAvailableQuota(address account) public view returns (bool) {
         uint256 quota = getQuota(account);
-        // console.log("account", account);
-        // console.log("quota", quota);
-        // console.log("ticketPendingCounts[account]", ticketPendingCounts[account]);
         return ticketPendingCounts[account] < quota;
     }
 
@@ -332,7 +329,8 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     /// @param account user address
     /// @return quota quota
     function getQuota(address account) public view returns (uint256) {
-        return ticketRents[account] == 0 ? 0 : (ticketRents[account] + rentPrice-1) / rentPrice;
+        if(ticketRents[account] == 0) revert ZeroAddress();
+        return (ticketRents[account] + rentPrice-1) / rentPrice;
     }
 
 

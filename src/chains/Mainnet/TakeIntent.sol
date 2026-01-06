@@ -13,6 +13,7 @@ import {InvalidWitness, InvalidIntent} from "../../core/SettlerErrors.sol";
 
 import {ParamsHash} from "../../utils/ParamsHash.sol";
 import {Permit2PaymentTakeIntent} from "../../core/Permit2Payment.sol";
+import {IPaymentMethodRegistry} from "../../interfaces/IPaymentMethodRegistry.sol";
 import {IAllowanceHolder} from "../../allowanceholder/IAllowanceHolder.sol";
 import {IEscrow} from "../../interfaces/IEscrow.sol";
 import {LighterAccount} from "../../account/LighterAccount.sol";
@@ -26,9 +27,9 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
     
     constructor(
         address lighterRelayer, IEscrow escrow, LighterAccount lighterAccount,
-        bytes20 gitCommit, IAllowanceHolder allowanceHolder
+        IPaymentMethodRegistry paymentMethodRegistry, bytes20 gitCommit, IAllowanceHolder allowanceHolder
         ) 
-        MainnetMixin(lighterRelayer, escrow, lighterAccount, gitCommit)
+        MainnetMixin(lighterRelayer, escrow, lighterAccount, paymentMethodRegistry, gitCommit)
         Permit2PaymentTakeIntent( allowanceHolder)
         EIP712("MainnetTakeIntent", "1") 
     {

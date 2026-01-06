@@ -45,8 +45,9 @@ interface IEscrow {
      * @param id the id of escrow trade
      * @param token The token of the escrow
      * @param buyer The buyer of the escrow
+     * @param paymentWindowSeconds The window seconds for the payment method
      */
-    function paid(bytes32 escrowHash, uint256 id, address token, address buyer) external;
+    function paid(bytes32 escrowHash, uint256 id, address token, address buyer, uint64 paymentWindowSeconds) external;
 
     /**
      * release the escrow
@@ -156,6 +157,7 @@ interface IEscrow {
     event CancelledByBuyer(address indexed token, address indexed buyer, address indexed seller, bytes32 escrowHash, uint256 id);
     event DisputedByBuyer(address indexed token, address indexed buyer, address indexed seller, bytes32 escrowHash, uint256 id);
     event DisputedBySeller(address indexed token, address indexed buyer, address indexed seller, bytes32 escrowHash, uint256 id);
+    event Resolved(address indexed token, address indexed buyer, address indexed seller, bytes32 escrowHash, uint256 id);
     event Claimed(address indexed token, address indexed tba, address indexed to, uint256 amount);
     event CollectedFee(address indexed token, address indexed to, uint256 amount);
 

@@ -94,13 +94,13 @@ contract DeployerContract is Script {
         // paymentMethodRegistry.addVerifier(bytes32(0), ISettlerBase.Stage.MANUAL, address(zkVerifyProofVerifier));
 
         console.log("Deploying MainnetTakeIntent...");
-        takeIntent = new MainnetTakeIntent(deployer, escrow, lighterAccount, bytes20(0), allowanceHolder);
+        takeIntent = new MainnetTakeIntent(deployer, escrow, lighterAccount, paymentMethodRegistry, bytes20(0), allowanceHolder);
         escrow.authorizeCreator(address(takeIntent), true);
         lighterAccount.authorizeOperator(address(takeIntent), true);
         console.log("MainnetTakeIntent deployed at:", address(takeIntent));
 
         console.log("Deploying MainnetWaypoint...");
-        mainnetWaypoint = new MainnetWaypoint(deployer, escrow, lighterAccount, bytes20(0), paymentMethodRegistry);
+        mainnetWaypoint = new MainnetWaypoint(deployer, escrow, lighterAccount, paymentMethodRegistry, bytes20(0));
         escrow.authorizeExecutor(address(mainnetWaypoint), true);
         lighterAccount.authorizeOperator(address(mainnetWaypoint), true);
         console.log("MainnetWaypoint deployed at:", address(mainnetWaypoint));

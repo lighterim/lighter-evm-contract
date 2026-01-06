@@ -26,13 +26,10 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
 
     using ParamsHash for ISettlerBase.EscrowParams;
 
-    IPaymentMethodRegistry public paymentMethodRegistry;
-
-    constructor(address lighterRelayer, IEscrow escrow, LighterAccount lighterAccount, bytes20 gitCommit, IPaymentMethodRegistry paymentMethodRegistry_) 
-    MainnetMixin(lighterRelayer, escrow, lighterAccount, gitCommit)
+    constructor(address lighterRelayer, IEscrow escrow, LighterAccount lighterAccount, IPaymentMethodRegistry paymentMethodRegistry, bytes20 gitCommit) 
+    MainnetMixin(lighterRelayer, escrow, lighterAccount, paymentMethodRegistry, gitCommit)
     EIP712("MainnetWaypoint", "1")
     {
-        paymentMethodRegistry = paymentMethodRegistry_;
     } 
 
     function getDomainSeparator() public view returns (bytes32) {
@@ -60,7 +57,8 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
         (bytes32 escrowHash,) = makesureEscrowParams(_domainSeparator(), escrowParams, sig);
         if(!lighterAccount.isOwnerCall(escrowParams.buyer, sender)) revert UnauthorizedCaller(sender);
 
-        escrow.paid(escrowHash, escrowParams.id, escrowParams.token, escrowParams.buyer);
+        ISettlerBase.PaymentMethodConfig memory cfg = _getPaymentMethodConfig(escrowParams.paymentMethod);
+        escrow.paid(escrowHash, escrowParams.id, escrowParams.token, escrowParams.buyer, cfg.windowSeconds);
     }
 
     /**
@@ -72,7 +70,7 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
         (bytes32 escrowHash,) = makesureEscrowParams(_domainSeparator(), escrowParams, sig);
         if(!lighterAccount.isOwnerCall(escrowParams.seller, sender)) revert UnauthorizedCaller(sender);
 
-        ISettlerBase.PaymentMethodConfig memory cfg = paymentMethodRegistry.getPaymentMethodConfig(escrowParams.paymentMethod);
+        ISettlerBase.PaymentMethodConfig memory cfg = _getPaymentMethodConfig(escrowParams.paymentMethod);
         escrow.requestCancel(escrowHash, escrowParams.id, escrowParams.token, escrowParams.buyer, escrowParams.seller, cfg.windowSeconds);
     }
 
@@ -98,7 +96,7 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
         (bytes32 escrowHash,) = makesureEscrowParams(_domainSeparator(), escrowParams, sig);
         if(!lighterAccount.isOwnerCall(escrowParams.seller, sender)) revert UnauthorizedCaller(sender);
         
-        ISettlerBase.PaymentMethodConfig memory cfg = paymentMethodRegistry.getPaymentMethodConfig(escrowParams.paymentMethod);
+        ISettlerBase.PaymentMethodConfig memory cfg = _getPaymentMethodConfig(escrowParams.paymentMethod);
         uint256 sellerFee = getFeeAmount(escrowParams.volume, escrowParams.sellerFeeRate);
         escrow.cancel(
             escrowHash, escrowParams.id, escrowParams.token, escrowParams.buyer, escrowParams.seller,

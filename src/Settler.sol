@@ -49,6 +49,7 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent {
             if (escrowTypedHash != getWitness()) {
                 revert InvalidWitness();
             }
+            _makesurePaymentMethod(escrowParams.paymentMethod);
             clearWitness();
         }
         else if(action == uint32(ISettlerActions.SIGNATURE_TRANSFER_FROM.selector)) {
@@ -149,10 +150,9 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent {
         return true;
     }
 
-    function _makesureTokenPermissions(ISignatureTransfer.TokenPermissions memory tokenPermissions) internal view returns (bool) {
+    function _makesureTokenPermissions(ISignatureTransfer.TokenPermissions memory tokenPermissions) internal view {
         bytes32 tokenPermissionsHash = tokenPermissions.hash();
         if(tokenPermissionsHash != getTokenPermissionsHash()) revert InvalidTokenPermissions();
-        return true;
     }
 
     function execute(address payer, bytes32 tokenPermissionsHash, bytes32 escrowTypedHash, bytes32 intentTypeHash, bytes[] calldata actions)

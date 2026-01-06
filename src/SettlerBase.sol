@@ -8,10 +8,11 @@ import {FullMath} from "./vendor/FullMath.sol";
 
 import {ISettlerActions} from "./ISettlerActions.sol";
 import {
-    revertConfusedDeputy
+    revertConfusedDeputy, InvalidPaymentMethod
 } from "./core/SettlerErrors.sol";
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
 import {SettlerAbstract} from "./SettlerAbstract.sol";
+import {IPaymentMethodRegistry} from "./interfaces/IPaymentMethodRegistry.sol";
 
 import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
 import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer.sol";
@@ -211,6 +212,7 @@ abstract contract SettlerBase is ISettlerBase, SettlerAbstract {
     using FullMath for uint256;
 
     uint256 constant FEE_RATE_BASE = 10000;
+    IPaymentMethodRegistry internal paymentMethodRegistry;
 
     receive() external payable {}
 
@@ -219,13 +221,14 @@ abstract contract SettlerBase is ISettlerBase, SettlerAbstract {
     // When/if you change this, you must make corresponding changes to
     // `sh/deploy_new_chain.sh` and 'sh/common_deploy_settler.sh' to set
     // `constructor_args`.
-    constructor(bytes20 gitCommit) {
+    constructor(bytes20 gitCommit, IPaymentMethodRegistry paymentMethodRegistry_) {
         if (block.chainid != 31337) {
             emit GitCommit(gitCommit);
             // assert(IERC721Owner(DEPLOYER).ownerOf(_tokenId()) == address(this));
         } else {
             assert(gitCommit == bytes20(0));
         }
+        paymentMethodRegistry = paymentMethodRegistry_;
     }
 
     // function _msgSender() internal view virtual override(AbstractContext, Context) returns (address) {
@@ -298,4 +301,12 @@ abstract contract SettlerBase is ISettlerBase, SettlerAbstract {
 
     function _dispatchVIP(uint256 action, bytes calldata data) internal virtual returns (bool);
 
+    function _makesurePaymentMethod(bytes32 paymentMethod) internal view{
+        ISettlerBase.PaymentMethodConfig memory cfg = paymentMethodRegistry.getPaymentMethodConfig(paymentMethod);
+        if(!cfg.isEnabled) revert InvalidPaymentMethod();
+    }
+
+    function _getPaymentMethodConfig(bytes32 paymentMethod) internal view returns (ISettlerBase.PaymentMethodConfig memory){
+        return paymentMethodRegistry.getPaymentMethodConfig(paymentMethod);
+    }
 }

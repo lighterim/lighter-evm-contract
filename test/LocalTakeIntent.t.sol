@@ -15,6 +15,8 @@ import {ERC6551Registry} from "../src/account/ERC6551Registry.sol";
 import {AccountV3Simplified} from "../src/account/AccountV3.sol";
 import {MockUSDC} from "../src/utils/TokenMock.sol";
 import {AllowanceHolder} from "../src/allowanceholder/AllowanceHolder.sol";
+import {IPaymentMethodRegistry} from "../src/interfaces/IPaymentMethodRegistry.sol";
+import {PaymentMethodRegistry} from "../src/PaymentMethodRegistry.sol";
 import {IAllowanceHolder} from "../src/allowanceholder/IAllowanceHolder.sol";
 import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer.sol";
 import {IEscrow} from "../src/interfaces/IEscrow.sol";
@@ -37,6 +39,7 @@ contract LocalTakeIntentTest is Permit2Signature {
     IAllowanceHolder allowanceHolder;
     Escrow escrow;
     LighterAccount lighterAccount;
+    IPaymentMethodRegistry internal paymentMethodRegistry;
     MainnetTakeIntent internal settler;
     
 
@@ -84,10 +87,26 @@ contract LocalTakeIntentTest is Permit2Signature {
         console.log("seller getQuota", lighterAccount.getQuota(seller));
         console.log("buyer getQuota", lighterAccount.getQuota(buyer));
 
+        paymentMethodRegistry = new PaymentMethodRegistry();
+        paymentMethodRegistry.addPaymentMethodConfig(keccak256("wechat"), ISettlerBase.PaymentMethodConfig({
+            windowSeconds: 300,
+            isEnabled: true
+        }));
+        paymentMethodRegistry.addPaymentMethodConfig(keccak256("wise"), ISettlerBase.PaymentMethodConfig({
+            windowSeconds: 300,
+            isEnabled: true
+        }));
+        paymentMethodRegistry.addPaymentMethodConfig(keccak256("alipay"), ISettlerBase.PaymentMethodConfig({
+            windowSeconds: 300,
+            isEnabled: true
+        }));
+
+
         settler = new MainnetTakeIntent(
             relayer,
             escrow,
             lighterAccount,
+            paymentMethodRegistry,
             bytes20(0),
             allowanceHolder
         );
