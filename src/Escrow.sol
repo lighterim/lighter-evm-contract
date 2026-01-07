@@ -212,7 +212,7 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
     }
 
     function cancel(
-        bytes32 escrowHash, uint256 id, address token, address buyer, address seller, uint256 amount, 
+        bytes32 escrowHash, ISettlerBase.EscrowParams memory escrowParams, 
         uint256 sellerFee, uint256 windowSeconds
     ) external onlyAuthorizedExecutor nonReentrant{
         ISettlerBase.EscrowStatus status = allEscrow[escrowHash].status;
@@ -226,14 +226,13 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
             if(block.timestamp < canCancelTs) revert SellerCancelWithinWindow(canCancelTs);
         }
         
-        uint256 refundAmount = amount + sellerFee;
-        sellerEscrow[seller][token] -= refundAmount;
-        //TODO: use payer instead of seller
-        IERC20(token).safeTransfer(seller, refundAmount);
+        uint256 refundAmount = escrowParams.volume + sellerFee;
+        sellerEscrow[escrowParams.seller][escrowParams.token] -= refundAmount;
+        IERC20(escrowParams.token).safeTransfer(escrowParams.payer, refundAmount);
 
         _setStatus(escrowHash, uint64(block.timestamp), ISettlerBase.EscrowStatus.SellerCancelled, 0, 0, 0);
 
-        emit Cancelled(token, buyer, seller, escrowHash, id, amount, ISettlerBase.EscrowStatus.SellerCancelled);
+        emit Cancelled(escrowParams.token, escrowParams.buyer, escrowParams.seller, escrowHash, escrowParams.id, escrowParams.volume, ISettlerBase.EscrowStatus.SellerCancelled);
     }
 
     function dispute(

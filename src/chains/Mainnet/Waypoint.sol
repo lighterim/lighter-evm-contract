@@ -102,8 +102,7 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
         ISettlerBase.PaymentMethodConfig memory cfg = _getPaymentMethodConfig(escrowParams.paymentMethod);
         uint256 sellerFee = getFeeAmount(escrowParams.volume, escrowParams.sellerFeeRate);
         escrow.cancel(
-            escrowHash, escrowParams.id, escrowParams.token, escrowParams.buyer, escrowParams.seller,
-            escrowParams.volume, sellerFee, cfg.windowSeconds
+            escrowHash, escrowParams, sellerFee, cfg.windowSeconds
         );
 
     }

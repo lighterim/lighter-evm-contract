@@ -86,15 +86,11 @@ interface IEscrow {
     /**
      * cancel the escrow
      * @param escrowHash The hash of the escrow
-     * @param id the id of escrow trade
-     * @param token The token of the escrow
-     * @param buyer The buyer of the escrow
-     * @param seller The seller of the escrow
-     * @param amount The amount of the escrow
+     * @param escrowParams The parameters of the escrow
      * @param sellerFee The fee of the seller
      * @param windowSeconds The window seconds for the payment method
      */
-    function cancel(bytes32 escrowHash, uint256 id, address token, address buyer, address seller, uint256 amount, uint256 sellerFee, uint256 windowSeconds) external;
+    function cancel(bytes32 escrowHash, ISettlerBase.EscrowParams memory escrowParams, uint256 sellerFee, uint256 windowSeconds) external;
 
     /**
      * cancel the escrow by buyer
