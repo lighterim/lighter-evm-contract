@@ -60,8 +60,21 @@ abstract contract WaypointAbstract is Context {
      * The resolver resolves the escrow
      * @param sender sender
      * @param escrowParams escrow parameters
+     * @param buyerThresholdBp buyer threshold in basis points
+     * @param tbaArbitrator tba arbitrator
+     * @param sig signature of the sender
+     * @param arbitratorSig signature of the arbitrator
+     * @param counterpartySig signature of the counterparty
      */
-    function _resolve(address sender, ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) internal virtual;
+    function _resolve(
+        address sender, 
+        ISettlerBase.EscrowParams memory escrowParams, 
+        uint16 buyerThresholdBp, 
+        address tbaArbitrator, 
+        bytes memory sig, 
+        bytes memory arbitratorSig, 
+        bytes memory counterpartySig
+    ) internal virtual;
 
     // /**
     //  * processing escrow transaction

@@ -211,7 +211,8 @@ abstract contract SettlerBase is ISettlerBase, SettlerAbstract {
     using SafeTransferLib for address payable;
     using FullMath for uint256;
 
-    uint256 constant FEE_RATE_BASE = 10000;
+    uint256 constant public BASIS_POINTS_BASE = 10000;
+    
     IPaymentMethodRegistry internal paymentMethodRegistry;
 
     receive() external payable {}
@@ -286,7 +287,7 @@ abstract contract SettlerBase is ISettlerBase, SettlerAbstract {
      * @return The amount with fee
      */
     function getAmountWithFee(uint256 amount, uint256 feeRate) public pure returns (uint256) {
-        return amount.mulDivUp(FEE_RATE_BASE + feeRate, FEE_RATE_BASE);
+        return amount.mulDivUp(BASIS_POINTS_BASE + feeRate, BASIS_POINTS_BASE);
     }
 
     /**
@@ -296,7 +297,7 @@ abstract contract SettlerBase is ISettlerBase, SettlerAbstract {
      * @return The fee amount
      */
     function getFeeAmount(uint256 amount, uint256 feeRate) public pure returns (uint256) {
-        return amount.mulDivUp(feeRate, FEE_RATE_BASE);
+        return amount.mulDivUp(feeRate, BASIS_POINTS_BASE);
     }
 
     function _dispatchVIP(uint256 action, bytes calldata data) internal virtual returns (bool);

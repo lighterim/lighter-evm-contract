@@ -55,6 +55,12 @@ error InvalidZkProof();
 
 error AccountAlreadyCreated();
 
+error InvalidArbitratorTicket();
+
+error InvalidArbitratorSignature();
+
+error InvalidCounterpartySignature();
+
 error HasPendingTx(address account);
 
 error PendingTxExists(address account, bytes32 escrowHash);

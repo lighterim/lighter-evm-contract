@@ -19,16 +19,19 @@ import {IEscrow} from "../../interfaces/IEscrow.sol";
 import {LighterAccount} from "../../account/LighterAccount.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {ParamsHash} from "../../utils/ParamsHash.sol";
-import {UnauthorizedCaller} from "../../core/SettlerErrors.sol";
+import {UnauthorizedCaller, InvalidArbitratorTicket, InvalidArbitratorSignature} from "../../core/SettlerErrors.sol";
 
 
 contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
 
     using ParamsHash for ISettlerBase.EscrowParams;
 
-    constructor(address lighterRelayer, IEscrow escrow, LighterAccount lighterAccount, IPaymentMethodRegistry paymentMethodRegistry, bytes20 gitCommit) 
-    MainnetMixin(lighterRelayer, escrow, lighterAccount, paymentMethodRegistry, gitCommit)
-    EIP712("MainnetWaypoint", "1")
+    constructor(
+        address lighterRelayer, IEscrow escrow, LighterAccount lighterAccount, 
+        IPaymentMethodRegistry paymentMethodRegistry, bytes20 gitCommit
+        )
+        MainnetMixin(lighterRelayer, escrow, lighterAccount, paymentMethodRegistry, gitCommit)
+        EIP712("MainnetWaypoint", "1")
     {
     } 
 
@@ -142,10 +145,30 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
 
     }
     
-    function _resolve(address sender, ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) internal virtual override{
-        (bytes32 escrowHash,) = makesureEscrowParams(_domainSeparator(), escrowParams, sig);
-        //TODO: check sender.
+    function _resolve(
+        address sender, 
+        ISettlerBase.EscrowParams memory escrowParams, 
+        uint16 buyerThresholdBp, 
+        address tbaArbitrator, 
+        bytes memory sig, 
+        bytes memory arbitratorSig, 
+        bytes memory counterpartySig
+    ) internal virtual override{
+        if(lighterAccount.getTicketType(tbaArbitrator) != ISettlerBase.TicketType.GENESIS2) revert InvalidArbitratorTicket();
+        (bytes32 escrowHash, bytes32 escrowTypedHash) = makesureEscrowParams(_domainSeparator(), escrowParams, sig);
+        if(!isValidSignature(tbaArbitrator, escrowTypedHash, arbitratorSig)) revert InvalidArbitratorSignature();
+        if(
+            !lighterAccount.isOwnerCall(escrowParams.buyer, sender) 
+            && !lighterAccount.isOwnerCall(escrowParams.seller, sender)
+            && !lighterAccount.isOwnerCall(tbaArbitrator, sender)
+        ) revert UnauthorizedCaller(sender);
 
-        escrow.resolve(escrowHash, escrowParams.id, escrowParams.token, escrowParams.buyer, escrowParams.seller);
+        uint256 sellerFee = getFeeAmount(escrowParams.volume, escrowParams.sellerFeeRate);
+        uint256 buyerFee = getFeeAmount(escrowParams.volume, escrowParams.buyerFeeRate);
+        escrow.resolve(
+            escrowHash, escrowParams, 
+            buyerFee, sellerFee,
+            buyerThresholdBp, tbaArbitrator, escrowTypedHash, counterpartySig
+        );
     }
 }

@@ -59,8 +59,23 @@ abstract contract SettlerWaypoint is ISettlerWaypoint, WaypointAbstract, Settler
             return true;
         }
         else if(action == uint32(ISettlerActions.RESOLVE.selector)) {
-            (ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) = abi.decode(data, (ISettlerBase.EscrowParams, bytes));
-            _resolve(_msgSender(), escrowParams, sig);
+            (
+                ISettlerBase.EscrowParams memory escrowParams, 
+                uint16 buyerThresholdBp,
+                address tbaArbitrator,
+                bytes memory sig, 
+                bytes memory arbitratorSig, 
+                bytes memory counterpartySig
+            ) = abi.decode(data, (ISettlerBase.EscrowParams, uint16, address, bytes, bytes, bytes));
+            _resolve(
+                _msgSender(), 
+                escrowParams, 
+                buyerThresholdBp, 
+                tbaArbitrator, 
+                sig, 
+                arbitratorSig, 
+                counterpartySig
+            );
             return true;
         }
         return false;
@@ -83,8 +98,7 @@ abstract contract SettlerWaypoint is ISettlerWaypoint, WaypointAbstract, Settler
 
     function _executeWaypoint(bytes[] calldata actions)
         internal
-        returns (bool)
-    {
+        returns (bool){   
         if(actions.length == 0) revertActionInvalid(0, 0, msg.data[0:0]);
 
         (uint256 action, bytes calldata data) = actions.decodeCall(0);

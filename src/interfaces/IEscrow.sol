@@ -128,7 +128,11 @@ interface IEscrow {
      */
     function dispute(bytes32 escrowHash, uint256 id, address token, address buyer, address seller, ISettlerBase.EscrowStatus status) external;
 
-    function resolve(bytes32 escrowHash, uint256 id, address token, address buyer, address seller) external;
+    function resolve(
+        bytes32 escrowHash, ISettlerBase.EscrowParams memory escrowParams,
+        uint256 buyerFee, uint256 sellerFee,
+        uint16 buyerThresholdBp, address tbaArbitrator, bytes32 escrowTypedHash, bytes memory counterpartySig
+    ) external;
 
 
     /**
@@ -157,7 +161,7 @@ interface IEscrow {
     event CancelledByBuyer(address indexed token, address indexed buyer, address indexed seller, bytes32 escrowHash, uint256 id);
     event DisputedByBuyer(address indexed token, address indexed buyer, address indexed seller, bytes32 escrowHash, uint256 id);
     event DisputedBySeller(address indexed token, address indexed buyer, address indexed seller, bytes32 escrowHash, uint256 id);
-    event Resolved(address indexed token, address indexed buyer, address indexed seller, bytes32 escrowHash, uint256 id);
+    event Resolved(address indexed token, address indexed buyer, address indexed seller, bytes32 escrowHash, uint256 id, address tbaArbitrator, uint256 buyerThresholdBp);
     event Claimed(address indexed token, address indexed tba, address indexed to, uint256 amount);
     event CollectedFee(address indexed token, address indexed to, uint256 amount);
 

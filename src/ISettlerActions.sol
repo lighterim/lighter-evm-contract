@@ -55,7 +55,12 @@ interface ISettlerActions {
 
     function RELEASE_BY_SELLER(ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) external;
 
-    function RESOLVE(ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) external;
+    function RESOLVE(
+        ISettlerBase.EscrowParams memory escrowParams,
+        uint16 buyerThresholdBp, // buyer threshold in basis points
+        address tbaArbitrator, 
+        bytes memory sig, bytes memory arbitratorSig, bytes memory counterpartySig
+        ) external;
 
 
     function RELEASE_BY_VERIFIER(ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) external;

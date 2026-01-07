@@ -6,6 +6,7 @@ import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
 import {IEscrow} from "./interfaces/IEscrow.sol";
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
@@ -15,7 +16,7 @@ import {LighterAccount} from "./account/LighterAccount.sol";
 import {
     EscrowAlreadyExists, EscrowNotExists, InvalidEscrowStatus, InsufficientBalance, 
     TokenNotWhitelisted, UnauthorizedCreator, UnauthorizedExecutor, UnauthorizedVerifier, 
-    UnauthorizedCaller, CancelWithinWindow, SellerCancelWithinWindow
+    UnauthorizedCaller, CancelWithinWindow, SellerCancelWithinWindow, InvalidCounterpartySignature
     } from "./core/SettlerErrors.sol";
 
 
@@ -23,6 +24,9 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
 
     using SafeTransferLib for IERC20;
     using FullMath for uint256;
+
+    /// @notice Basis points base (10000 = 100%)
+    uint256 public constant BASIS_POINTS_BASE = 10000;
 
     LighterAccount public immutable lighterAccount;
     address public feeCollector;
@@ -254,17 +258,45 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         }
     }
 
-    function resolve(bytes32 escrowHash, uint256 id, address token, address buyer, address seller) external onlyAuthorizedExecutor{
+    function resolve(
+        bytes32 escrowHash, ISettlerBase.EscrowParams memory escrowParams,
+        uint256 buyerFee, uint256 sellerFee,
+        uint16 buyerThresholdBp, address tbaArbitrator, bytes32 escrowTypedHash, bytes memory counterpartySig
+    ) external onlyAuthorizedExecutor{
         ISettlerBase.EscrowStatus status = allEscrow[escrowHash].status;
         if(
             status != ISettlerBase.EscrowStatus.BuyerDisputed
             && status != ISettlerBase.EscrowStatus.SellerDisputed
         ) revert InvalidEscrowStatus(escrowHash, status);
+        if(
+            status == ISettlerBase.EscrowStatus.BuyerDisputed 
+            && !SignatureChecker.isValidSignatureNow(escrowParams.seller, escrowTypedHash, counterpartySig)
+        ) revert InvalidCounterpartySignature();
+        if (
+            status == ISettlerBase.EscrowStatus.SellerDisputed 
+            && !SignatureChecker.isValidSignatureNow(escrowParams.buyer, escrowTypedHash, counterpartySig)
+        ) revert InvalidCounterpartySignature();
         
+        sellerEscrow[escrowParams.seller][escrowParams.token] -= (escrowParams.volume + sellerFee);
+        userCredit[tbaArbitrator][escrowParams.token] += sellerFee;
+        if(buyerThresholdBp == 0){
+            IERC20(escrowParams.token).safeTransfer(escrowParams.payer, escrowParams.volume);
+        }
+        else {
+            userCredit[feeCollector][escrowParams.token] += buyerFee;
+            uint256 buyerAmount = escrowParams.volume - buyerFee;
+            if(buyerThresholdBp >= BASIS_POINTS_BASE){
+                userCredit[escrowParams.buyer][escrowParams.token] += buyerAmount;
+            }
+            else{
+                uint256 buyerResolveAmount = buyerAmount * buyerThresholdBp / BASIS_POINTS_BASE;
+                userCredit[escrowParams.payer][escrowParams.token] += buyerResolveAmount;
+                IERC20(escrowParams.token).safeTransfer(escrowParams.payer, buyerAmount - buyerResolveAmount);
+            }
+        }
         _setStatus(escrowHash, uint64(block.timestamp), ISettlerBase.EscrowStatus.Resolved, 0, 0, 0);
 
-        emit Resolved(token, buyer, seller, escrowHash, id);
-        
+        emit Resolved(escrowParams.token, escrowParams.buyer, escrowParams.seller, escrowHash, escrowParams.id, tbaArbitrator, buyerThresholdBp);
     }
 
     function _setStatus(bytes32 escrowHash, uint64 timestamp, ISettlerBase.EscrowStatus status, uint64 paidSeconds, uint64 releaseSeconds, uint64 cancelTs) private {
