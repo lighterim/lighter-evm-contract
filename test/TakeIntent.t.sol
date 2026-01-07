@@ -39,7 +39,7 @@ contract TakeIntentTest is BasePairTest, Utils {
     }
 
     function _testBlockNumber() internal pure virtual override returns (uint256) {
-        return 9904727;
+        return 9997241;
     }
     
 

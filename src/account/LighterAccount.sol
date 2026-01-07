@@ -352,31 +352,6 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         );
     }
 
-    // /**
-    //  * @notice Batch calculate TBA addresses for multiple NFTs
-    //  * @param tokenIds Array of NFT token IDs
-    //  * @return Array of TBA addresses
-    //  */
-    // function batchGetAccountAddresses(uint256[] calldata tokenIds) 
-    //     external 
-    //     view 
-    //     returns (address[] memory) 
-    // {
-    //     address[] memory tbaAddresses = new address[](tokenIds.length);
-        
-    //     for (uint256 i = 0; i < tokenIds.length; i++) {
-    //         tbaAddresses[i] = IERC6551Registry(registry).account(
-    //             accountImpl,
-    //             salt,
-    //             block.chainid,
-    //             address(ticketContract),
-    //             tokenIds[i]
-    //         );
-    //     }
-        
-    //     return tbaAddresses;
-    // }
-
     /// @notice check if user has available quota
     /// @param account user address
     /// @return true if user has available quota
@@ -427,34 +402,6 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         emit RentPriceUpdated(oldPrice, newPrice);
     }
 
-    // /**
-    //  * @notice Withdraw ETH from contract
-    //  */
-    // function withdraw() external onlyOwner {
-    //     uint256 balance = address(this).balance;
-    //     if (balance == 0) revert ZeroFunds();
-        
-    //     (bool success, ) = msg.sender.call{value: balance}("");
-    //     if (!success) revert WithdrawalFailed();
-        
-    //     emit FundsWithdrawn(msg.sender, balance);
-    // }
-
-    // /**
-    //  * @notice Withdraw specified amount of ETH
-    //  * @param amount Amount to withdraw
-    //  */
-    // function withdrawAmount(uint256 amount) external onlyOwner {
-    //     require(amount > 0 && amount <= address(this).balance, "Invalid amount");
-        
-    //     (bool success, ) = msg.sender.call{value: amount}("");
-    //     if (!success) revert WithdrawalFailed();
-        
-    //     emit FundsWithdrawn(msg.sender, amount);
-    // }
-
-    // ============ View Functions ============
-
     /**
      * @notice Get contract balance
      * @return ETH balance in contract
@@ -462,14 +409,5 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     function getBalance() external view returns (uint256) {
         return address(this).balance;
     }
-
-    // /**
-    //  * @notice Calculate total price for batch minting
-    //  * @param count Number of mints
-    //  * @return Total price
-    //  */
-    // function calculateTotalPrice(uint256 count) external view returns (uint256) {
-    //     return mintPrice * count;
-    // }
 }
 

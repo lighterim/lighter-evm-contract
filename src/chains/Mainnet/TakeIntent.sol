@@ -46,7 +46,7 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
         return _hashTypedDataV4(intentHash);
     }
 
-    function getTokenPermissionsHash(ISignatureTransfer.TokenPermissions memory tokenPermissions) public view returns (bytes32) {   
+    function getTokenPermissionsHash(ISignatureTransfer.TokenPermissions memory tokenPermissions) public pure returns (bytes32) {   
         return tokenPermissions.hash();
     }
 

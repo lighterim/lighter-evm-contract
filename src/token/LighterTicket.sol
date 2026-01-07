@@ -65,7 +65,7 @@ contract LighterTicket is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
     }
 
     function genesisMint(address to, uint8 start, uint8 end, uint256 startIndex) external onlyOwner {
-        if(_tokenIdCounter > 0) revert DenyMint();
+        if(_tokenIdCounter > 256) revert DenyMint();
         if(startIndex < end) revert InvalidIndex();
         
         for (uint8 tokenId = start; tokenId <= end; tokenId++) {
