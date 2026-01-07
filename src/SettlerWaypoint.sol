@@ -102,11 +102,10 @@ abstract contract SettlerWaypoint is ISettlerWaypoint, WaypointAbstract, Settler
         return true;
     }
 
-    function executeWaypoint(
+    function execute(
         bytes32 /*escrowTypedDataHash*/,
         bytes[] calldata actions
-    )
-        external payable override
+    ) external payable override
         //placeWaypoint(msg.sender, escrowTypedDataHash)
         returns (bool) {
         return _executeWaypoint(actions);

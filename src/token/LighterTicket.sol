@@ -22,8 +22,13 @@ contract LighterTicket is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
     // Token counter for minting
     uint256 private _tokenIdCounter;
 
+    error DenyMint();
+    error TokenURIAlreadySet();
+    error InvalidIndex();
+
     // Events
     event TokenMinted(address indexed to, uint256 indexed tokenId, bytes32 nostrPubKey);
+    event GenesisMinted(address indexed to, uint8 start, uint8 end);
     event TokenBurned(uint256 indexed tokenId, string hexNostrPubKey);
     event BaseURIUpdated(string newBaseURI);
 
@@ -39,23 +44,7 @@ contract LighterTicket is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
         string memory baseUri_
     ) ERC721(name_, symbol_) Ownable(msg.sender) {
         _baseTokenUri = baseUri_;
-        _tokenIdCounter = 1; // Start token IDs from 1
     }
-
-    // /**
-    //  * @dev Mint a single NFT to an address
-    //  * @param to Address to mint the NFT to
-    //  * @return tokenId The ID of the minted token
-    //  */
-    // function mint(address to) external onlyOwner returns (uint256) {
-    //     uint256 tokenId = _tokenIdCounter;
-    //     _tokenIdCounter++;
-        
-    //     _safeMint(to, tokenId);
-        
-    //     emit TokenMinted(to, tokenId, tokenURI(tokenId));
-    //     return tokenId;
-    // }
 
     /**
      * @dev Mint a single NFT with custom metadata URI
@@ -73,6 +62,24 @@ contract LighterTicket is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
         
         emit TokenMinted(to, tokenId, nostrPubKey);
         return tokenId;
+    }
+
+    function genesisMint(address to, uint8 start, uint8 end, uint256 startIndex) external onlyOwner {
+        if(_tokenIdCounter > 0) revert DenyMint();
+        if(startIndex < end) revert InvalidIndex();
+        
+        for (uint8 tokenId = start; tokenId <= end; tokenId++) {
+            _safeMint(to, tokenId);
+        }
+        _tokenIdCounter = startIndex;
+        
+        emit GenesisMinted(to, start, end);        
+    }
+
+    function setTokenURI(uint256 tokenId, bytes32 nostrPubKey) external onlyOwner {
+        if(bytes(tokenURI(tokenId)).length > 0) revert TokenURIAlreadySet();
+        string memory metadataURI = LibString.toHexString(uint256(nostrPubKey));
+        _setTokenURI(tokenId, metadataURI);
     }
 
     function burn(uint256 tokenId) external onlyOwner returns (string memory strNostrPubKey) {

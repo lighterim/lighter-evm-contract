@@ -53,6 +53,8 @@ error InvalidSpender();
 
 error InvalidZkProof();
 
+error AccountAlreadyCreated();
+
 error HasPendingTx(address account);
 
 error PendingTxExists(address account, bytes32 escrowHash);
@@ -90,6 +92,8 @@ error InvalidPayment();
 error InvalidPaymentId();
 
 error InvalidPrice();
+
+error InvalidAccountAddress();
 
 error IntentExpired(uint256 expiryTime);
 

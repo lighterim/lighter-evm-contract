@@ -48,6 +48,7 @@ contract DeployerContract is Script {
  
         console.log("Deploying LighterTicket...");
         ticket = new LighterTicket("LighterTicket", "LTK", "https://nft.lighter.im/horizen/");
+        ticket.genesisMint(deployer, 1, 100, 10000);
         console.log("LighterTicket deployed at:", address(ticket));
         
         console.log("Deploying ERC6551Registry...");

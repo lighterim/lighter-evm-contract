@@ -12,6 +12,12 @@ interface ISettlerBase {
         OPT3
     }
 
+    enum TicketType {
+        GENESIS1,
+        GENESIS2,
+        LIGHTER_USER
+    }
+
     struct Range {
         uint256 min;                                // Minimum value
         uint256 max;                                // Maximum value
@@ -79,6 +85,20 @@ interface ISettlerBase {
         bytes32 currency;
         bytes32 payeeDetails;
         uint256 amount;
+    }
+
+    struct Honour {
+        uint256 accumulatedUsd;
+    
+        uint32 count;
+        uint32 pendingCount;
+        uint32 cancelledCount;
+        uint32 disputedAsBuyer;
+        uint32 disputedAsSeller;
+        uint32 lostDisputeCount;
+        
+        uint32 avgReleaseSeconds;
+        uint32 avgPaidSeconds;
     }
 
 }

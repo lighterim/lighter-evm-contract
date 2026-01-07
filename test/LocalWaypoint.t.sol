@@ -145,7 +145,7 @@ contract LocalTakeIntentTest is Permit2Signature {
         );
 
         vm.startPrank(eoaSeller);
-        waypoint.executeWaypoint(bytes32(0), actions);
+        waypoint.execute(bytes32(0), actions);
         vm.stopPrank();
         assertTrue(escrow.getEscrowData(escrowParams.hash()).status == ISettlerBase.EscrowStatus.SellerReleased);
     }
@@ -198,7 +198,7 @@ contract LocalTakeIntentTest is Permit2Signature {
         );
 
         vm.startPrank(eoaBuyer);
-        waypoint.executeWaypoint(bytes32(0), actions);
+        waypoint.execute(bytes32(0), actions);
         vm.stopPrank();
     }
 

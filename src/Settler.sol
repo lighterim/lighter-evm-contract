@@ -4,14 +4,11 @@ pragma solidity ^0.8.25;
 
 import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
 import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer.sol";
+
 import {ISettlerTakeIntent} from "./interfaces/ISettlerTakeIntent.sol";
 import {Permit2PaymentTakeIntent} from "./core/Permit2Payment.sol";
-
-// import {PermitHash} from "@uniswap/permit2/libraries/PermitHash.sol";
-
 import {CalldataDecoder} from "./SettlerBase.sol";
 import {UnsafeMath} from "./utils/UnsafeMath.sol";
-
 import {ISettlerActions} from "./ISettlerActions.sol";
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
 import {ParamsHash} from "./utils/ParamsHash.sol";
@@ -28,15 +25,12 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent {
     using ParamsHash for ISettlerBase.IntentParams;
     using ParamsHash for ISettlerBase.EscrowParams;
     using ParamsHash for ISignatureTransfer.TokenPermissions;
-    // // using PermitHash for ISignatureTransfer.PermitTransferFrom;
     
     error InvalidTokenPermissions();
 
     function _tokenId() internal pure override returns (uint256) {
         return 2;
     }
-
-    // function _myAddress() internal view virtual returns (address);
 
     function _dispatch(uint256 index, uint256 action, bytes calldata data) internal virtual override returns (bool) {
         if(action == uint32(ISettlerActions.ESCROW_PARAMS_CHECK.selector)) {

@@ -76,7 +76,7 @@ contract WaypointTest is BasePairTest, Utils{
             abi.encodeCall(ISettlerActions.RELEASE_BY_SELLER, (escrowParams, escrowSignature))
         );
         vm.startPrank(eoaSeller);
-        waypoint.executeWaypoint(
+        waypoint.execute(
             bytes32(0),
             actions
         );
@@ -93,7 +93,7 @@ contract WaypointTest is BasePairTest, Utils{
         );
 
         vm.startPrank(eoaBuyer);
-        waypoint.executeWaypoint(
+        waypoint.execute(
             bytes32(0),
             actions
         );

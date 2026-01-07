@@ -5,7 +5,7 @@ import {ISettlerBase} from "./ISettlerBase.sol";
 
 interface ISettlerWaypoint is ISettlerBase {
     
-    function executeWaypoint(
+    function execute(
         bytes32 escrowTypedDataHash,
         bytes[] calldata actions
     ) external payable returns (bool);
