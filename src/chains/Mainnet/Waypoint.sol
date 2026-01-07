@@ -104,7 +104,8 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
         escrow.cancel(
             escrowHash, escrowParams, sellerFee, cfg.windowSeconds
         );
-
+        lighterAccount.cancelPendingTx(escrowParams.seller, false);
+        lighterAccount.cancelPendingTx(escrowParams.buyer, true);
     }
 
     /**
@@ -140,8 +141,13 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
         uint256 sellerFee = getFeeAmount(escrowParams.volume, escrowParams.sellerFeeRate);
         uint256 buyerFee = getFeeAmount(escrowParams.volume, escrowParams.buyerFeeRate);
 
-        escrow.releaseBySeller(escrowHash, escrowParams.id, escrowParams.token, escrowParams.buyer, buyerFee, escrowParams.seller, sellerFee, escrowParams.volume);
+        (uint32 paidSeconds, uint32 releaseSeconds) = escrow.releaseBySeller(
+            escrowHash, escrowParams.id, escrowParams.token, escrowParams.buyer, buyerFee, 
+            escrowParams.seller, sellerFee, escrowParams.volume
+        );
 
+        lighterAccount.releasePendingTx(escrowParams.buyer, escrowParams.volume, paidSeconds, releaseSeconds);
+        lighterAccount.releasePendingTx(escrowParams.seller, sellerFee, paidSeconds, releaseSeconds);
     }
     
     function _resolve(
@@ -164,10 +170,37 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
 
         uint256 sellerFee = getFeeAmount(escrowParams.volume, escrowParams.sellerFeeRate);
         uint256 buyerFee = getFeeAmount(escrowParams.volume, escrowParams.buyerFeeRate);
-        escrow.resolve(
+        bool isDisputedByBuyer = escrow.resolve(
             escrowHash, escrowParams, 
             buyerFee, sellerFee,
             buyerThresholdBp, tbaArbitrator, escrowTypedHash, counterpartySig
         );
+
+        uint256 buyerAmount = 0;
+        uint256 sellerAmount = 0;
+        bool isBuyerLoseDispute = true;
+        bool isSellerLoseDispute = true;
+        if(buyerThresholdBp >= BASIS_POINTS_BASE) {
+            buyerAmount = escrowParams.volume;
+            isBuyerLoseDispute = false;
+        } else {
+            if(buyerThresholdBp == 0) {
+                sellerAmount = escrowParams.volume;
+                isSellerLoseDispute = false;
+            } else {
+                buyerAmount = escrowParams.volume * buyerThresholdBp / BASIS_POINTS_BASE;
+                sellerAmount = escrowParams.volume - buyerAmount;
+                if(isDisputedByBuyer) {
+                    isBuyerLoseDispute = false;
+                } else {
+                    isSellerLoseDispute = false;
+                }
+            }
+        }
+
+        lighterAccount.resolvePendingTx(escrowParams.buyer, buyerAmount, isBuyerLoseDispute);
+        lighterAccount.resolvePendingTx(escrowParams.seller, sellerAmount, isSellerLoseDispute);
+        
+
     }
 }

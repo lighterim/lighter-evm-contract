@@ -217,9 +217,8 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     /// @param usdAmount usd amount
     /// @param releaseSeconds release seconds
     /// @param paidSeconds paid seconds
-    /// @param isLoseDispute is lose dispute, if true, the user will lose the dispute
-    function releasePendingTx(address account, uint256 usdAmount, uint32 releaseSeconds, uint32 paidSeconds, bool isLoseDispute) public onlyAuthorized {
-        if (userHonour[account].pendingCount <= 0 || userHonour[account].count == 0) revert NoPendingTx(account);
+    function releasePendingTx(address account, uint256 usdAmount, uint32 paidSeconds, uint32 releaseSeconds) public onlyAuthorized {
+        if (userHonour[account].pendingCount <= 0) revert NoPendingTx(account);
         uint256 count = userHonour[account].count;
         uint256 tradeCount = count - userHonour[account].cancelledCount;
         uint256 denominator = tradeCount + 1;
@@ -244,18 +243,23 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         userHonour[account].accumulatedUsd += usdAmount;
     }
 
-    function cancelPendingTx(address account) public onlyAuthorized {
+    function cancelPendingTx(address account, bool isDuty) public onlyAuthorized {
         if (userHonour[account].pendingCount <= 0) revert NoPendingTx(account);
         userHonour[account].pendingCount--;
         userHonour[account].count++;
-        userHonour[account].cancelledCount++;
+        if(isDuty) {
+            userHonour[account].cancelledCount++;
+        }
+        
     }
 
     function resolvePendingTx(address account, uint256 usdAmount, bool isLoseDispute) public onlyAuthorized {
         if (userHonour[account].pendingCount <= 0) revert NoPendingTx(account);
         userHonour[account].pendingCount--;
         userHonour[account].count++;
-        userHonour[account].accumulatedUsd += usdAmount;
+        if(usdAmount > 0) {
+            userHonour[account].accumulatedUsd += usdAmount;
+        }
         if(isLoseDispute) {
             userHonour[account].lostDisputeCount++;
         }
@@ -385,7 +389,7 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     /// @param account user address
     /// @return quota quota
     function getQuota(address account) public view returns (uint256) {
-        if(ticketRents[account] == 0) revert ZeroAddress();
+        if(ticketRents[account] == 0) revert InvalidAccountAddress();
         return (ticketRents[account] + rentPrice-1) / rentPrice;
     }
 
@@ -404,6 +408,12 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         return ISettlerBase.TicketType.LIGHTER_USER;
     }
 
+    
+    function getUserHonour(address account) public view returns (ISettlerBase.Honour memory) {
+        if(ticketRents[account] == 0) revert InvalidAccountAddress();
+        return userHonour[account];
+    }
+    
 
     // ============ Admin Functions ============
 

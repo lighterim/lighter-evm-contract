@@ -66,8 +66,8 @@ interface ISettlerBase {
 
     struct EscrowData{
         EscrowStatus status;
-        uint64 paidSeconds;
-        uint64 releaseSeconds;
+        uint32 paidSeconds;
+        uint32 releaseSeconds;
         uint64 cancelTs;
         uint64 lastActionTs;
         uint256 gasSpentForBuyer;
