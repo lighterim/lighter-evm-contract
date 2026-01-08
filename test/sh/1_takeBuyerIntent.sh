@@ -96,9 +96,6 @@ export SetWaypoint=${SET_WAYPOINT:-0x3a1F23470ED277898f962E3fcA94c2D0225FC6A0}
 export ZkVerifyProofVerifier=${ZK_VERIFY_PROOF_VERIFIER:-0xa2607E73CA6ccb2F5Ca5883cB7757904aB3fF74e}
 export Permit2Helper=${PERMIT2_HELPER:-0x69047390100A919bE0B6c453D4Acb05b3d317395}
 
-# Set buyer and seller addresses (same as TBA addresses)
-export buyer=$tbaBuyer
-export seller=$tbaSeller
 
 # Display configuration summary
 echo "=========================================="
@@ -112,6 +109,12 @@ echo "Escrow Contract: $Escrow"
 echo "=========================================="
 echo ""
 
+# Get EOA seller address (from seller private key)
+export eoaSeller=$(cast wallet address --private-key=$sellerPrivKey)
+
+# Get EOA buyer address (from buyer private key)
+export eoaBuyer=$(cast wallet address --private-key=$buyerPrivKey)
+
 cast send $usdc 'approve(address,uint256)' $permit2 $(cast --to-uint256 99999999999999999999999) --private-key=$sellerPrivKey --rpc-url $ETH_RPC_URL
 
 #export expiryTime=$(date -d "+7 days" +%s) #ubuntu
@@ -122,7 +125,7 @@ export paymentMethod=$(cast keccak "wechat")
 export payeeDetails=$(cast keccak $PAYEE_DETAILS)
 export price=1000000000000000000
 export usdRate=1000000000000000000
-export tradeId=${TRADE_ID:-1}
+export tradeId=${TRADE_ID:-2}
 export sellerFeeRate=20
 export buyerFeeRate=20
 export bp=10000
@@ -131,7 +134,7 @@ export permit2Amount=$(echo "($amount * ($bp + $sellerFeeRate) + ($bp - 1)) / $b
 
 export permit="(($usdc,$permit2Amount),$permit2Nonce,$expiryTime)"
 export intentParams="($usdc,($amount,$amount), $expiryTime, $currency, $paymentMethod, $payeeDetails, $price)"
-export escrowParms="($tradeId, $usdc, $amount, $price, $usdRate, $seller, $tbaSeller, $sellerFeeRate, $paymentMethod, $currency, $payeeDetails, $tbaBuyer, $buyerFeeRate)"
+export escrowParms="($tradeId, $usdc, $amount, $price, $usdRate, $eoaSeller, $tbaSeller, $sellerFeeRate, $paymentMethod, $currency, $payeeDetails, $tbaBuyer, $buyerFeeRate)"
 # getIntentTypedHash((address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256)) # token, range, expiryTime, currency, paymentMethod, payeeDetails, price
 # getEscrowTypedHash((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256)) # id, token, volume, price, usdRate, payer, seller, sellerFeeRate, paymentMethod, currency, payeeDetails, buyer, buyerFeeRate
 export intentTypedHash=$(cast call $TakeIntent "getIntentTypedHash((address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256))" $intentParams --rpc-url $ETH_RPC_URL)
@@ -174,12 +177,6 @@ export action3Data="${action3Selector}${action3Params:2}"
 # Note: For bytes[] encoding in cast abi-encode, we need to ensure each bytes value is properly formatted
 # Each action data is already a hex string with 0x prefix, which cast should handle correctly
 # However, we'll encode the array directly in the execute function call instead
-
-# Get EOA seller address (from seller private key)
-export eoaSeller=$(cast wallet address --private-key=$sellerPrivKey)
-
-# Get EOA buyer address (from buyer private key)
-export eoaBuyer=$(cast wallet address --private-key=$buyerPrivKey)
 
 # Execute the transaction
 # execute(address payer, bytes32 tokenPermissionsHash, bytes32 witness, bytes32 intentTypeHash, bytes[] actions)
