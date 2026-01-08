@@ -77,7 +77,8 @@ contract LighterTicket is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
     }
 
     function setTokenURI(uint256 tokenId, bytes32 nostrPubKey) external onlyOwner {
-        if(bytes(tokenURI(tokenId)).length > 0) revert TokenURIAlreadySet();
+        // genesis mint tokenURI is baseURI + tokenId
+        if(bytes(tokenURI(tokenId)).length > bytes(_baseTokenUri).length + 3) revert TokenURIAlreadySet();
         string memory metadataURI = LibString.toHexString(uint256(nostrPubKey));
         _setTokenURI(tokenId, metadataURI);
     }
