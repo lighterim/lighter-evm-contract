@@ -80,6 +80,7 @@ export sellerPrivKey=$SELLER_PRIVATE_KEY
 export relayerPrivKey=${RELAYER_PRIVATE_KEY:-$sellerPrivKey}  # Default to seller if not set
 export tbaBuyer=$TBA_BUYER
 export tbaSeller=$TBA_SELLER
+export tradeId=${TRADE_ID:-2}
 
 # Contract addresses (can be overridden via environment variables)
 export usdc=${USDC:-0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238}
@@ -125,7 +126,6 @@ export paymentMethod=$(cast keccak "wechat")
 export payeeDetails=$(cast keccak $PAYEE_DETAILS)
 export price=1000000000000000000
 export usdRate=1000000000000000000
-export tradeId=${TRADE_ID:-2}
 export sellerFeeRate=20
 export buyerFeeRate=20
 export bp=10000

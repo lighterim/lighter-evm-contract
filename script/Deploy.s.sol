@@ -113,11 +113,12 @@ contract DeployerContract is Script {
         
         console.log("Deploying completed!");
         console.log("Deployer:", deployer);
-        console.log("ZkVerify:", zkVerify);
-        console.log("export LighterAccount=", address(lighterAccount));
-        console.log("export LighterTicket=", address(ticket)); 
         console.log("ERC6551Registry:", address(registry));
         console.log("AccountV3Simplified:", address(accountImpl));
+        console.log("ZkVerify:", zkVerify);
+
+        console.log("export LighterAccount=", address(lighterAccount));
+        console.log("export LighterTicket=", address(ticket)); 
         console.log("export Escrow=", address(escrow));
         console.log("export AllowanceHolder=", address(allowanceHolder));
         console.log("export TakeIntent=", address(takeIntent));

@@ -2,7 +2,7 @@
 #
 # Take Intent Test Script
 # 
-# This script executes testTakeSellerIntent functionality via command line.
+# This script executes testTakeBulkSale functionality via command line.
 # 
 # Required Environment Variables:
 #   BUYER_PRIVATE_KEY    - Private key for buyer account (EOA)
@@ -19,7 +19,7 @@
 #   ESCROW               - Escrow contract address
 #   ALLOWANCE_HOLDER     - AllowanceHolder contract address
 #   TAKE_INTENT          - TakeIntent contract address
-#   PERMIT2_HELPER       - Permit2Helper contract address
+
 #
 # Example usage:
 #   # Option 1: Export variables directly
@@ -74,13 +74,18 @@ if [ -z "$PAYEE_DETAILS" ]; then
     exit 1
 fi
 
+if [ -z "$TRADE_ID" ]; then
+    echo "Error: TRADE_ID environment variable is not set"
+    exit 1
+fi
+
 # Load sensitive information from environment variables
 export buyerPrivKey=$BUYER_PRIVATE_KEY
 export sellerPrivKey=$SELLER_PRIVATE_KEY
 export relayerPrivKey=${RELAYER_PRIVATE_KEY:-$sellerPrivKey}  # Default to seller if not set
 export tbaBuyer=$TBA_BUYER
 export tbaSeller=$TBA_SELLER
-export tradeId=${TRADE_ID:-1}
+export tradeId=${TRADE_ID:-3}
 
 
 # Contract addresses (can be overridden via environment variables)
@@ -110,14 +115,13 @@ echo "Escrow Contract: $Escrow"
 echo "=========================================="
 echo ""
 
-cast send $usdc 'approve(address,uint256)' $permit2 $(cast --to-uint256 99999999999999999999999999) --private-key=$sellerPrivKey
 
 export eoaSeller=$(cast wallet address --private-key=$sellerPrivKey)
 export eoaBuyer=$(cast wallet address --private-key=$buyerPrivKey)
 
 #export expiryTime=$(date -d "+7 days" +%s) #ubuntu
 export expiryTime=$(date -v+7d +%s)
-export amount=1234567
+export amount=34567
 export currency=$(cast keccak "USD")
 export paymentMethod=$(cast keccak "wechat")
 export payeeDetails=$(cast keccak $PAYEE_DETAILS)
@@ -129,6 +133,15 @@ export buyerFeeRate=20
 export bp=10000
 export permit2Nonce=$(LC_ALL=C tr -dc '0-9' < /dev/urandom | head -c 11)
 export permit2Amount=$(echo "($amount * ($bp + $sellerFeeRate) + ($bp - 1)) / $bp" | bc)
+
+result=$(cast call $permit2 "allowance(address,address,address)" $eoaSeller $usdc $AllowanceHolder)
+read -r allowance nonce expiry <<< $(cast abi-decode -i "decodeResult(uint160,uint48,uint48)" $result | tr '\n' ' ')
+echo "AllowanceHolder: allowance: $allowance, Nonce: $nonce, Expiry: $expiry"
+
+
+### TODO: go on...
+cast send $permit2 'permit(address,(address,uint160,uint48,uint48),address,uint256),bytes' $eoaSeller "($usdc,$permit2Amount,$expiryTime,$nonce)" $AllowanceHolder $expiryTime  --private-key=$sellerPrivKey
+
 
 export intentParams="($usdc,($amount,$amount), $expiryTime, $currency, $paymentMethod, $payeeDetails, $price)"
 export escrowParms="($tradeId, $usdc, $amount, $price, $usdRate, $eoaSeller, $tbaSeller, $sellerFeeRate, $paymentMethod, $currency, $payeeDetails, $tbaBuyer, $buyerFeeRate)"
