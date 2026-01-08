@@ -11,6 +11,7 @@
 #   TBA_BUYER            - Token Bound Account address for buyer
 #   TBA_SELLER           - Token Bound Account address for seller
 #   ETH_RPC_URL          - Ethereum RPC endpoint URL
+#   PAYEE_DETAILS        - Payee details(account + qrCode + memo)
 #
 # Optional Environment Variables (contract addresses):
 #   USDC                 - USDC token address (default: 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238)
@@ -27,6 +28,7 @@
 #   export TBA_BUYER=0x...
 #   export TBA_SELLER=0x...
 #   export ETH_RPC_URL=https://...
+#   export PAYEE_DETAILS=1234567890xxxxxxxxyyyyzzzz
 #   export ESCROW=0x...
 #   export TAKE_INTENT=0x...
 #   ./0_takeIntent.sh
@@ -62,6 +64,11 @@ fi
 
 if [ -z "$ETH_RPC_URL" ]; then
     echo "Error: ETH_RPC_URL environment variable is not set"
+    exit 1
+fi
+
+if [ -z "$PAYEE_DETAILS" ]; then
+    echo "Error: PAYEE_DETAILS environment variable is not set"
     exit 1
 fi
 
@@ -110,10 +117,10 @@ export expiryTime=$(date -v+7d +%s)
 export amount=1234567
 export currency=$(cast keccak "USD")
 export paymentMethod=$(cast keccak "wechat")
-export payeeDetails=$(cast keccak "dustwxp://f2f0in9xnsA4G_eXWBRORK63ixD6bMQcP11eKGFz1VS4Kf0wechat")
+export payeeDetails=$(cast keccak $PAYEE_DETAILS)
 export price=1000000000000000000
 export usdRate=1000000000000000000
-export tradeId=1
+export tradeId=${TRADE_ID:-1}
 export sellerFeeRate=20
 export buyerFeeRate=20
 export bp=10000
@@ -147,8 +154,9 @@ export transferDetails="($Escrow,$permit2Amount)"
 export emptyBytes="0x"
 # Get function selector and encode parameters
 export action1Selector=$(cast sig "ESCROW_AND_INTENT_CHECK((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),(address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256),bytes)")
-export action1Params=$(cast abi-encode "((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),(address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256),bytes)" $escrowParms $intentParams $emptyBytes)
-export action1Data="${action1Selector}${action1Params:2}" # Remove 0x prefix from params and combine
+export action1Params=$(cast abi-encode "x((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),(address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256),bytes)" "$escrowParms" "$intentParams" "$emptyBytes")
+export action1Data="${action1Selector}${action1Params:2}"
+ # Remove 0x prefix from params and combine
 
 # Action 2: ESCROW_PARAMS_CHECK(escrowParams, sig)
 export action2Selector=$(cast sig "ESCROW_PARAMS_CHECK((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),bytes)")
