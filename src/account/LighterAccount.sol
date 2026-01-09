@@ -226,22 +226,25 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         uint256 denominator = tradeCount + 1;
         
         unchecked {
-            if(denominator == 1){
-                userHonour[account].avgReleaseSeconds = releaseSeconds;
-                userHonour[account].avgPaidSeconds = paidSeconds;
-            } else {
-                // Safe cast: weighted average result is bounded by max(avg, new), both are uint32
-                // Calculate weighted average: (avg * n + new) / (n + 1)
-                // Since avg and new are both uint32, the result is guaranteed to fit in uint32
-                // because weighted average cannot exceed max(avg, new)
-                uint256 releaseSecondsSum = uint256(userHonour[account].avgReleaseSeconds) * tradeCount + releaseSeconds;
-                uint256 paidSecondsSum = uint256(userHonour[account].avgPaidSeconds) * tradeCount + paidSeconds;
-                userHonour[account].avgReleaseSeconds = uint32(releaseSecondsSum / denominator);
-                userHonour[account].avgPaidSeconds = uint32(paidSecondsSum / denominator);
-            }            
             userHonour[account].count = count + 1;
             userHonour[account].pendingCount--;
             userHonour[account].accumulatedUsd += usdAmount;
+        }
+        
+        if(denominator == 1){
+            userHonour[account].avgReleaseSeconds = releaseSeconds;
+            userHonour[account].avgPaidSeconds = paidSeconds;
+        } else {
+            // Safe cast: weighted average result is bounded by max(avg, new), both are uint32
+            // Calculate weighted average: (avg * n + new) / (n + 1)
+            // Since avg and new are both uint32, the result is guaranteed to fit in uint32
+            // because weighted average cannot exceed max(avg, new)
+            uint256 releaseSecondsSum = uint256(userHonour[account].avgReleaseSeconds) * tradeCount + releaseSeconds;
+            uint256 paidSecondsSum = uint256(userHonour[account].avgPaidSeconds) * tradeCount + paidSeconds;
+            unchecked {
+                userHonour[account].avgReleaseSeconds = uint32(releaseSecondsSum / denominator);
+                userHonour[account].avgPaidSeconds = uint32(paidSecondsSum / denominator);
+            }
         }
     }
 
