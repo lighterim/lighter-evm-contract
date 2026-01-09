@@ -146,8 +146,10 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
             escrowParams.seller, sellerFee, escrowParams.volume
         );
 
-        lighterAccount.releasePendingTx(escrowParams.buyer, escrowParams.volume, paidSeconds, releaseSeconds);
-        lighterAccount.releasePendingTx(escrowParams.seller, sellerFee, paidSeconds, releaseSeconds);
+        uint8 tokenDecimals = IERC20(escrowParams.token).decimals();
+        uint256 amountUsd = _calcAmountUsd(escrowParams.volume, tokenDecimals, escrowParams.price, escrowParams.usdRate);
+        lighterAccount.releasePendingTx(escrowParams.buyer, amountUsd, paidSeconds, releaseSeconds);
+        lighterAccount.releasePendingTx(escrowParams.seller, amountUsd, paidSeconds, releaseSeconds);
     }
     
     function _resolve(
@@ -180,16 +182,18 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
         uint256 sellerAmount = 0;
         bool isBuyerLoseDispute = true;
         bool isSellerLoseDispute = true;
+        uint8 tokenDecimals = IERC20(escrowParams.token).decimals();
+        uint256 amountUsd = _calcAmountUsd(escrowParams.volume, tokenDecimals, escrowParams.price, escrowParams.usdRate);
         if(buyerThresholdBp >= BASIS_POINTS_BASE) {
-            buyerAmount = escrowParams.volume;
+            buyerAmount = amountUsd;
             isBuyerLoseDispute = false;
         } else {
             if(buyerThresholdBp == 0) {
-                sellerAmount = escrowParams.volume;
+                sellerAmount = amountUsd;
                 isSellerLoseDispute = false;
             } else {
-                buyerAmount = escrowParams.volume * buyerThresholdBp / BASIS_POINTS_BASE;
-                sellerAmount = escrowParams.volume - buyerAmount;
+                buyerAmount = amountUsd * buyerThresholdBp / BASIS_POINTS_BASE;
+                sellerAmount = amountUsd - buyerAmount;
                 if(isDisputedByBuyer) {
                     isBuyerLoseDispute = false;
                 } else {
@@ -197,10 +201,33 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
                 }
             }
         }
-
+        
         lighterAccount.resolvePendingTx(escrowParams.buyer, buyerAmount, isBuyerLoseDispute);
         lighterAccount.resolvePendingTx(escrowParams.seller, sellerAmount, isSellerLoseDispute);
-        
+    }
 
+    /**
+     * @notice Calculates the USD value of a given token amount.
+     * @dev Formula: (tokenAmount * price * usdRate) / 10^(tokenDecimals + PRICE_DECIMALS + USD_RATE_DECIMALS - USD_DECIMALS)
+     * @param tokenAmount The raw amount of the token (in its smallest unit)
+     * @param tokenDecimals The decimals of the token
+     * @param price The price of the token (scaled by PRICE_DECIMALS)
+     * @param usdRate The conversion rate to USD (scaled by USD_RATE_DECIMALS)
+     * @return amountUsd The total value in USD (scaled by USD_DECIMALS)
+     */
+    function _calcAmountUsd(
+        uint256 tokenAmount,
+        uint8 tokenDecimals,
+        uint256 price,
+        uint256 usdRate
+    ) internal pure returns (uint256 amountUsd) {
+        // Optimization: Calculate the shared exponent once.
+        // Small uint8 operations are safe from overflow in this context.
+        uint256 exponent;
+        unchecked {
+            exponent = uint256(tokenDecimals) + PRICE_DECIMALS + USD_RATE_DECIMALS - USD_DECIMALS;
+        }
+
+        amountUsd = (tokenAmount * price * usdRate) / (10 ** exponent);
     }
 }

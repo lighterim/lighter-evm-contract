@@ -212,7 +212,10 @@ abstract contract SettlerBase is ISettlerBase, SettlerAbstract {
     using FullMath for uint256;
 
     uint256 constant public BASIS_POINTS_BASE = 10000;
-    
+    uint8 constant public USD_DECIMALS = 6;
+    uint8 constant public PRICE_DECIMALS = 18;
+    uint8 constant public USD_RATE_DECIMALS = 18;
+
     IPaymentMethodRegistry internal paymentMethodRegistry;
 
     receive() external payable {}
