@@ -13,7 +13,7 @@ import {ISettlerActions} from "./ISettlerActions.sol";
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
 import {ParamsHash} from "./utils/ParamsHash.sol";
 import {
-    revertActionInvalid, InvalidWitness, InvalidPayer, InvalidIntent
+    revertActionInvalid, InvalidWitness, InvalidPayer, InvalidIntent, InvalidActionsLength
     } from "./core/SettlerErrors.sol";
 // import {console} from "forge-std/console.sol";
 
@@ -156,6 +156,8 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent {
         takeIntent(payer, tokenPermissionsHash, escrowTypedHash, intentTypeHash)
         returns (bool)
     {
+        if (actions.length > 100) revert InvalidActionsLength();
+
         if (actions.length != 0) {
             (uint256 action, bytes calldata data) = actions.decodeCall(0);
             if (!_dispatchVIP(action, data)) {

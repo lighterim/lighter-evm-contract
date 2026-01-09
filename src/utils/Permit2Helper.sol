@@ -13,11 +13,11 @@ contract Permit2Helper {
 
     using ParamsHash for ISettlerBase.IntentParams;
 
-    address immutable takeIntent;
+    address immutable TAKE_INTENT;
     IPermit2 constant PERMIT2 = IPermit2(0x000000000022D473030F116dDEE9F6B43aC78BA3);
 
     constructor(address takeIntent_) {
-        takeIntent = takeIntent_;
+        TAKE_INTENT = takeIntent_;
     }
 
     function getPermitTransferFromHash(
@@ -56,7 +56,7 @@ contract Permit2Helper {
         bytes32 typeHash = keccak256(abi.encodePacked(PermitHash._PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB, witnessTypeString));
 
         bytes32 tokenPermissionsHash = _hashTokenPermissions(permit.permitted);
-        return keccak256(abi.encode(typeHash, tokenPermissionsHash, takeIntent, permit.nonce, permit.deadline, witness));
+        return keccak256(abi.encode(typeHash, tokenPermissionsHash, TAKE_INTENT, permit.nonce, permit.deadline, witness));
     }
 
     function getTransferFromTypedHash(ISignatureTransfer.PermitTransferFrom memory permit) internal view returns (bytes32) {
@@ -65,7 +65,7 @@ contract Permit2Helper {
             abi.encode(
                 PermitHash._PERMIT_TRANSFER_FROM_TYPEHASH, 
                 tokenPermissionsHash, 
-                takeIntent, 
+                TAKE_INTENT, 
                 permit.nonce, 
                 permit.deadline
             )

@@ -16,6 +16,8 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 contract LighterTicket is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
     using Strings for uint256;
 
+    // the end token id for genesis2(user group for genesis2)
+    uint8 constant public GENESIS2_END = 101;
     // Base URI for token metadata
     string private _baseTokenUri;
     
@@ -65,14 +67,15 @@ contract LighterTicket is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
     }
 
     function genesisMint(address to, uint8 start, uint8 end, uint256 startIndex) external onlyOwner {
-        if(_tokenIdCounter > 256) revert DenyMint();
-        if(startIndex < end) revert InvalidIndex();
-        
-        for (uint8 tokenId = start; tokenId <= end; tokenId++) {
+        if(_tokenIdCounter > GENESIS2_END) revert DenyMint();
+        if(startIndex < GENESIS2_END) revert InvalidIndex();
+        uint8 tokenId = start;
+        for (; tokenId <= end; tokenId++) {
             _safeMint(to, tokenId);
         }
-        _tokenIdCounter = startIndex;
-        
+        if(tokenId >= GENESIS2_END){
+            _tokenIdCounter = startIndex;
+        }
         emit GenesisMinted(to, start, end);        
     }
 

@@ -3,6 +3,7 @@ pragma solidity ^0.8.25;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 import "erc6551/src/interfaces/IERC6551Registry.sol";
 import "erc6551/src/interfaces/IERC6551Account.sol";
 import "../token/LighterTicket.sol";
@@ -21,8 +22,7 @@ import {
  * Features:
  * 1. Mint Ticket NFT at sale price
  * 2. Automatically create TBA (AccountV3 instance) for each minted NFT
- * 3. Support batch minting
- * 4. Price management and revenue extraction
+ * 4. Price management 
  */
 contract LighterAccount is Ownable, ReentrancyGuard {
 
@@ -34,9 +34,12 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     address public immutable accountImpl;
     bytes32 public immutable salt;
 
-    uint8 public immutable GENESIS1_END = 10;
-    uint8 public immutable GENESIS2_END = 101;
-    uint256 public immutable LIGHTER_TICKET_ID_START = 10000;
+    // the end token id for genesis1(user group for genesis1) and genesis2(user group for genesis2)
+    uint8 public constant GENESIS1_END = 10;
+    // the end token id for genesis2(user group for genesis2)
+    uint8 public constant GENESIS2_END = 101;
+    // the start token id for lighter user(user group for lighter user).
+    uint256 public constant LIGHTER_TICKET_ID_START = 10000;
     
     /// @notice Total number of rented tickets
     uint256 public totalRented;
@@ -193,10 +196,9 @@ contract LighterAccount is Ownable, ReentrancyGuard {
 
         string memory hexNostrPubKey = ticketContract.burn(nftId);
         uint256 amount = ticketRents[tbaAddress];
-        if (ticketRents[tbaAddress] > 0) {
+        if (amount > 0) {
             delete ticketRents[tbaAddress];
-            (bool success, ) = recipient.call{value: amount}("");
-            if (!success) revert WithdrawalFailed();
+            Address.sendValue(recipient, amount);
         }
 
         emit TicketDestroyed(recipient, nftId, tbaAddress, amount, hexNostrPubKey);
@@ -219,58 +221,64 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     /// @param paidSeconds paid seconds
     function releasePendingTx(address account, uint256 usdAmount, uint32 paidSeconds, uint32 releaseSeconds) public onlyAuthorized {
         if (userHonour[account].pendingCount <= 0) revert NoPendingTx(account);
-        uint256 count = userHonour[account].count;
+        uint32 count = userHonour[account].count;
         uint256 tradeCount = count - userHonour[account].cancelledCount;
         uint256 denominator = tradeCount + 1;
-
-        // Calculate weighted average: (avg * n + new) / (n + 1)
-        // Since avg and new are both uint32, the result is guaranteed to fit in uint32
-        // because weighted average cannot exceed max(avg, new)
-        uint256 releaseSecondsSum = tradeCount == 0 
-            ? releaseSeconds 
-            : uint256(userHonour[account].avgReleaseSeconds) * tradeCount + releaseSeconds;
-        uint256 paidSecondsSum = tradeCount == 0 
-            ? paidSeconds 
-            : uint256(userHonour[account].avgPaidSeconds) * tradeCount + paidSeconds;
-
-        // Safe cast: weighted average result is bounded by max(avg, new), both are uint32
+        
         unchecked {
-            userHonour[account].avgReleaseSeconds = uint32(releaseSecondsSum / denominator);
-            userHonour[account].avgPaidSeconds = uint32(paidSecondsSum / denominator);
-            userHonour[account].count = uint32(count + 1);
+            if(denominator == 1){
+                userHonour[account].avgReleaseSeconds = releaseSeconds;
+                userHonour[account].avgPaidSeconds = paidSeconds;
+            } else {
+                // Safe cast: weighted average result is bounded by max(avg, new), both are uint32
+                // Calculate weighted average: (avg * n + new) / (n + 1)
+                // Since avg and new are both uint32, the result is guaranteed to fit in uint32
+                // because weighted average cannot exceed max(avg, new)
+                uint256 releaseSecondsSum = uint256(userHonour[account].avgReleaseSeconds) * tradeCount + releaseSeconds;
+                uint256 paidSecondsSum = uint256(userHonour[account].avgPaidSeconds) * tradeCount + paidSeconds;
+                userHonour[account].avgReleaseSeconds = uint32(releaseSecondsSum / denominator);
+                userHonour[account].avgPaidSeconds = uint32(paidSecondsSum / denominator);
+            }            
+            userHonour[account].count = count + 1;
+            userHonour[account].pendingCount--;
+            userHonour[account].accumulatedUsd += usdAmount;
         }
-        userHonour[account].pendingCount--;
-        userHonour[account].accumulatedUsd += usdAmount;
     }
 
     function cancelPendingTx(address account, bool isDuty) public onlyAuthorized {
         if (userHonour[account].pendingCount <= 0) revert NoPendingTx(account);
-        userHonour[account].pendingCount--;
-        userHonour[account].count++;
-        if(isDuty) {
-            userHonour[account].cancelledCount++;
+        unchecked {
+            userHonour[account].pendingCount--;
+            userHonour[account].count++;
+            if(isDuty) {
+                userHonour[account].cancelledCount++;
+            }
         }
-        
     }
 
     function resolvePendingTx(address account, uint256 usdAmount, bool isLoseDispute) public onlyAuthorized {
         if (userHonour[account].pendingCount <= 0) revert NoPendingTx(account);
-        userHonour[account].pendingCount--;
-        userHonour[account].count++;
-        if(usdAmount > 0) {
-            userHonour[account].accumulatedUsd += usdAmount;
-        }
-        if(isLoseDispute) {
-            userHonour[account].lostDisputeCount++;
+        
+        unchecked {
+            userHonour[account].pendingCount--;
+            userHonour[account].count++;
+            if(usdAmount > 0) {
+                userHonour[account].accumulatedUsd += usdAmount;
+            }
+            if(isLoseDispute) {
+                userHonour[account].lostDisputeCount++;
+            }
         }
     }
 
     function disputePendingTx(address account, bool byBuyer) public onlyAuthorized {
         if (userHonour[account].pendingCount <= 0) revert NoPendingTx(account);
-        if(byBuyer) {
-            userHonour[account].disputedAsSeller++;
-        } else {
-            userHonour[account].disputedAsBuyer++;
+        unchecked{
+            if(byBuyer) {
+                userHonour[account].disputedAsSeller++;
+            } else {
+                userHonour[account].disputedAsBuyer++;
+            }
         }
     }
 
@@ -378,8 +386,13 @@ contract LighterAccount is Ownable, ReentrancyGuard {
             || tokenContract != address(ticketContract)
         ) revert InvalidAccountAddress();
 
+        // the token id is less than GENESIS1_END, return GENESIS1(1-9)
         if(tokenId < GENESIS1_END) return ISettlerBase.TicketType.GENESIS1;
+        // the token id is less than GENESIS2_END, return GENESIS2(10-100)
         if(tokenId < GENESIS2_END) return ISettlerBase.TicketType.GENESIS2;
+        // deploment error, the token id is less than LIGHTER_TICKET_ID_START.
+        if(tokenId < LIGHTER_TICKET_ID_START) revert InvalidAccountAddress();
+        // the token id is greater than or equal to GENESIS2_END, return LIGHTER_USER(10000-)
         return ISettlerBase.TicketType.LIGHTER_USER;
     }
 

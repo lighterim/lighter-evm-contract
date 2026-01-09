@@ -12,10 +12,16 @@ interface ISettlerBase {
         OPT3
     }
 
+    /**
+     * @notice the ticket type
+     * @dev the ticket type GENESIS1 is used to identify the user group for genesis1
+     * @dev the ticket type GENESIS2 is used to identify the user group for genesis2
+     * @dev the ticket type LIGHTER_USER is used to identify the user group for lighter user
+     */
     enum TicketType {
-        GENESIS1,
-        GENESIS2,
-        LIGHTER_USER
+        GENESIS1, // the user group for genesis1
+        GENESIS2, // the user group for genesis2
+        LIGHTER_USER // the user group for lighter user
     }
 
     struct Range {
