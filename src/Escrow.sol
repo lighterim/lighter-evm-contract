@@ -218,6 +218,9 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         uint64 currentTs = uint64(block.timestamp);
         
         paidSeconds = escrowData.paidSeconds;
+        // casting to 'uint32' is safe because time difference between timestamps (both uint64)
+        // will not exceed uint32 max (2^32 - 1 seconds ≈ 136 years), which is sufficient for escrow durations
+        // forge-lint: disable-next-line(unsafe-typecast)
         releaseSeconds = paidSeconds > 0 ? uint32(currentTs - lastActionTs) : 0;
         
         escrowData.status = status;
@@ -356,6 +359,9 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
 
         escrowData.status = ISettlerBase.EscrowStatus.Resolved;
         unchecked {
+            // casting to 'uint64' is safe because block.timestamp (uint256) values are within uint64 range
+            // until year 2106 (2^64 seconds ≈ 584 years), which is sufficient for all practical purposes
+            // forge-lint: disable-next-line(unsafe-typecast)
             escrowData.lastActionTs = uint64(currentTs);
         }
         

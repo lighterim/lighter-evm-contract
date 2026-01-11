@@ -95,11 +95,22 @@ abstract contract Permit2PaymentAbstract is Context {
      * @param escrowParams Submitted escrow transaction parameters
      * @param intentParams Submitted intent parameters
      */
-    function makesureTradeValidation(ISettlerBase.EscrowParams memory escrowParams, ISettlerBase.IntentParams memory intentParams) internal view virtual{
+    function makesureTradeValidation(
+        ISettlerBase.EscrowParams memory escrowParams, 
+        ISettlerBase.IntentParams memory intentParams,
+        bool isInitiatedByBuyer
+        ) internal view virtual{
         if(block.timestamp > intentParams.expiryTime) revert IntentExpired(intentParams.expiryTime);
         if(escrowParams.token != intentParams.token) revert InvalidToken();
-        if(escrowParams.volume < intentParams.range.min || (intentParams.range.max > 0 && escrowParams.volume > intentParams.range.max)) revert InvalidAmount();
-        if(escrowParams.currency != intentParams.currency || escrowParams.paymentMethod != intentParams.paymentMethod || escrowParams.payeeDetails != intentParams.payeeDetails) revert InvalidPayment();
+        if(
+            escrowParams.volume < intentParams.range.min 
+            || (intentParams.range.max > 0 && escrowParams.volume > intentParams.range.max)
+        ) revert InvalidAmount();
+        if(
+            escrowParams.currency != intentParams.currency 
+            || escrowParams.paymentMethod != intentParams.paymentMethod 
+            || (isInitiatedByBuyer && escrowParams.payeeDetails != intentParams.payeeDetails)
+        ) revert InvalidPayment();
         if(intentParams.price > 0 && escrowParams.price != intentParams.price) revert InvalidPrice();
     }
 

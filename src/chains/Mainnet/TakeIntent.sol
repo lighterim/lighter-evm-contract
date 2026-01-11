@@ -101,21 +101,21 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
                 revert InvalidTokenPermissions();
             }
 
+            bool isInitiatedBySeller = lighterAccount.isOwnerCall(escrowParams.seller, _msgSender());
             /**
              * @dev Intent verification logic:
              * 1. takeBulkSell: maker is seller(tba), maker intent signature from seller tba, checked in _dispatch(transferFrom)
              * 2. takeSellerIntent: maker is seller(tba), checked in permit2 transferFrom
              * 3. takeBuyerIntent: maker is buyer(tba), maker intent signature from buyer tba
              */
-            if(lighterAccount.isOwnerCall(escrowParams.seller, _msgSender())){
+            if(isInitiatedBySeller){
                 /// the caller is from seller ==> 3. takeBuyerIntent
                 /// verify buyer intent signature
                 makesureIntentParams(escrowParams.buyer, _domainSeparator(), intentParams, makerIntentSig);
                 clearIntentTypeHash();
             }
 
-            
-            makesureTradeValidation(escrowParams, intentParams);
+            makesureTradeValidation(escrowParams, intentParams, !isInitiatedBySeller); // isInitiatedByBuyer
             _makeEscrow(escrowHash, escrowParams);
             return true;
         }
@@ -127,27 +127,28 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
         bytes32 escrowHash,
         ISettlerBase.EscrowParams memory escrowParams
     ) internal {
-        lighterAccount.addPendingTx(escrowParams.buyer, escrowParams.seller);
-
-        uint256 sellerFee = getFeeAmount(escrowParams.volume, escrowParams.sellerFeeRate);
+        address buyer = escrowParams.buyer;
+        address seller = escrowParams.seller;
+        uint256 volume = escrowParams.volume;
+        
+        lighterAccount.addPendingTx(buyer, seller);
+        
+        uint256 sellerFee = getFeeAmount(volume, escrowParams.sellerFeeRate);
         escrow.create(
-            address(escrowParams.token), 
-            escrowParams.buyer, 
-            escrowParams.seller, 
-            escrowParams.volume,
+            escrowParams.token, 
+            buyer, 
+            seller, 
+            volume,
             sellerFee, 
             escrowHash, 
             escrowParams.id,
-            ISettlerBase.EscrowData(
-                {
-                    status: ISettlerBase.EscrowStatus.Escrowed,
-                    paidSeconds: 0,
-                    releaseSeconds: 0,
-                    cancelTs: 0,
-                    lastActionTs: uint64(block.timestamp)
-                }
-            )
+            ISettlerBase.EscrowData({
+                status: ISettlerBase.EscrowStatus.Escrowed,
+                paidSeconds: 0,
+                releaseSeconds: 0,
+                cancelTs: 0,
+                lastActionTs: uint64(block.timestamp)
+            })
         );
-        // console.logString("------------#### _makeEscrow### --------------------");
     }
 }
