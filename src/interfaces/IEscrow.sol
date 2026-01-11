@@ -126,7 +126,7 @@ interface IEscrow {
 
     function resolve(
         bytes32 escrowHash, ISettlerBase.EscrowParams memory escrowParams,
-        uint256 buyerFee, uint256 sellerFee,
+        uint256 buyerFee, uint256 sellerFee, uint32 disputeWindowSeconds,
         uint16 buyerThresholdBp, address tbaArbitrator, bytes32 escrowTypedHash, bytes memory counterpartySig
     ) external returns(bool isDisputedByUser);
 

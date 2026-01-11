@@ -4,6 +4,7 @@ pragma solidity ^0.8.25;
 
 import {MainnetMixin} from "./Common.sol";
 import {Settler} from "../../Settler.sol";
+import {SettlerAbstract} from "../../SettlerAbstract.sol";
 
 import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
@@ -61,36 +62,12 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
         return _domainSeparatorV4();
     }
 
-    // function _dispatch(uint256 i, uint256 action, bytes calldata data)
-    //     internal
-    //     override(Settler, SettlerAbstract) DANGEROUS_freeMemory
-    //     returns (bool)
-    // {
-    //     if (super._dispatch(i, action, data)) {
-    //         return true;
-    //     } else if (action == uint32(ISettlerActions.NATIVE_CHECK.selector)) {
-    //         (uint256 deadline, uint256 msgValue) = abi.decode(data, (uint256, uint256));
-    //         if (block.timestamp > deadline) {
-    //             assembly ("memory-safe") {
-    //                 mstore(0x00, 0xcd21db4f) // selector for `SignatureExpired(uint256)`
-    //                 mstore(0x20, deadline)
-    //                 revert(0x1c, 0x24)
-    //             }
-    //         }
-    //         if (msg.value > msgValue) {
-    //             assembly ("memory-safe") {
-    //                 mstore(0x00, 0x4a094431) // selector for `MsgValueMismatch(uint256,uint256)`
-    //                 mstore(0x20, msgValue)
-    //                 mstore(0x40, callvalue())
-    //                 revert(0x1c, 0x44)
-    //             }
-    //         }
-    //         return true;
-
-    //     } else {
-    //         return false;
-    //     }
-    // }
+    function _dispatch(uint256 i, uint256 action, bytes calldata data)
+        internal
+        override(Settler, SettlerAbstract) DANGEROUS_freeMemory
+        returns (bool){
+        return super._dispatch(i, action, data);
+    }
 
 
     function _dispatchVIP(uint256 action, bytes calldata data) internal virtual override DANGEROUS_freeMemory returns (bool) {
@@ -130,8 +107,8 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
              * 2. takeSellerIntent: maker is seller(tba), checked in permit2 transferFrom
              * 3. takeBuyerIntent: maker is buyer(tba), maker intent signature from buyer tba
              */
-            if(lighterAccount.isOwnerCall(escrowParams.seller, msg.sender)){
-                /// the call is from seller ==> 3. takeBuyerIntent
+            if(lighterAccount.isOwnerCall(escrowParams.seller, _msgSender())){
+                /// the caller is from seller ==> 3. takeBuyerIntent
                 /// verify buyer intent signature
                 makesureIntentParams(escrowParams.buyer, _domainSeparator(), intentParams, makerIntentSig);
                 clearIntentTypeHash();
@@ -139,7 +116,7 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
 
             
             makesureTradeValidation(escrowParams, intentParams);
-            _makeEscrow(escrowHash, escrowParams, 0, 0);
+            _makeEscrow(escrowHash, escrowParams);
             return true;
         }
 
@@ -148,12 +125,10 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
 
     function _makeEscrow(
         bytes32 escrowHash,
-        ISettlerBase.EscrowParams memory escrowParams,
-        uint256 gasSpentForBuyer,
-        uint256 gasSpentForSeller
+        ISettlerBase.EscrowParams memory escrowParams
     ) internal {
-        lighterAccount.addPendingTx(escrowParams.buyer);
-        lighterAccount.addPendingTx(escrowParams.seller);
+        lighterAccount.addPendingTx(escrowParams.buyer, escrowParams.seller);
+
         uint256 sellerFee = getFeeAmount(escrowParams.volume, escrowParams.sellerFeeRate);
         escrow.create(
             address(escrowParams.token), 
@@ -169,9 +144,7 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
                     paidSeconds: 0,
                     releaseSeconds: 0,
                     cancelTs: 0,
-                    lastActionTs: uint64(block.timestamp),
-                    gasSpentForBuyer: gasSpentForBuyer,
-                    gasSpentForSeller: gasSpentForSeller
+                    lastActionTs: uint64(block.timestamp)
                 }
             )
         );

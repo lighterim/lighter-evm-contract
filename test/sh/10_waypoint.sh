@@ -159,13 +159,13 @@ cast send $SetWaypoint \
   --gas-limit 5000000
 
 result=$(cast call $LighterAccount 'getUserHonour(address)' $tbaSeller)
-read -r accumulatedUsd count pendingCount cancelledCount disputedAsBuyer disputedAsSeller lostDisputeCount avgReleaseSeconds avgPaidSeconds <<< $(cast abi-decode -i "decodeResult(uint256,uint32,uint32,uint32,uint32,uint32,uint32,uint32,uint32)" $result | tr '\n' ' ')
+read -r accumulatedUsd count pendingCount cancelledCount disputesReceivedAsBuyer disputesReceivedAsSeller totalAdverseRulings avgReleaseSeconds avgPaidSeconds <<< $(cast abi-decode -i "decodeResult(uint256,uint32,uint32,uint32,uint32,uint32,uint32,uint32,uint32)" $result | tr '\n' ' ')
 echo "Accumulated USD: $accumulatedUsd"
 echo "Count: $count"
 echo "Pending Count: $pendingCount"
 echo "Cancelled Count: $cancelledCount"
-echo "Disputed As Buyer: $disputedAsBuyer"
-echo "Disputed As Seller: $disputedAsSeller"
-echo "Lost Dispute Count: $lostDisputeCount"
+echo "Disputes Received As Buyer: $disputesReceivedAsBuyer"
+echo "Disputes Received As Seller: $disputesReceivedAsSeller"
+echo "Total Adverse Rulings: $totalAdverseRulings"
 echo "Avg Release Seconds: $avgReleaseSeconds"
 echo "Avg Paid Seconds: $avgPaidSeconds"

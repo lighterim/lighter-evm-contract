@@ -205,46 +205,90 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     }
     
     /// @notice add pending tx count
-    /// @param account user address
-    function addPendingTx(address account) public onlyAuthorized {
-        // console.logString("------------addPendingTx--------------------");
-        // console.logAddress(account);
-        // console.log("ticketPendingCounts[account]", ticketPendingCounts[account]);
+    /// @param tbaBuyer tba buyer address
+    /// @param tbaSeller tba seller address
+    function addPendingTx(address tbaBuyer, address tbaSeller) public onlyAuthorized {
+        _addPendingTx(tbaBuyer);
+        _addPendingTx(tbaSeller);
+    }
+
+    function _addPendingTx(address account) private {
         if(!hasAvailableQuota(account)) revert InsufficientQuota(account);
         userHonour[account].pendingCount++;
     }
 
     /// @notice release pending tx
-    /// @param account account address
+    /// @param tbaBuyer tba buyer address
+    /// @param tbaSeller tba seller address
     /// @param usdAmount usd amount
     /// @param releaseSeconds release seconds
     /// @param paidSeconds paid seconds
-    function releasePendingTx(address account, uint256 usdAmount, uint32 paidSeconds, uint32 releaseSeconds) public onlyAuthorized {
-        if (userHonour[account].pendingCount <= 0) revert NoPendingTx(account);
-        uint32 count = userHonour[account].count;
-        uint256 tradeCount = count - userHonour[account].cancelledCount;
-        uint256 denominator = tradeCount + 1;
-        
+    function releasePendingTx(address tbaBuyer, address tbaSeller, uint256 usdAmount, uint32 paidSeconds, uint32 releaseSeconds) public onlyAuthorized {
+        _releaseBuyerPendingTx(tbaBuyer, usdAmount, paidSeconds);
+        _releaseSellerPendingTx(tbaSeller, usdAmount, releaseSeconds);
+    }
+
+    function _releaseBuyerPendingTx(address account, uint256 usdAmount, uint32 paidSeconds) private {
+        ISettlerBase.Honour storage honour = userHonour[account];
+        uint256 tradeCount = _updateRelease(honour, account, usdAmount);
+        honour.avgPaidSeconds = _calcAvg(honour.avgPaidSeconds, tradeCount, paidSeconds);
+    }
+
+    function _releaseSellerPendingTx(address account, uint256 usdAmount, uint32 releaseSeconds) private {
+        ISettlerBase.Honour storage honour = userHonour[account];
+        uint256 tradeCount = _updateRelease(honour, account, usdAmount);
+        honour.avgReleaseSeconds = _calcAvg(honour.avgReleaseSeconds, tradeCount, releaseSeconds);
+    }
+
+    /**
+     * @dev Internal helper to update core transaction metrics and return denominator for averages.
+     * @return tradeCount Total successful trades before this update (for weighted average)
+     */
+    function _updateRelease(
+        ISettlerBase.Honour storage honour, 
+        address account,
+        uint256 usdAmount
+    ) private returns (uint256 tradeCount) {
+        uint32 pendingCount = honour.pendingCount;
+        if (pendingCount < 1) revert NoPendingTx(account);
+
+        uint32 count = honour.count;
+        uint32 cancelledCount = honour.cancelledCount;
+        tradeCount = uint256(count - cancelledCount);
+
         unchecked {
-            userHonour[account].count = count + 1;
-            userHonour[account].pendingCount--;
-            userHonour[account].accumulatedUsd += usdAmount;
+            honour.accumulatedUsd += usdAmount;
+            honour.count = count + 1;
+            honour.pendingCount = pendingCount - 1;
         }
-        
-        if(denominator == 1){
-            userHonour[account].avgReleaseSeconds = releaseSeconds;
-            userHonour[account].avgPaidSeconds = paidSeconds;
-        } else {
-            // Safe cast: weighted average result is bounded by max(avg, new), both are uint32
-            // Calculate weighted average: (avg * n + new) / (n + 1)
-            // Since avg and new are both uint32, the result is guaranteed to fit in uint32
-            // because weighted average cannot exceed max(avg, new)
-            uint256 releaseSecondsSum = uint256(userHonour[account].avgReleaseSeconds) * tradeCount + releaseSeconds;
-            uint256 paidSecondsSum = uint256(userHonour[account].avgPaidSeconds) * tradeCount + paidSeconds;
-            unchecked {
-                userHonour[account].avgReleaseSeconds = uint32(releaseSecondsSum / denominator);
-                userHonour[account].avgPaidSeconds = uint32(paidSecondsSum / denominator);
-            }
+    }
+
+    /**
+     * @dev Calculates the weighted average: (currentAvg * n + newValue) / (n + 1)
+     * @param currentAvg The existing average value
+     * @param previousCount The number of successful trades PRIOR to this update (n)
+     * @param newValue The new data point to incorporate
+     * @return The new weighted average
+     */
+    function _calcAvg(
+        uint32 currentAvg, 
+        uint256 previousCount, 
+        uint32 newValue
+    ) private pure returns (uint32) {
+        // If this is the first successful trade, the new value is the average
+        if (previousCount == 0) {
+            return newValue;
+        }
+
+        // Use uint256 for intermediate calculation to prevent overflow
+        // Formula: (avg * n + new) / (n + 1)
+        // Note: Weighted average will never exceed max(currentAvg, newValue),
+        // so it is guaranteed to fit back into uint32.
+        uint256 numerator = (uint256(currentAvg) * previousCount) + uint256(newValue);
+        uint256 denominator = previousCount + 1;
+
+        unchecked {
+            return uint32(numerator / denominator);
         }
     }
 
@@ -269,22 +313,31 @@ contract LighterAccount is Ownable, ReentrancyGuard {
                 userHonour[account].accumulatedUsd += usdAmount;
             }
             if(isLoseDispute) {
-                userHonour[account].lostDisputeCount++;
+                userHonour[account].totalAdverseRulings++;
             }
         }
     }
 
-    function disputePendingTx(address account, bool byBuyer) public onlyAuthorized {
-        if (userHonour[account].pendingCount <= 0) revert NoPendingTx(account);
-        unchecked{
-            if(byBuyer) {
-                userHonour[account].disputedAsSeller++;
-            } else {
-                userHonour[account].disputedAsBuyer++;
+    /// @notice Record a dispute for a pending transaction
+    /// @param tbaBuyer The tba address of the buyer
+    /// @param tbaSeller The tba address of the seller
+    /// @param initiatedByBuyer True if buyer initiated the dispute, false if seller initiated
+    function disputePendingTx(address tbaBuyer, address tbaSeller, bool initiatedByBuyer) public onlyAuthorized {
+        if (userHonour[tbaBuyer].pendingCount < 1) revert NoPendingTx(tbaBuyer);
+        if (userHonour[tbaSeller].pendingCount < 1) revert NoPendingTx(tbaSeller);
+
+        if(initiatedByBuyer) {
+            unchecked{
+                userHonour[tbaBuyer].disputesInitiatedAsBuyer++;
+                userHonour[tbaSeller].disputesReceivedAsSeller++;
+            }
+        } else {
+            unchecked{
+                userHonour[tbaSeller].disputesInitiatedAsSeller++;
+                userHonour[tbaBuyer].disputesReceivedAsBuyer++;
             }
         }
     }
-
 
 
     /// @notice upgrade quota

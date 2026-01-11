@@ -96,14 +96,17 @@ contract LocalTakeIntentTest is Permit2Signature {
         paymentMethodRegistry = new PaymentMethodRegistry();
         paymentMethodRegistry.addPaymentMethodConfig(keccak256("wechat"), ISettlerBase.PaymentMethodConfig({
             windowSeconds: 300,
+            disputeWindowSeconds: 604800, // 7 days
             isEnabled: true
         }));
         paymentMethodRegistry.addPaymentMethodConfig(keccak256("wise"), ISettlerBase.PaymentMethodConfig({
             windowSeconds: 300,
+            disputeWindowSeconds: 604800, // 7 days
             isEnabled: true
         }));
         paymentMethodRegistry.addPaymentMethodConfig(keccak256("alipay"), ISettlerBase.PaymentMethodConfig({
             windowSeconds: 300,
+            disputeWindowSeconds: 604800, // 7 days
             isEnabled: true
         }));
 
@@ -220,9 +223,7 @@ contract LocalTakeIntentTest is Permit2Signature {
                     paidSeconds: 0,
                     releaseSeconds: 0,
                     cancelTs: 0,
-                    lastActionTs: uint64(block.timestamp),
-                    gasSpentForBuyer: 0,
-                    gasSpentForSeller: 0
+                    lastActionTs: uint64(block.timestamp)
                 }
             )
         );

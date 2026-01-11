@@ -82,14 +82,17 @@ contract DeployerContract is Script {
         console.log("PaymentMethodRegistry deployed at:", address(paymentMethodRegistry));
         paymentMethodRegistry.addPaymentMethodConfig(keccak256("wechat"), ISettlerBase.PaymentMethodConfig({
             windowSeconds: 300,
+            disputeWindowSeconds: 604800, // 7 days
             isEnabled: true
         }));
         paymentMethodRegistry.addPaymentMethodConfig(keccak256("wise"), ISettlerBase.PaymentMethodConfig({
             windowSeconds: 300,
+            disputeWindowSeconds: 604800, // 7 days
             isEnabled: true
         }));
         paymentMethodRegistry.addPaymentMethodConfig(keccak256("alipay"), ISettlerBase.PaymentMethodConfig({
-            windowSeconds: 300,
+            windowSeconds: 300, 
+            disputeWindowSeconds: 604800, // 7 days
             isEnabled: true
         }));
         // paymentMethodRegistry.addVerifier(bytes32(0), ISettlerBase.Stage.MANUAL, address(zkVerifyProofVerifier));

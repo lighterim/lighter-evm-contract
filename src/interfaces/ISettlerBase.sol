@@ -76,12 +76,11 @@ interface ISettlerBase {
         uint32 releaseSeconds;
         uint64 cancelTs;
         uint64 lastActionTs;
-        uint256 gasSpentForBuyer;
-        uint256 gasSpentForSeller;
     } 
 
     struct PaymentMethodConfig {
         uint32 windowSeconds;
+        uint32 disputeWindowSeconds;
         bool isEnabled;
     }
 
@@ -93,17 +92,47 @@ interface ISettlerBase {
         uint256 amount;
     }
 
+    /**
+     * @notice User honor/reputation tracking structure
+     * @dev Tracks transaction history, dispute records, and performance metrics for reputation system
+     */
     struct Honour {
+        /// @notice Accumulated transaction volume in USD
         uint256 accumulatedUsd;
-    
+        /// @notice Total number of completed transactions (excludes cancelled, includes disputed)
         uint32 count;
+        /// @notice Number of pending (in-progress) transactions
         uint32 pendingCount;
+        /// @notice Number of cancelled transactions (typically by buyer)
         uint32 cancelledCount;
-        uint32 disputedAsBuyer;
-        uint32 disputedAsSeller;
-        uint32 lostDisputeCount;
+       
+
+        /**
+         * @dev PASSIVE DISPUTES (Incoming):
+         * Number of times a counterparty has opened a dispute against this user.
+         */
+        /// @notice Number of disputes received as buyer (when current user's role is buyer)
+        uint32 disputesReceivedAsBuyer;
+        /// @notice Number of disputes received as seller (when current user's role is seller)
+        uint32 disputesReceivedAsSeller;
+        /// @notice Total number of adverse rulings against the current user in dispute resolutions
+        uint32 totalAdverseRulings;
+
+        /**
+         * @dev ACTIVE DISPUTES (Outgoing):
+         * Number of times this user has initiated a dispute process against a counterparty.
+         */
+        /// @notice Times this user initiated a dispute while acting as a Buyer
+        uint32 disputesInitiatedAsBuyer;
+        /// @notice Times this user initiated a dispute while acting as a Seller
+        uint32 disputesInitiatedAsSeller;
+        /// @notice Number of disputes initiated by this user that were ruled in favor of the counterparty
+        uint32 failedInitiations;
         
+
+        /// @notice Average release time in seconds (from payment to release completion)
         uint32 avgReleaseSeconds;
+        /// @notice Average payment time in seconds
         uint32 avgPaidSeconds;
     }
 

@@ -118,7 +118,8 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
         if(!lighterAccount.isOwnerCall(escrowParams.buyer, sender)) revert UnauthorizedCaller(sender);
         
         escrow.dispute(escrowHash, escrowParams.id, escrowParams.token, escrowParams.buyer, escrowParams.seller, ISettlerBase.EscrowStatus.BuyerDisputed);
-
+        
+        lighterAccount.disputePendingTx(escrowParams.buyer, escrowParams.seller, true);
     }
 
     /**
@@ -131,6 +132,8 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
         if(!lighterAccount.isOwnerCall(escrowParams.seller, sender)) revert UnauthorizedCaller(sender);
 
         escrow.dispute(escrowHash, escrowParams.id, escrowParams.token, escrowParams.buyer, escrowParams.seller, ISettlerBase.EscrowStatus.SellerDisputed);
+
+        lighterAccount.disputePendingTx(escrowParams.buyer, escrowParams.seller, false);
 
     }
 
@@ -148,8 +151,7 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
 
         uint8 tokenDecimals = IERC20(escrowParams.token).decimals();
         uint256 amountUsd = _calcAmountUsd(escrowParams.volume, tokenDecimals, escrowParams.price, escrowParams.usdRate);
-        lighterAccount.releasePendingTx(escrowParams.buyer, amountUsd, paidSeconds, releaseSeconds);
-        lighterAccount.releasePendingTx(escrowParams.seller, amountUsd, paidSeconds, releaseSeconds);
+        lighterAccount.releasePendingTx(escrowParams.buyer, escrowParams.seller, amountUsd, paidSeconds, releaseSeconds);
     }
     
     function _resolve(
@@ -170,11 +172,13 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
             && !lighterAccount.isOwnerCall(tbaArbitrator, sender)
         ) revert UnauthorizedCaller(sender);
 
+        uint32 disputeWindowSeconds = paymentMethodRegistry.getPaymentMethodConfig(escrowParams.paymentMethod).disputeWindowSeconds;
         uint256 sellerFee = getFeeAmount(escrowParams.volume, escrowParams.sellerFeeRate);
         uint256 buyerFee = getFeeAmount(escrowParams.volume, escrowParams.buyerFeeRate);
         bool isDisputedByBuyer = escrow.resolve(
             escrowHash, escrowParams, 
             buyerFee, sellerFee,
+            disputeWindowSeconds,
             buyerThresholdBp, tbaArbitrator, escrowTypedHash, counterpartySig
         );
 
