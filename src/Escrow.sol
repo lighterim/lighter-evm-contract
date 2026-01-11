@@ -325,7 +325,7 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         address tbaArbitrator, 
         bytes32 escrowTypedHash, 
         bytes memory counterpartySig
-    ) external onlyAuthorizedExecutor returns(bool isDisputedByBuyer){
+    ) external onlyAuthorizedExecutor returns(bool isInitiatedByBuyer){
 
         ISettlerBase.EscrowData storage escrowData = allEscrow[escrowHash];
         ISettlerBase.EscrowStatus status = escrowData.status;
@@ -334,16 +334,19 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
             && status != ISettlerBase.EscrowStatus.SellerDisputed
         ) revert InvalidEscrowStatus(escrowHash, status);
 
-        isDisputedByBuyer = status == ISettlerBase.EscrowStatus.BuyerDisputed;
+        isInitiatedByBuyer = (status == ISettlerBase.EscrowStatus.BuyerDisputed);
         uint256 currentTs = block.timestamp;
         uint64 lastActionTs = escrowData.lastActionTs;
+        address token = escrowParams.token;
+        uint256 volume = escrowParams.volume;
+        address seller = escrowParams.seller;
+        address buyer = escrowParams.buyer;
 
         // 1. Check time window first (Cheapest check - fails fast)
         if (currentTs < lastActionTs + disputeWindowSeconds) {
-            
             // 2. Determine who the expected signer is based on dispute status
             // Logic: If Buyer disputed, we need Seller's sig. Otherwise, we need Buyer's sig.
-            address expectedSigner = isDisputedByBuyer ? escrowParams.seller : escrowParams.buyer;
+            address expectedSigner = isInitiatedByBuyer ? seller : buyer;
 
             // 3. Verify signature (Most expensive check - performed only if time window is valid)
             if (!SignatureChecker.isValidSignatureNow(expectedSigner, escrowTypedHash, counterpartySig)) {
@@ -352,30 +355,30 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         }
 
         escrowData.status = ISettlerBase.EscrowStatus.Resolved;
-        escrowData.lastActionTs = uint64(currentTs);
-
-        address token = escrowParams.token;
-        uint256 volume = escrowParams.volume;
+        unchecked {
+            escrowData.lastActionTs = uint64(currentTs);
+        }
         
         sellerEscrow[escrowParams.seller][token] -= (volume + sellerFee);
         userCredit[tbaArbitrator][token] += sellerFee;
+
         if(buyerThresholdBp == 0){
             IERC20(token).safeTransfer(escrowParams.payer, volume);
         }
         else {
             userCredit[feeCollector][token] += buyerFee;
-            uint256 buyerAmount = volume - buyerFee;
+            uint256 buyerNet = volume - buyerFee;
             if(buyerThresholdBp >= BASIS_POINTS_BASE){
-                userCredit[escrowParams.buyer][token] += buyerAmount;
+                userCredit[buyer][token] += buyerNet;
             }
             else{
-                uint256 buyerResolveAmount = buyerAmount * buyerThresholdBp / BASIS_POINTS_BASE;
-                userCredit[escrowParams.payer][token] += buyerResolveAmount;
-                IERC20(token).safeTransfer(escrowParams.payer, buyerAmount - buyerResolveAmount);
+                uint256 buyerResolveAmount = buyerNet * buyerThresholdBp / BASIS_POINTS_BASE;
+                userCredit[buyer][token] += buyerResolveAmount;
+                IERC20(token).safeTransfer(escrowParams.payer, buyerNet - buyerResolveAmount);
             }
         }
 
-        emit Resolved(escrowParams.token, escrowParams.buyer, escrowParams.seller, escrowHash, escrowParams.id, tbaArbitrator, buyerThresholdBp);
+        emit Resolved(token, buyer, seller, escrowHash, escrowParams.id, tbaArbitrator, buyerThresholdBp);
     }
 
     function _setStatus(bytes32 escrowHash, uint64 timestamp, ISettlerBase.EscrowStatus status, uint32 paidSeconds, uint32 releaseSeconds, uint64 cancelTs) private {

@@ -104,8 +104,7 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
         escrow.cancel(
             escrowHash, escrowParams, sellerFee, cfg.windowSeconds
         );
-        lighterAccount.cancelPendingTx(escrowParams.seller, false);
-        lighterAccount.cancelPendingTx(escrowParams.buyer, true);
+        lighterAccount.cancelPendingTx(escrowParams.buyer, escrowParams.seller, true);
     }
 
     /**
@@ -141,17 +140,21 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
         (bytes32 escrowHash,) = makesureEscrowParams(_domainSeparator(), escrowParams, sig);
         if(!lighterAccount.isOwnerCall(escrowParams.seller, sender)) revert UnauthorizedCaller(sender);
 
-        uint256 sellerFee = getFeeAmount(escrowParams.volume, escrowParams.sellerFeeRate);
-        uint256 buyerFee = getFeeAmount(escrowParams.volume, escrowParams.buyerFeeRate);
+        uint256 volume = escrowParams.volume;
+        uint256 sellerFee = getFeeAmount(volume, escrowParams.sellerFeeRate);
+        uint256 buyerFee = getFeeAmount(volume, escrowParams.buyerFeeRate);
 
+        address buyer = escrowParams.buyer;
+        address seller = escrowParams.seller;
+        address token = escrowParams.token;
         (uint32 paidSeconds, uint32 releaseSeconds) = escrow.releaseBySeller(
-            escrowHash, escrowParams.id, escrowParams.token, escrowParams.buyer, buyerFee, 
-            escrowParams.seller, sellerFee, escrowParams.volume
+            escrowHash, escrowParams.id, token, buyer, buyerFee, 
+            seller, sellerFee, volume
         );
 
-        uint8 tokenDecimals = IERC20(escrowParams.token).decimals();
-        uint256 amountUsd = _calcAmountUsd(escrowParams.volume, tokenDecimals, escrowParams.price, escrowParams.usdRate);
-        lighterAccount.releasePendingTx(escrowParams.buyer, escrowParams.seller, amountUsd, paidSeconds, releaseSeconds);
+        uint8 tokenDecimals = IERC20(token).decimals();
+        uint256 amountUsd = _calcAmountUsd(volume, tokenDecimals, escrowParams.price, escrowParams.usdRate);
+        lighterAccount.releasePendingTx(buyer, seller, amountUsd, paidSeconds, releaseSeconds);
     }
     
     function _resolve(
@@ -172,10 +175,11 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
             && !lighterAccount.isOwnerCall(tbaArbitrator, sender)
         ) revert UnauthorizedCaller(sender);
 
+        uint256 volume = escrowParams.volume;
         uint32 disputeWindowSeconds = paymentMethodRegistry.getPaymentMethodConfig(escrowParams.paymentMethod).disputeWindowSeconds;
-        uint256 sellerFee = getFeeAmount(escrowParams.volume, escrowParams.sellerFeeRate);
-        uint256 buyerFee = getFeeAmount(escrowParams.volume, escrowParams.buyerFeeRate);
-        bool isDisputedByBuyer = escrow.resolve(
+        uint256 sellerFee = getFeeAmount(volume, escrowParams.sellerFeeRate);
+        uint256 buyerFee = getFeeAmount(volume, escrowParams.buyerFeeRate);
+        bool isInitiatedByBuyer = escrow.resolve(
             escrowHash, escrowParams, 
             buyerFee, sellerFee,
             disputeWindowSeconds,
@@ -184,30 +188,29 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
 
         uint256 buyerAmount = 0;
         uint256 sellerAmount = 0;
-        bool isBuyerLoseDispute = true;
-        bool isSellerLoseDispute = true;
         uint8 tokenDecimals = IERC20(escrowParams.token).decimals();
-        uint256 amountUsd = _calcAmountUsd(escrowParams.volume, tokenDecimals, escrowParams.price, escrowParams.usdRate);
+        uint256 amountUsd = _calcAmountUsd(volume, tokenDecimals, escrowParams.price, escrowParams.usdRate);
+
+        bool isBuyerLoseDispute;
         if(buyerThresholdBp >= BASIS_POINTS_BASE) {
             buyerAmount = amountUsd;
             isBuyerLoseDispute = false;
+        } else if (buyerThresholdBp == 0) {
+            sellerAmount = amountUsd;
+            isBuyerLoseDispute = true; // Buyer loses dispute when threshold is 0
         } else {
-            if(buyerThresholdBp == 0) {
-                sellerAmount = amountUsd;
-                isSellerLoseDispute = false;
-            } else {
-                buyerAmount = amountUsd * buyerThresholdBp / BASIS_POINTS_BASE;
-                sellerAmount = amountUsd - buyerAmount;
-                if(isDisputedByBuyer) {
-                    isBuyerLoseDispute = false;
-                } else {
-                    isSellerLoseDispute = false;
-                }
-            }
+            buyerAmount = amountUsd * buyerThresholdBp / BASIS_POINTS_BASE;
+            sellerAmount = amountUsd - buyerAmount;
+            // In partial refund scenario, initiator is typically considered not fully victorious
+            isBuyerLoseDispute = isInitiatedByBuyer; 
         }
-        
-        lighterAccount.resolvePendingTx(escrowParams.buyer, buyerAmount, isBuyerLoseDispute);
-        lighterAccount.resolvePendingTx(escrowParams.seller, sellerAmount, isSellerLoseDispute);
+
+        // Update account honor records
+        lighterAccount.resolvePendingTx(
+            escrowParams.buyer, buyerAmount, 
+            escrowParams.seller, sellerAmount,
+            isInitiatedByBuyer, isBuyerLoseDispute
+        );
     }
 
     /**

@@ -11,7 +11,7 @@ import "../interfaces/ISettlerBase.sol";
 // import {console} from "forge-std/console.sol";
 import {
     ZeroAddress, InvalidAccountAddress, InvalidRecipient, InvalidRentPrice, HasPendingTx,
-    InsufficientPayment, WithdrawalFailed, InvalidSender, InvalidTokenId, AccountAlreadyCreated,
+    InsufficientPayment, InvalidSender, InvalidTokenId, AccountAlreadyCreated,
     UnauthorizedExecutor, NoPendingTx, InsufficientQuota
     } from "../core/SettlerErrors.sol";
 
@@ -287,33 +287,87 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         uint256 numerator = (uint256(currentAvg) * previousCount) + uint256(newValue);
         uint256 denominator = previousCount + 1;
 
+        // casting to 'uint32' is safe because weighted average will never exceed max(currentAvg, newValue),
+        // so it is guaranteed to fit back into uint32.
         unchecked {
+            // forge-lint: disable-next-line(unsafe-typecast)
             return uint32(numerator / denominator);
         }
     }
 
-    function cancelPendingTx(address account, bool isDuty) public onlyAuthorized {
-        if (userHonour[account].pendingCount <= 0) revert NoPendingTx(account);
+    function cancelPendingTx(address tbaBuyer, address tbaSeller, bool isBuyerDuty) public onlyAuthorized {
+        _cancelPendingTx(tbaBuyer, isBuyerDuty);
+        _cancelPendingTx(tbaSeller, !isBuyerDuty);
+    }
+
+    function _cancelPendingTx(address account, bool isDuty) private {
+        ISettlerBase.Honour storage honour = userHonour[account];
+        uint32 pendingCount = honour.pendingCount;
+        if(pendingCount <= 0) revert NoPendingTx(account);
         unchecked {
-            userHonour[account].pendingCount--;
-            userHonour[account].count++;
-            if(isDuty) {
-                userHonour[account].cancelledCount++;
+            honour.pendingCount = (pendingCount -1);
+            honour.count++;
+        }
+    }
+
+    function resolvePendingTx(
+        address tbaBuyer, 
+        uint256 buyerAmount, 
+        address tbaSeller, 
+        uint256 sellerAmount,
+        bool isInitiatedByBuyer,
+        bool isBuyerLoseDispute
+    ) public onlyAuthorized {
+        _updateHonourOnResolve(tbaBuyer, buyerAmount, isInitiatedByBuyer, isBuyerLoseDispute);
+        _updateHonourOnResolve(tbaSeller, sellerAmount, !isInitiatedByBuyer, !isBuyerLoseDispute);
+    }
+
+    function _updateHonourOnResolve(
+        address account,
+        uint256 usdAmount,
+        bool iAmInitiator, 
+        bool iLose
+    ) private {
+        ISettlerBase.Honour storage honour = userHonour[account];
+        uint32 pendingCount = honour.pendingCount;
+        if(pendingCount < 1) revert NoPendingTx(account);
+
+        unchecked {
+            honour.pendingCount = pendingCount - 1;
+            honour.count++;
+            honour.accumulatedUsd += usdAmount;
+
+            if(iLose) {
+                if(iAmInitiator) honour.failedInitiations++;
+                else honour.totalAdverseRulings++;
             }
         }
     }
 
-    function resolvePendingTx(address account, uint256 usdAmount, bool isLoseDispute) public onlyAuthorized {
-        if (userHonour[account].pendingCount <= 0) revert NoPendingTx(account);
-        
+    function _resolvePendingTx(
+        ISettlerBase.Honour storage honour, 
+        uint32 pendingCount,
+        uint256 usdAmount,
+        bool isInitiated, 
+        bool isLoseDispute
+    ) private {
+        if(usdAmount > 0) {
+            honour.accumulatedUsd += usdAmount;
+        }
         unchecked {
-            userHonour[account].pendingCount--;
-            userHonour[account].count++;
-            if(usdAmount > 0) {
-                userHonour[account].accumulatedUsd += usdAmount;
+            honour.pendingCount = (pendingCount -1);
+            honour.count++;
+        }
+        if(isLoseDispute) {
+            if(isInitiated){
+                unchecked {
+                honour.failedInitiations++;
+                }
             }
-            if(isLoseDispute) {
-                userHonour[account].totalAdverseRulings++;
+            else{
+                unchecked {     
+                honour.totalAdverseRulings++;
+                }
             }
         }
     }
@@ -323,22 +377,23 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     /// @param tbaSeller The tba address of the seller
     /// @param initiatedByBuyer True if buyer initiated the dispute, false if seller initiated
     function disputePendingTx(address tbaBuyer, address tbaSeller, bool initiatedByBuyer) public onlyAuthorized {
-        if (userHonour[tbaBuyer].pendingCount < 1) revert NoPendingTx(tbaBuyer);
-        if (userHonour[tbaSeller].pendingCount < 1) revert NoPendingTx(tbaSeller);
+        ISettlerBase.Honour storage buyerHonour = userHonour[tbaBuyer];
+        if (buyerHonour.pendingCount < 1) revert NoPendingTx(tbaBuyer); 
+        ISettlerBase.Honour storage sellerHonour = userHonour[tbaSeller];
+        if (sellerHonour.pendingCount < 1) revert NoPendingTx(tbaSeller);
 
         if(initiatedByBuyer) {
             unchecked{
-                userHonour[tbaBuyer].disputesInitiatedAsBuyer++;
-                userHonour[tbaSeller].disputesReceivedAsSeller++;
+                buyerHonour.disputesInitiatedAsBuyer++;
+                sellerHonour.disputesReceivedAsSeller++;
             }
         } else {
             unchecked{
-                userHonour[tbaSeller].disputesInitiatedAsSeller++;
-                userHonour[tbaBuyer].disputesReceivedAsBuyer++;
+                sellerHonour.disputesInitiatedAsSeller++;
+                buyerHonour.disputesReceivedAsBuyer++;
             }
         }
     }
-
 
     /// @notice upgrade quota
     /// @param nftId token id
@@ -378,8 +433,8 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     /// @return tokenContract token contract address
     /// @return tokenId token id
     function token(address tbaAddress) public view returns (uint256, address, uint256) {
+        if(tbaAddress.code.length == 0) revert InvalidAccountAddress();
         IERC6551Account account = IERC6551Account(payable(tbaAddress));
-        if (address(account).code.length == 0) revert InvalidAccountAddress();
         return account.token();
     }
 
@@ -428,7 +483,7 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     /// @param account user address
     /// @return quota quota
     function getQuota(address account) public view returns (uint256) {
-        if(ticketRents[account] == 0) revert InvalidAccountAddress();
+        if(account.code.length == 0 || ticketRents[account] == 0) revert InvalidAccountAddress();
         return (ticketRents[account] + rentPrice-1) / rentPrice;
     }
 
