@@ -18,6 +18,7 @@ contract LighterTicket is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
 
     // the end token id for genesis2(user group for genesis2)
     uint8 constant public GENESIS2_END = 101;
+    uint256 public constant LIGHTER_TICKET_ID_START = 10000;
     // Base URI for token metadata
     string private _baseTokenUri;
     
@@ -30,7 +31,7 @@ contract LighterTicket is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
 
     // Events
     event TokenMinted(address indexed to, uint256 indexed tokenId, bytes32 nostrPubKey);
-    event GenesisMinted(address indexed to, uint8 start, uint8 end);
+    event GenesisMinted(address indexed to,uint8 start, uint8 end);
     event TokenBurned(uint256 indexed tokenId, string hexNostrPubKey);
     event BaseURIUpdated(string newBaseURI);
 
@@ -46,6 +47,7 @@ contract LighterTicket is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
         string memory baseUri_
     ) ERC721(name_, symbol_) Ownable(msg.sender) {
         _baseTokenUri = baseUri_;
+        _tokenIdCounter = 1;
     }
 
     /**
@@ -66,16 +68,20 @@ contract LighterTicket is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
         return tokenId;
     }
 
-    function genesisMint(address to, uint8 start, uint8 end, uint256 startIndex) external onlyOwner {
-        if(_tokenIdCounter > GENESIS2_END) revert DenyMint();
-        if(startIndex < GENESIS2_END) revert InvalidIndex();
-        uint8 tokenId = start;
+    function genesisMint(address to, uint8 end) external onlyOwner {
+        if(_tokenIdCounter >= GENESIS2_END || end >= GENESIS2_END) revert DenyMint();
+
+        uint256 tokenId = _tokenIdCounter;
+        uint8 start = uint8(tokenId);
         for (; tokenId <= end; tokenId++) {
+            _tokenIdCounter++;
             _safeMint(to, tokenId);
         }
-        if(tokenId >= GENESIS2_END){
-            _tokenIdCounter = startIndex;
-        }
+
+        // if(tokenId >= GENESIS2_END){
+            _tokenIdCounter = LIGHTER_TICKET_ID_START;
+        // }
+
         emit GenesisMinted(to, start, end);        
     }
 

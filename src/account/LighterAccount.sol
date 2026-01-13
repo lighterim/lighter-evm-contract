@@ -90,14 +90,16 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     event RentPriceUpdated(uint256 oldPrice, uint256 newPrice);
     event OperatorAuthorized(address indexed operator, bool isAuthorized);
 
+
+    // ============ Modifiers ============
     modifier onlyAuthorized() {
         _onlyAuthorized();
         _;
     }
 
-     function _onlyAuthorized() private view {
+    function _onlyAuthorized() private view {
          if (!authorizedOperators[msg.sender]) revert UnauthorizedExecutor(msg.sender);
-     }
+    }
 
     // ============ Constructor ============
     /**
@@ -124,86 +126,28 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         salt = bytes32(uint256(uint160(address(this))));
     }
 
-    // ============ Public Functions ============
+
+    // ============ Owner Functions ============
     /**
-     * @notice Mint a single NFT and create corresponding TBA
-     * @param recipient NFT recipient address
-     * @param nostrPubKey NOSTR pubkey
-     * @return tokenId Minted token ID
-     * @return tbaAddress Created TBA address
+     * @notice Update mint price
+     * @param newPrice New price
      */
-    function createAccount(address recipient, bytes32 nostrPubKey) 
-        external 
-        payable 
-        nonReentrant
-        returns (uint256 tokenId, address tbaAddress) 
-    {
-        if (recipient == address(0)) revert InvalidRecipient();
-        
-        // 1. Mint NFT
-        tokenId = ticketContract.mintWithURI(recipient, nostrPubKey);
-        
-        tbaAddress = _createAccount(tokenId, nostrPubKey, recipient);
+    function setRentPrice(uint256 newPrice) external onlyOwner {
+        uint256 oldPrice = rentPrice;
+        rentPrice = newPrice;
+        emit RentPriceUpdated(oldPrice, newPrice);
     }
 
-    function createAccount(uint256 tokenId, bytes32 nostrPubKey) external payable nonReentrant returns (address tbaAddress) {
-        if (getAccountAddress(tokenId).code.length > 0) revert AccountAlreadyCreated();
-        
-        return _createAccount(tokenId, nostrPubKey, ticketContract.ownerOf(tokenId));
+    function setTicketBaseURI(string calldata newBaseURI) external onlyOwner {
+        ticketContract.setBaseURI(newBaseURI);
     }
 
-    function _createAccount(uint256 tokenId, bytes32 nostrPubKey, address recipient) internal returns (address) {
-        if (msg.value < rentPrice) revert InsufficientPayment(rentPrice, msg.value);
-
-        // 2. Create TBA (AccountV3 instance)
-        address tbaAddress = IERC6551Registry(registry).createAccount(
-            accountImpl,
-            salt,
-            block.chainid,
-            address(ticketContract),
-            tokenId
-        );
-        
-        // 3. Update statistics
-        unchecked {
-            totalRented++;
-            ticketRents[tbaAddress] += msg.value;
-        }
-
-        emit TicketRentedWithTBA(recipient, tokenId, tbaAddress, msg.value, nostrPubKey);
-        
-        return tbaAddress;
+    function authorizeOperator(address operator, bool isAuthorized) external onlyOwner {
+        authorizedOperators[operator] = isAuthorized;
+        emit OperatorAuthorized(operator, isAuthorized);
     }
 
-    /// @notice Destroy ticket, also lose control of TBA, return rental assets
-    /// @param nftId Token ID
-    /// @param recipient Recipient address
-    function destroyAccount(uint256 nftId, address payable recipient) external nonReentrant {
-        if (nftId == 0) revert InvalidTokenId();
-        if (recipient == address(0)) revert InvalidRecipient();
-
-        address tbaAddress = IERC6551Registry(registry).account(
-            accountImpl,
-            salt,
-            block.chainid,
-            address(ticketContract),
-            nftId
-        );
-
-        if (tbaAddress.code.length == 0) revert InvalidAccountAddress();
-        if (msg.sender != ticketContract.ownerOf(nftId)) revert InvalidSender();
-        if (userHonour[tbaAddress].pendingCount > 0) revert HasPendingTx(tbaAddress);
-
-        string memory hexNostrPubKey = ticketContract.burn(nftId);
-        uint256 amount = ticketRents[tbaAddress];
-        if (amount > 0) {
-            delete ticketRents[tbaAddress];
-            Address.sendValue(recipient, amount);
-        }
-
-        emit TicketDestroyed(recipient, nftId, tbaAddress, amount, hexNostrPubKey);
-    }
-    
+    // ============ Internal(authorized) Functions ============
     /// @notice add pending tx count
     /// @param tbaBuyer tba buyer address
     /// @param tbaSeller tba seller address
@@ -223,7 +167,13 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     /// @param usdAmount usd amount
     /// @param releaseSeconds release seconds
     /// @param paidSeconds paid seconds
-    function releasePendingTx(address tbaBuyer, address tbaSeller, uint256 usdAmount, uint32 paidSeconds, uint32 releaseSeconds) public onlyAuthorized {
+    function releasePendingTx(
+        address tbaBuyer,
+        address tbaSeller,
+        uint256 usdAmount,
+        uint32 paidSeconds,
+        uint32 releaseSeconds
+    ) public onlyAuthorized {
         _releaseBuyerPendingTx(tbaBuyer, usdAmount, paidSeconds);
         _releaseSellerPendingTx(tbaSeller, usdAmount, releaseSeconds);
     }
@@ -236,8 +186,10 @@ contract LighterAccount is Ownable, ReentrancyGuard {
 
     function _releaseSellerPendingTx(address account, uint256 usdAmount, uint32 releaseSeconds) private {
         ISettlerBase.Honour storage honour = userHonour[account];
+        uint32 currentAvg = honour.avgReleaseSeconds;
+        
         uint256 tradeCount = _updateRelease(honour, account, usdAmount);
-        honour.avgReleaseSeconds = _calcAvg(honour.avgReleaseSeconds, tradeCount, releaseSeconds);
+        honour.avgReleaseSeconds = _calcAvg(currentAvg, tradeCount, releaseSeconds);
     }
 
     /**
@@ -250,7 +202,7 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         uint256 usdAmount
     ) private returns (uint256 tradeCount) {
         uint32 pendingCount = honour.pendingCount;
-        if (pendingCount < 1) revert NoPendingTx(account);
+        if (pendingCount == 0) revert NoPendingTx(account);
 
         uint32 count = honour.count;
         uint32 cancelledCount = honour.cancelledCount;
@@ -308,6 +260,11 @@ contract LighterAccount is Ownable, ReentrancyGuard {
             honour.pendingCount = (pendingCount -1);
             honour.count++;
         }
+        if(isDuty) {
+            unchecked {
+                honour.cancelledCount++;
+            }
+        }
     }
 
     function resolvePendingTx(
@@ -330,10 +287,10 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     ) private {
         ISettlerBase.Honour storage honour = userHonour[account];
         uint32 pendingCount = honour.pendingCount;
-        if(pendingCount < 1) revert NoPendingTx(account);
+        if(pendingCount == 0) revert NoPendingTx(account);
 
         unchecked {
-            honour.pendingCount = pendingCount - 1;
+            honour.pendingCount = (pendingCount - 1);
             honour.count++;
             honour.accumulatedUsd += usdAmount;
 
@@ -344,43 +301,15 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         }
     }
 
-    function _resolvePendingTx(
-        ISettlerBase.Honour storage honour, 
-        uint32 pendingCount,
-        uint256 usdAmount,
-        bool isInitiated, 
-        bool isLoseDispute
-    ) private {
-        if(usdAmount > 0) {
-            honour.accumulatedUsd += usdAmount;
-        }
-        unchecked {
-            honour.pendingCount = (pendingCount -1);
-            honour.count++;
-        }
-        if(isLoseDispute) {
-            if(isInitiated){
-                unchecked {
-                honour.failedInitiations++;
-                }
-            }
-            else{
-                unchecked {     
-                honour.totalAdverseRulings++;
-                }
-            }
-        }
-    }
-
     /// @notice Record a dispute for a pending transaction
     /// @param tbaBuyer The tba address of the buyer
     /// @param tbaSeller The tba address of the seller
     /// @param initiatedByBuyer True if buyer initiated the dispute, false if seller initiated
     function disputePendingTx(address tbaBuyer, address tbaSeller, bool initiatedByBuyer) public onlyAuthorized {
         ISettlerBase.Honour storage buyerHonour = userHonour[tbaBuyer];
-        if (buyerHonour.pendingCount < 1) revert NoPendingTx(tbaBuyer); 
+        if (buyerHonour.pendingCount == 0) revert NoPendingTx(tbaBuyer); 
         ISettlerBase.Honour storage sellerHonour = userHonour[tbaSeller];
-        if (sellerHonour.pendingCount < 1) revert NoPendingTx(tbaSeller);
+        if (sellerHonour.pendingCount == 0) revert NoPendingTx(tbaSeller);
 
         if(initiatedByBuyer) {
             unchecked{
@@ -393,6 +322,85 @@ contract LighterAccount is Ownable, ReentrancyGuard {
                 buyerHonour.disputesReceivedAsBuyer++;
             }
         }
+    }
+
+    // ============ Public User Functions ============
+    /**
+     * @notice Mint a single NFT and create corresponding TBA
+     * @param recipient NFT recipient address
+     * @param nostrPubKey NOSTR pubkey
+     * @return tokenId Minted token ID
+     * @return tbaAddress Created TBA address
+     */
+    function createAccount(address recipient, bytes32 nostrPubKey) 
+        external 
+        payable 
+        nonReentrant
+        returns (uint256 tokenId, address tbaAddress) 
+    {
+        if (recipient == address(0)) revert InvalidRecipient();
+
+        if (msg.value < rentPrice) revert InsufficientPayment(rentPrice, msg.value);
+        
+        // 1. Mint NFT
+        tokenId = ticketContract.mintWithURI(recipient, nostrPubKey);
+        tbaAddress = _createAccount(tokenId, nostrPubKey, recipient);
+    }
+
+    function createAccount(uint256 tokenId, bytes32 nostrPubKey) external nonReentrant returns (address tbaAddress) {
+        if (isDeployedContract(getAccountAddress(tokenId))) revert AccountAlreadyCreated();
+        
+        return _createAccount(tokenId, nostrPubKey, ticketContract.ownerOf(tokenId));
+    }
+
+    function _createAccount(uint256 tokenId, bytes32 nostrPubKey, address recipient) internal returns (address) {
+        // 2. Create TBA (AccountV3 instance)
+        address tbaAddress = IERC6551Registry(registry).createAccount(
+            accountImpl,
+            salt,
+            block.chainid,
+            address(ticketContract),
+            tokenId
+        );
+        
+        // 3. Update statistics
+        unchecked {
+            totalRented++;
+            ticketRents[tbaAddress] += msg.value;
+        }
+
+        emit TicketRentedWithTBA(recipient, tokenId, tbaAddress, msg.value, nostrPubKey);
+        
+        return tbaAddress;
+    }
+
+    /// @notice Destroy ticket, also lose control of TBA, return rental assets
+    /// @param nftId Token ID
+    /// @param recipient Recipient address
+    function destroyAccount(uint256 nftId, address payable recipient) external nonReentrant {
+        if (nftId == 0) revert InvalidTokenId();
+        if (recipient == address(0)) revert InvalidRecipient();
+
+        address tbaAddress = IERC6551Registry(registry).account(
+            accountImpl,
+            salt,
+            block.chainid,
+            address(ticketContract),
+            nftId
+        );
+
+        if (!isDeployedContract(tbaAddress)) revert InvalidAccountAddress();
+        if (msg.sender != ticketContract.ownerOf(nftId)) revert InvalidSender();
+        if (userHonour[tbaAddress].pendingCount > 0) revert HasPendingTx(tbaAddress);
+
+        string memory hexNostrPubKey = ticketContract.burn(nftId);
+        uint256 amount = ticketRents[tbaAddress];
+        if (amount > 0) {
+            delete ticketRents[tbaAddress];
+            Address.sendValue(recipient, amount);
+        }
+
+        emit TicketDestroyed(recipient, nftId, tbaAddress, amount, hexNostrPubKey);
     }
 
     /// @notice upgrade quota
@@ -409,7 +417,7 @@ contract LighterAccount is Ownable, ReentrancyGuard {
             nftId
         );
 
-        if (account.code.length == 0) revert InvalidAccountAddress();
+        if (!isDeployedContract(account)) revert InvalidAccountAddress();
         if (userHonour[account].pendingCount > 0) revert HasPendingTx(account);
         
         string memory hexNostrPubKey = ticketContract.tokenURI(nftId);
@@ -418,14 +426,6 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         emit QuotaUpgraded(msg.sender, nftId, account, msg.value, hexNostrPubKey);
     }
 
-    function setTicketBaseURI(string calldata newBaseURI) external onlyOwner {
-        ticketContract.setBaseURI(newBaseURI);
-    }
-
-    function authorizeOperator(address operator, bool isAuthorized) external onlyOwner {
-        authorizedOperators[operator] = isAuthorized;
-        emit OperatorAuthorized(operator, isAuthorized);
-    }
 
     /// @notice get token id, token contract address and token id from tba address
     /// @param tbaAddress tba address
@@ -433,7 +433,7 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     /// @return tokenContract token contract address
     /// @return tokenId token id
     function token(address tbaAddress) public view returns (uint256, address, uint256) {
-        if(tbaAddress.code.length == 0) revert InvalidAccountAddress();
+        if(!isDeployedContract(tbaAddress)) revert InvalidAccountAddress();
         IERC6551Account account = IERC6551Account(payable(tbaAddress));
         return account.token();
     }
@@ -443,10 +443,6 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     /// @param caller caller address
     /// @return true if the caller is the owner of the token
     function isOwnerCall(address tbaAddress, address caller) public view returns (bool) {
-        // console.logString("------------isOwnerCall--------------------");
-        // console.logAddress(tbaAddress);
-        // console.logAddress(caller);
-        // console.logString("------------isOwnerCall------------------end------------------");
         (uint256 chainId, address tokenContract, uint256 tokenId) = token(tbaAddress);
         if ((block.chainid == 31337 || chainId == block.chainid) && tokenContract == address(ticketContract)){
             if(tbaAddress == caller) return true;
@@ -483,7 +479,7 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     /// @param account user address
     /// @return quota quota
     function getQuota(address account) public view returns (uint256) {
-        if(account.code.length == 0 || ticketRents[account] == 0) revert InvalidAccountAddress();
+        if(!isDeployedContract(account) || ticketRents[account] == 0) return 0;
         return (ticketRents[account] + rentPrice-1) / rentPrice;
     }
 
@@ -506,32 +502,23 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         // the token id is greater than or equal to GENESIS2_END, return LIGHTER_USER(10000-)
         return ISettlerBase.TicketType.LIGHTER_USER;
     }
-
     
     function getUserHonour(address account) public view returns (ISettlerBase.Honour memory) {
         if(ticketRents[account] == 0) revert InvalidAccountAddress();
         return userHonour[account];
     }
     
-
-    // ============ Admin Functions ============
-
     /**
-     * @notice Update mint price
-     * @param newPrice New price
+     * @dev Check if given address is a deployed TokenBound contract
      */
-    function setRentPrice(uint256 newPrice) external onlyOwner {
-        uint256 oldPrice = rentPrice;
-        rentPrice = newPrice;
-        emit RentPriceUpdated(oldPrice, newPrice);
+    function isDeployedContract(address addr) internal view returns (bool) {
+        uint256 size;
+        assembly {
+            size := extcodesize(addr)
+        }
+        return size > 0;
     }
 
-    /**
-     * @notice Get contract balance
-     * @return ETH balance in contract
-     */
-    function getBalance() external view returns (uint256) {
-        return address(this).balance;
-    }
+
 }
 

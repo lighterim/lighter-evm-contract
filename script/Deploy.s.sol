@@ -48,7 +48,7 @@ contract DeployerContract is Script {
  
         console.log("Deploying LighterTicket...");
         ticket = new LighterTicket("LighterTicket", "LTK", "https://nft.lighter.im/horizen/");
-        ticket.genesisMint(deployer, 1, 2, 10000);
+        ticket.genesisMint(deployer, 10);
         console.log("LighterTicket deployed at:", address(ticket));
         
         console.log("Deploying ERC6551Registry...");
@@ -127,6 +127,7 @@ contract DeployerContract is Script {
         console.log("export TakeIntent=", address(takeIntent));
         console.log("export SetWaypoint=", address(mainnetWaypoint));
         console.log("export ZkVerifyProofVerifier=", address(zkVerifyProofVerifier));
+        console.log("export PaymentMethodRegistry=", address(paymentMethodRegistry));
         
         vm.stopBroadcast();
     }

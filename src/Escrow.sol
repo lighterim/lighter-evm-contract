@@ -66,9 +66,9 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
     using FullMath for uint256;
 
     /// @notice Basis points base (10000 = 100%)
-    uint256 public constant BASIS_POINTS_BASE = 10000;
+    uint256 constant BASIS_POINTS_BASE = 10000;
 
-    LighterAccount public immutable lighterAccount;
+    LighterAccount immutable lighterAccount;
     address public feeCollector;
 
     // for trade(escrow data)
@@ -175,6 +175,9 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         }
         
         uint64 timestamp = uint64(block.timestamp);
+        // casting to 'uint32' is safe because difference between timestamps (both uint64)
+        // will not exceed uint32 max (2^32 - 1 seconds ≈ 136 years), which is sufficient for escrow durations
+        // forge-lint: disable-next-line(unsafe-typecast)
         uint32 paidSeconds = uint32(timestamp - lastActionTs);
         if(status == ISettlerBase.EscrowStatus.SellerRequestCancel){
             paidSeconds += paymentWindowSeconds;
@@ -218,6 +221,7 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         uint64 currentTs = uint64(block.timestamp);
         
         paidSeconds = escrowData.paidSeconds;
+        // If paidSeconds is 0, the escrow was released directly via ThresholdReachedReleased without going through the Paid status. In this case, releaseSeconds is 0.
         // casting to 'uint32' is safe because time difference between timestamps (both uint64)
         // will not exceed uint32 max (2^32 - 1 seconds ≈ 136 years), which is sufficient for escrow durations
         // forge-lint: disable-next-line(unsafe-typecast)
@@ -227,11 +231,12 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         escrowData.lastActionTs = currentTs;
         escrowData.releaseSeconds = releaseSeconds;
         
+        uint256 buyerNet = amount - buyerFee;
         sellerEscrow[seller][token] -= (amount + sellerFee);
-        userCredit[buyer][token] += (amount - buyerFee);
+        userCredit[buyer][token] += buyerNet;
         userCredit[feeCollector][token] += (buyerFee + sellerFee);
 
-        emit Released(token, buyer, seller, escrowHash, id, amount, status);
+        emit Released(token, buyer, seller, escrowHash, id, buyerNet, status);
     }
 
     function requestCancel(bytes32 escrowHash, uint256 id, address token, address buyer, address seller, uint256 windowSeconds) external onlyAuthorizedExecutor{
@@ -310,7 +315,7 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
      * @param targetStatus The target status
      * @return bool True if the status is invalid, false otherwise
      */
-    function _invalidStatusForDispute(ISettlerBase.EscrowStatus status, ISettlerBase.EscrowStatus targetStatus) public pure returns (bool) {
+    function _invalidStatusForDispute(ISettlerBase.EscrowStatus status, ISettlerBase.EscrowStatus targetStatus) private pure returns (bool) {
         return status != ISettlerBase.EscrowStatus.Paid 
         || ( 
             targetStatus != ISettlerBase.EscrowStatus.BuyerDisputed 
