@@ -180,8 +180,10 @@ contract LighterAccount is Ownable, ReentrancyGuard {
 
     function _releaseBuyerPendingTx(address account, uint256 usdAmount, uint32 paidSeconds) private {
         ISettlerBase.Honour storage honour = userHonour[account];
+        uint32 currentAvg = honour.avgPaidSeconds;
+
         uint256 tradeCount = _updateRelease(honour, account, usdAmount);
-        honour.avgPaidSeconds = _calcAvg(honour.avgPaidSeconds, tradeCount, paidSeconds);
+        honour.avgPaidSeconds = _calcAvg(currentAvg, tradeCount, paidSeconds);
     }
 
     function _releaseSellerPendingTx(address account, uint256 usdAmount, uint32 releaseSeconds) private {
@@ -255,7 +257,7 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     function _cancelPendingTx(address account, bool isDuty) private {
         ISettlerBase.Honour storage honour = userHonour[account];
         uint32 pendingCount = honour.pendingCount;
-        if(pendingCount <= 0) revert NoPendingTx(account);
+        if(pendingCount == 0) revert NoPendingTx(account);
         unchecked {
             honour.pendingCount = (pendingCount -1);
             honour.count++;
@@ -339,21 +341,21 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         returns (uint256 tokenId, address tbaAddress) 
     {
         if (recipient == address(0)) revert InvalidRecipient();
-
-        if (msg.value < rentPrice) revert InsufficientPayment(rentPrice, msg.value);
         
         // 1. Mint NFT
         tokenId = ticketContract.mintWithURI(recipient, nostrPubKey);
         tbaAddress = _createAccount(tokenId, nostrPubKey, recipient);
     }
 
-    function createAccount(uint256 tokenId, bytes32 nostrPubKey) external nonReentrant returns (address tbaAddress) {
+    function createAccount(uint256 tokenId, bytes32 nostrPubKey) external payable nonReentrant returns (address tbaAddress) {
         if (isDeployedContract(getAccountAddress(tokenId))) revert AccountAlreadyCreated();
         
         return _createAccount(tokenId, nostrPubKey, ticketContract.ownerOf(tokenId));
     }
 
     function _createAccount(uint256 tokenId, bytes32 nostrPubKey, address recipient) internal returns (address) {
+        if (msg.value < rentPrice) revert InsufficientPayment(rentPrice, msg.value);
+        
         // 2. Create TBA (AccountV3 instance)
         address tbaAddress = IERC6551Registry(registry).createAccount(
             accountImpl,
