@@ -9,9 +9,9 @@ import {IPaymentMethodRegistry} from "./interfaces/IPaymentMethodRegistry.sol";
 
 /**
  * @title PaymentMethodsRegistry
- * @author @Moebius101
+ * @author @Dust
  * @notice This contract is used to register payment methods and verifiers for the Settler contract.
- * @dev This contract is owned by the Settler contract and can only be called by the owner.
+ * @dev
  */
 contract PaymentMethodRegistry is Ownable, IPaymentMethodRegistry {
 

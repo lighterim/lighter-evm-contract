@@ -26,15 +26,15 @@ abstract contract Permit2PaymentTakeIntent is SettlerBase, Permit2PaymentAbstrac
     /// @dev Permit2 address
     IPermit2 internal constant _PERMIT2 = IPermit2(0x000000000022D473030F116dDEE9F6B43aC78BA3);
     
-    IAllowanceHolder internal immutable allowanceHolder;
+    IAllowanceHolder internal immutable ALLOWANCE_HOLDER;
 
     constructor(IAllowanceHolder allowanceHolder_) {
-        allowanceHolder = allowanceHolder_;
+        ALLOWANCE_HOLDER = allowanceHolder_;
     }
 
-    function _permit(address owner, IAllowanceTransfer.PermitSingle memory permitSingle, bytes memory signature) internal virtual override(Permit2PaymentAbstract) {
-        _PERMIT2.permit(owner, permitSingle, signature);
-    }
+    // function _permit(address owner, IAllowanceTransfer.PermitSingle memory permitSingle, bytes memory signature) internal virtual override(Permit2PaymentAbstract) {
+    //     _PERMIT2.permit(owner, permitSingle, signature);
+    // }
     
     /**
      * @dev TODO: Should forwarding be supported? It should support forwarding.
@@ -153,7 +153,7 @@ abstract contract Permit2PaymentTakeIntent is SettlerBase, Permit2PaymentAbstrac
     }
 
     function _allowanceHolderTransferFrom(address token, address owner, address recipient, uint160 amount) internal virtual override(Permit2PaymentAbstract) {
-        allowanceHolder.transferFrom(token, owner, recipient, amount);
+        ALLOWANCE_HOLDER.transferFrom(token, owner, recipient, amount);
     }
 
     modifier takeIntent(address payer, bytes32 tokenPermissions, bytes32 witness, bytes32 intentTypeHash) override {

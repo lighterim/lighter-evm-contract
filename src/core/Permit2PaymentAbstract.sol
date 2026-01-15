@@ -50,15 +50,15 @@ abstract contract Permit2PaymentAbstract is Context {
         internal
         virtual;
 
-    /**
-     * allowance transfer with permit(compatible with Permit2)
-     * @param owner owner of the token
-     * @param permitSingle permit single
-     * @param signature signature
-     */
-    function _permit(address owner, IAllowanceTransfer.PermitSingle memory permitSingle, bytes memory signature)
-        internal 
-        virtual;
+    // /**
+    //  * allowance transfer with permit(compatible with Permit2)
+    //  * @param owner owner of the token
+    //  * @param permitSingle permit single
+    //  * @param signature signature
+    //  */
+    // function _permit(address owner, IAllowanceTransfer.PermitSingle memory permitSingle, bytes memory signature)
+    //     internal 
+    //     virtual;
     
     /**
      * @notice Calculate the EIP-712 typed data hash of intent parameters

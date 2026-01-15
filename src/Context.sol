@@ -35,8 +35,10 @@ abstract contract Context is AbstractContext {
      * @return escrowHash Hash of escrow parameters
      * @return escrowTypedHash EIP-712 typed data hash of escrow parameters, used for signature verification
      */
-    function getEscrowTypedHash(ISettlerBase.EscrowParams memory params, bytes32 domainSeparator)
-    internal pure returns (bytes32 escrowHash, bytes32 escrowTypedHash) {
+    function getEscrowTypedHash(
+        ISettlerBase.EscrowParams memory params, 
+        bytes32 domainSeparator
+    )internal pure returns (bytes32 escrowHash, bytes32 escrowTypedHash) {
         escrowHash = params.hash();
         escrowTypedHash = MessageHashUtils.toTypedDataHash(domainSeparator, escrowHash);
     }
@@ -68,23 +70,7 @@ abstract contract Context is AbstractContext {
         bytes memory sig
     ) internal view virtual returns (bytes32 escrowHash, bytes32 escrowTypedHash){
         (escrowHash, escrowTypedHash) = getEscrowTypedHash(params, domainSeparator);
-        // console.logString("escrowHash=");
-        // console.logBytes32(escrowHash);
-        // console.logString("escrowTypedHash=");
-        // console.logBytes32(escrowTypedHash);
-        // console.logString("sig=");
-        // console.logBytes(sig);
-        // console.logString("relayer=");
-        // console.logAddress(relayer);
         if(!isValidSignature(relayer, escrowTypedHash, sig)) revert InvalidEscrowSignature();
-    }
-
-    function getEscrow() internal view returns (IEscrow) {
-        return escrow;
-    }
-
-    function _getRelayer() internal view returns (address) {
-        return relayer;
     }
 
 }

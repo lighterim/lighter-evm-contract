@@ -81,7 +81,7 @@ abstract contract SettlerWaypoint is ISettlerWaypoint, WaypointAbstract, Settler
         return false;
     }
 
-    function _dispatch(uint256 i, uint256 action, bytes calldata data) internal virtual override returns (bool) { 
+    function _dispatch(uint256 /*i*/, uint256 /*action*/, bytes calldata /*data*/) internal virtual override returns (bool) { 
         return false;
     }
 
@@ -107,8 +107,8 @@ abstract contract SettlerWaypoint is ISettlerWaypoint, WaypointAbstract, Settler
         }
 
         for (uint256 i = 1; i < actions.length; i = i.unsafeInc()) {
-            (uint256 action, bytes calldata data) = actions.decodeCall(i);
-            if (!_dispatch(i, action, data)) {
+            (uint256 action_, bytes calldata data_) = actions.decodeCall(i);
+            if (!_dispatch(i, action_, data_)) {
                 revertActionInvalid(i, action, data);
             }
         }

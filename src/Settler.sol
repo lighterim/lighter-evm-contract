@@ -32,13 +32,11 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent {
         return 2;
     }
 
-    function _dispatch(uint256 index, uint256 action, bytes calldata data) internal virtual override returns (bool) {
+    function _dispatch(uint256 /*index*/, uint256 action, bytes calldata data) internal virtual override returns (bool) {
         if(action == uint32(ISettlerActions.ESCROW_PARAMS_CHECK.selector)) {
-            // console.logString("------------ESCROW_PARAMS_CHECK--------------------");
             (ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) = abi.decode(data, (ISettlerBase.EscrowParams, bytes));
             // makesure escrow params come from relayer signature.
             (,bytes32 escrowTypedHash) = makesureEscrowParams(_domainSeparator(), escrowParams, sig);
-            
             // escrow typed hash(takeIntent modifier) should be the same as the escrow typed hash in the escrow params.
             if (escrowTypedHash != getWitness()) {
                 revert InvalidWitness();
@@ -70,7 +68,6 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent {
                 ISettlerBase.IntentParams memory intentParams,
                 bytes memory sig
             ) = abi.decode(data, (ISignatureTransfer.PermitTransferFrom, ISignatureTransfer.SignatureTransferDetails, ISettlerBase.IntentParams, bytes));
-            // console.logString("------------SIGNATURE_TRANSFER_FROM_WITH_WITNESS--------------------");
             bytes32 intentParamsHash = intentParams.hash(); 
             bytes32 intentTypedHash = getIntentTypedHash(intentParams, _domainSeparator());
             if(intentTypedHash != getIntentTypeHash()) revert InvalidIntent();
@@ -79,33 +76,7 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent {
 
             address payer = getPayer();
             _transferFromIKnowWhatImDoing(permit, transferDetails, payer, intentParamsHash, ParamsHash._INTENT_WITNESS_TYPE_STRING, sig);
-            // console.logString("--------------------------------");
-            // console.logString("payer");
-            // console.logAddress(payer);
-            // console.logString("intentParamsHash");
-            // console.logBytes32(intentParamsHash);
-            // console.logString("intentTypedHash");
-            // console.logBytes32(intentTypedHash);
-            // console.logString("sig");
-            // console.logBytes(sig);
             
-            // // Use helper function to handle memory -> calldata conversion
-            // bytes32 dataHash = _hashPermitWithWitness(permit, intentParamsHash);
-            
-            // // Debug: output Permit2 address and DOMAIN_SEPARATOR
-            // console.logString("_PERMIT2 address");
-            // console.logAddress(address(_PERMIT2));
-            // bytes32 permit2DomainSeparator = _PERMIT2.DOMAIN_SEPARATOR();
-            // console.logString("_PERMIT2.DOMAIN_SEPARATOR()");
-            // console.logBytes32(permit2DomainSeparator);
-            
-            // bytes32 signatureForDataHash = keccak256(abi.encodePacked("\x19\x01", permit2DomainSeparator, dataHash));
-            // console.logString("signatureForDataHash");
-            // console.logBytes32(signatureForDataHash);
-            // console.logString("dataHash");
-            // console.logBytes32(dataHash);
-            // _transferFromIKnowWhatImDoing(permit, transferDetails, payer, intentParamsHash, ParamsHash._INTENT_WITNESS_TYPE_STRING, sig);
-            // console.logString("########################################################");
             clearPayer(payer);
             clearIntentTypeHash();
             clearTokenPermissionsHash();

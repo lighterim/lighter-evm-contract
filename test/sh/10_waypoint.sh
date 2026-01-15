@@ -159,13 +159,38 @@ cast send $SetWaypoint \
   --gas-limit 5000000
 
 result=$(cast call $LighterAccount 'getUserHonour(address)' $tbaSeller)
-read -r accumulatedUsd count pendingCount cancelledCount disputesReceivedAsBuyer disputesReceivedAsSeller totalAdverseRulings avgReleaseSeconds avgPaidSeconds <<< $(cast abi-decode -i "decodeResult(uint256,uint32,uint32,uint32,uint32,uint32,uint32,uint32,uint32)" $result | tr '\n' ' ')
+read -r accumulatedUsd placeholder count pendingCount cancelledCount disputesReceivedAsBuyer disputesReceivedAsSeller totalAdverseRulings disputesInitiatedAsBuyer disputesInitiatedAsSeller failedInitiations avgReleaseSeconds avgPaidSeconds <<< $(cast abi-decode -i "decodeResult(uint256,uint32,uint32,uint32,uint32,uint32,uint32,uint32,uint32,uint32,uint32,uint32)" $result | tr '\n' ' ')
+echo "=========================================="
+echo "Seller Honour"
+echo "=========================================="
 echo "Accumulated USD: $accumulatedUsd"
 echo "Count: $count"
 echo "Pending Count: $pendingCount"
-echo "Cancelled Count: $cancelledCount"
+echo "Cancelled Count: $cancelledCount"  
 echo "Disputes Received As Buyer: $disputesReceivedAsBuyer"
 echo "Disputes Received As Seller: $disputesReceivedAsSeller"
-echo "Total Adverse Rulings: $totalAdverseRulings"
+echo "Total Adverse Rulings: $totalAdverseRulings"  
+echo "Disputes Initiated As Buyer: $disputesInitiatedAsBuyer"
+echo "Disputes Initiated As Seller: $disputesInitiatedAsSeller"
+echo "Failed Initiations: $failedInitiations"
+echo "Avg Release Seconds: $avgReleaseSeconds"
+echo "Avg Paid Seconds: $avgPaidSeconds"
+
+
+result=$(cast call $LighterAccount 'getUserHonour(address)' $tbaBuyer)
+read -r accumulatedUsd placeholder count pendingCount cancelledCount disputesReceivedAsBuyer disputesReceivedAsSeller totalAdverseRulings disputesInitiatedAsBuyer disputesInitiatedAsSeller failedInitiations avgReleaseSeconds avgPaidSeconds <<< $(cast abi-decode -i "decodeResult(uint256,uint32,uint32,uint32,uint32,uint32,uint32,uint32,uint32,uint32,uint32,uint32)" $result | tr '\n' ' ')
+echo "=========================================="
+echo "Buyer Honour"
+echo "=========================================="
+echo "Accumulated USD: $accumulatedUsd"
+echo "Count: $count"
+echo "Pending Count: $pendingCount"
+echo "Cancelled Count: $cancelledCount"  
+echo "Disputes Received As Buyer: $disputesReceivedAsBuyer"
+echo "Disputes Received As Seller: $disputesReceivedAsSeller"
+echo "Total Adverse Rulings: $totalAdverseRulings"  
+echo "Disputes Initiated As Buyer: $disputesInitiatedAsBuyer"
+echo "Disputes Initiated As Seller: $disputesInitiatedAsSeller"
+echo "Failed Initiations: $failedInitiations"
 echo "Avg Release Seconds: $avgReleaseSeconds"
 echo "Avg Paid Seconds: $avgPaidSeconds"

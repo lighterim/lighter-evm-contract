@@ -54,16 +54,6 @@ if [ -z "$SELLER_PRIVATE_KEY" ]; then
     exit 1
 fi
 
-if [ -z "$TBA_BUYER" ]; then
-    echo "Error: TBA_BUYER environment variable is not set"
-    exit 1
-fi
-
-if [ -z "$TBA_SELLER" ]; then
-    echo "Error: TBA_SELLER environment variable is not set"
-    exit 1
-fi
-
 if [ -z "$ETH_RPC_URL" ]; then
     echo "Error: ETH_RPC_URL environment variable is not set"
     exit 1
@@ -117,7 +107,7 @@ export eoaBuyer=$(cast wallet address --private-key=$buyerPrivKey)
 
 #export expiryTime=$(date -d "+7 days" +%s) #ubuntu
 export expiryTime=$(date -v+7d +%s)
-export amount=1234567
+export amount=$AMOUNT
 export currency=$(cast keccak "USD")
 export paymentMethod=$(cast keccak "wechat")
 export payeeDetails=$(cast keccak $PAYEE_DETAILS)
@@ -133,6 +123,8 @@ export permit2Amount=$(echo "($amount * ($bp + $sellerFeeRate) + ($bp - 1)) / $b
 export intentParams="($usdc,($amount,$amount), $expiryTime, $currency, $paymentMethod, $payeeDetails, $price)"
 export escrowParms="($tradeId, $usdc, $amount, $price, $usdRate, $eoaSeller, $tbaSeller, $sellerFeeRate, $paymentMethod, $currency, $payeeDetails, $tbaBuyer, $buyerFeeRate)"
 # getIntentTypedHash((address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256)) # token, range, expiryTime, currency, paymentMethod, payeeDetails, price
+echo "intentParams: $intentParams \n escrowParms: $escrowParms \n"
+
 export intentTypedHash=$(cast call $TakeIntent "getIntentTypedHash((address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256))" $intentParams)
 # getEscrowTypedHash((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256)) # id, token, volume, price, usdRate, payer, seller, sellerFeeRate, paymentMethod, currency, payeeDetails, buyer, buyerFeeRate
 export escrowTypedHash=$(cast call $TakeIntent "getEscrowTypedHash((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256))" $escrowParms)

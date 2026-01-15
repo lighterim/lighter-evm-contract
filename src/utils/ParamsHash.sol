@@ -38,12 +38,6 @@ library ParamsHash {
         "EscrowParams(uint256 id,address token,uint256 volume,uint256 price,uint256 usdRate,address payer,address seller,uint256 sellerFeeRate,bytes32 paymentMethod,bytes32 currency,bytes32 payeeDetails,address buyer,uint256 buyerFeeRate)"
     );
 
-    // _test = keccak256(abi.encodePacked("account","qrCode", "memo"));
-    bytes32 public constant _test = keccak256(abi.encodePacked("account","qrCode", "memo"));
-
-
-
-
     /*
     bytes32 public constant _PERMIT_DETAILS_TYPEHASH =
         keccak256("PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)");

@@ -120,7 +120,7 @@ cast send $usdc 'approve(address,uint256)' $permit2 $(cast --to-uint256 99999999
 
 #export expiryTime=$(date -d "+7 days" +%s) #ubuntu
 export expiryTime=$(date -v+7d +%s)
-export amount=234567
+export amount=456799
 export currency=$(cast keccak "USD")
 export paymentMethod=$(cast keccak "wechat")
 export payeeDetails=$(cast keccak $PAYEE_DETAILS)
@@ -143,33 +143,18 @@ export tokenPermissionsHash=$(cast call $TakeIntent "getTokenPermissionsHash((ad
 
 # Get buyer intent signature (buyer signs intentTypedHash)
 export intentSignature=$(cast wallet sign --no-hash $intentTypedHash --private-key=$buyerPrivKey)
-
-# Get seller permit transfer signature (seller signs permit, NOT witness version)
 export permitTransferHash=$(cast call $Permit2Helper "getPermitTransferFromHash(((address,uint256),uint256,uint256))" $permit --rpc-url $ETH_RPC_URL)
 export transferSignature=$(cast wallet sign --no-hash $permitTransferHash --private-key=$sellerPrivKey)
-
-# Get relayer escrow signature
 export relayerSig=$(cast wallet sign --no-hash $escrowTypedHash --private-key=$relayerPrivKey)
 
-# Build SignatureTransferDetails structure
-# SignatureTransferDetails: (to, requestedAmount)
 export transferDetails="($Escrow,$permit2Amount)"
 
-# Build actions array
-# Action 1: ESCROW_AND_INTENT_CHECK(escrowParams, intentParams, intentSignature)
-# Note: For takeBuyerIntent, we need buyer's intent signature, not empty bytes
 export action1Selector=$(cast sig "ESCROW_AND_INTENT_CHECK((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),(address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256),bytes)")
 export action1Params=$(cast abi-encode "x((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),(address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256),bytes)" "$escrowParms" "$intentParams" "$intentSignature")
 export action1Data="${action1Selector}${action1Params:2}" 
-# Remove 0x prefix from params and combine
-
-# Action 2: ESCROW_PARAMS_CHECK(escrowParams, sig)
 export action2Selector=$(cast sig "ESCROW_PARAMS_CHECK((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),bytes)")
 export action2Params=$(cast abi-encode "x((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),bytes)" $escrowParms $relayerSig)
 export action2Data="${action2Selector}${action2Params:2}"
-
-# Action 3: SIGNATURE_TRANSFER_FROM(permit, transferDetails, transferSignature)
-# Note: For takeBuyerIntent, this is NOT the WITH_WITNESS version
 export action3Selector=$(cast sig "SIGNATURE_TRANSFER_FROM(((address,uint256),uint256,uint256),(address,uint256),bytes)")
 export action3Params=$(cast abi-encode "x(((address,uint256),uint256,uint256),(address,uint256),bytes)" $permit $transferDetails $transferSignature)
 export action3Data="${action3Selector}${action3Params:2}"

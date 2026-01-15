@@ -19,12 +19,12 @@ function revertConfusedDeputy() pure {
 
 // error RelayerNotAuthorized();
 
-function revertRelayerNotAuthorized() pure {
-    assembly ("memory-safe") {
-        mstore(0x00, 0x1c500e5c) // selector for `RelayerNotAuthorized()`
-        revert(0x1c, 0x04)
-    }
-}
+// function revertRelayerNotAuthorized() pure {
+//     assembly ("memory-safe") {
+//         mstore(0x00, 0x1c500e5c) // selector for `RelayerNotAuthorized()`
+//         revert(0x1c, 0x04)
+//     }
+// }
 
 error TokenNotWhitelisted(address token);
 error UnauthorizedCreator(address creator);
@@ -35,21 +35,15 @@ error UnauthorizedCaller(address caller);
 error InsufficientPayment(uint256 required, uint256 provided);
 error InvalidCount();
 error InvalidRecipient();
-error WithdrawalFailed();
 
 error InvalidWitness();
 
 error InvalidIntent();
 
-/// @notice Thrown when a target contract is invalid given the context
-error InvalidTarget();
-
 /// @notice Thrown when validating the caller against the expected caller
 error InvalidSender();
 
 error InvalidPayer();
-
-error InvalidSpender();
 
 error InvalidZkProof();
 
@@ -63,12 +57,6 @@ error InvalidCounterpartySignature();
 
 error HasPendingTx(address account);
 
-error PendingTxExists(address account, bytes32 escrowHash);
-
-error PendingTxNotExists(address account, bytes32 escrowHash);
-
-error MaxPendingTxReached(address account);
-
 error NoPendingTx(address account);
 
 error InvalidRentPrice();
@@ -80,14 +68,6 @@ error EscrowAlreadyExists(bytes32 escrowHash);
 error EscrowNotExists(bytes32 escrowHash);
 
 error InvalidEscrowStatus(bytes32 escrowHash, ISettlerBase.EscrowStatus actual);
-
-/// @notice Thrown in cases when using a Trusted Forwarder / AllowanceHolder is not allowed
-error ForwarderNotAllowed();
-
-/// @notice Thrown when a signature length is not the expected length
-error InvalidSignatureLen();
-
-error InvalidSignature();
 
 error InvalidEscrowSignature();
 
@@ -139,54 +119,19 @@ function revertUnknownForkId(uint8 forkId) pure {
     }
 }
 
-/// @notice Thrown when an AllowanceHolder transfer's permit is past its deadline
-error SignatureExpired(uint256 deadline);
-
-/// @notice Thrown when selling the native asset, but `msg.value` exceeds the value from the generated quote
-error MsgValueMismatch(uint256 expected, uint256 actual);
-
-/// @notice An internal error that should never be thrown. Thrown when a callback reenters the
-///         entrypoint and attempts to clobber the existing callback.
-error ReentrantCallback(uint256 callbackInt);
-
-/// @notice An internal error that should never be thrown. This error can only be thrown by
-///         non-metatx-supporting Settler instances. Thrown when a callback-requiring liquidity
-///         source is called, but Settler never receives the callback.
-error CallbackNotSpent(uint256 callbackInt);
-
 /// @notice Thrown when a metatransaction has reentrancy.
 error ReentrantMetatransaction(bytes32 oldWitness);
 
 /// @notice Thrown when any transaction has reentrancy, not just taker-submitted or metatransaction.
 error ReentrantPayer(address oldPayer);
 
-/// @notice An internal error that should never be thrown. Thrown when a metatransaction fails to
-///         spend a coupon.
-error WitnessNotSpent(bytes32 oldWitness);
 
 /// @notice An internal error that should never be thrown. Thrown when the payer is unset
 ///         unexpectedly.
 error PayerSpent();
 
-error DeltaNotPositive(IERC20 token);
-error DeltaNotNegative(IERC20 token);
-error ZeroSellAmount(IERC20 token);
-error ZeroBuyAmount(IERC20 buyToken);
-error BoughtSellToken(IERC20 sellToken);
-error TokenHashCollision(IERC20 token0, IERC20 token1);
-error ZeroToken();
 error ZeroAddress();
 error InvalidToken();
 error InvalidTokenId();
 error InvalidAmount();
-error ZeroFunds();
 error InsufficientBalance(uint256 amount);
-
-/// @notice Thrown for liquidities that require a Newton-Raphson approximation to solve their
-///         constant function when Newton-Raphson fails to converge on the solution in a
-///         "reasonable" number of iterations.
-error NotConverged();
-
-/// @notice Thrown when the encoded pool manager ID as part of PancakeSwap Infinity fill is not on
-///         the list of recognized pool managers.
-error UnknownPoolManagerId(uint8 poolManagerId);
