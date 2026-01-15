@@ -2,7 +2,6 @@
 pragma solidity ^0.8.25;
 
 import {SettlerBase} from "../../SettlerBase.sol";
-import {ISettlerBase} from "../../interfaces/ISettlerBase.sol";
 
 
 import {FreeMemory} from "../../utils/FreeMemory.sol";

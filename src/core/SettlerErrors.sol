@@ -37,7 +37,7 @@ error InvalidCount();
 error InvalidRecipient();
 
 error InvalidWitness();
-
+error InvalidTokenPermissions();
 error InvalidIntent();
 
 /// @notice Thrown when validating the caller against the expected caller

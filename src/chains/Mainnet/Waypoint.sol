@@ -3,21 +3,14 @@ pragma solidity ^0.8.25;
 
 
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
-import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
-import {IAllowanceHolder} from "../../allowanceholder/IAllowanceHolder.sol";
+import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+
 import {MainnetMixin} from "./Common.sol";
 import {SettlerWaypoint} from "../../SettlerWaypoint.sol";
-import {ISettlerActions} from "../../ISettlerActions.sol";
 import {IPaymentMethodRegistry} from "../../interfaces/IPaymentMethodRegistry.sol";
-
-
-import {SettlerAbstract} from "../../SettlerAbstract.sol";
-import {SettlerBase} from "../../SettlerBase.sol";
 import {ISettlerBase} from "../../interfaces/ISettlerBase.sol";
-import {Context} from "../../Context.sol";
 import {IEscrow} from "../../interfaces/IEscrow.sol";
 import {LighterAccount} from "../../account/LighterAccount.sol";
-import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {ParamsHash} from "../../utils/ParamsHash.sol";
 import {UnauthorizedCaller, InvalidArbitratorTicket, InvalidArbitratorSignature} from "../../core/SettlerErrors.sol";
 

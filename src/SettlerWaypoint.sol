@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
-import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
 import {ISettlerWaypoint} from "./interfaces/ISettlerWaypoint.sol";
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
 
-import {SettlerAbstract} from "./SettlerAbstract.sol";
 
 import {CalldataDecoder, SettlerBase} from "./SettlerBase.sol";
 import {UnsafeMath} from "./utils/UnsafeMath.sol";

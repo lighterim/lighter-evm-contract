@@ -13,7 +13,7 @@ import {ISettlerActions} from "./ISettlerActions.sol";
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
 import {ParamsHash} from "./utils/ParamsHash.sol";
 import {
-    revertActionInvalid, InvalidWitness, InvalidPayer, InvalidIntent, InvalidActionsLength
+    revertActionInvalid, InvalidWitness, InvalidPayer, InvalidIntent, InvalidActionsLength, InvalidTokenPermissions
     } from "./core/SettlerErrors.sol";
 // import {console} from "forge-std/console.sol";
 
@@ -25,8 +25,7 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent {
     using ParamsHash for ISettlerBase.IntentParams;
     using ParamsHash for ISettlerBase.EscrowParams;
     using ParamsHash for ISignatureTransfer.TokenPermissions;
-    
-    error InvalidTokenPermissions();
+
 
     function _tokenId() internal pure override returns (uint256) {
         return 2;
