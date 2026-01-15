@@ -7,7 +7,7 @@ import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer
 
 import {ISettlerTakeIntent} from "./interfaces/ISettlerTakeIntent.sol";
 import {Permit2PaymentTakeIntent} from "./core/Permit2Payment.sol";
-import {CalldataDecoder} from "./SettlerBase.sol";
+import {CalldataDecoder} from "./utils/CalldataDecoder.sol";
 import {UnsafeMath} from "./utils/UnsafeMath.sol";
 import {ISettlerActions} from "./ISettlerActions.sol";
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";

@@ -4,8 +4,8 @@ pragma solidity ^0.8.25;
 import {ISettlerWaypoint} from "./interfaces/ISettlerWaypoint.sol";
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
 
-
-import {CalldataDecoder, SettlerBase} from "./SettlerBase.sol";
+import {CalldataDecoder} from "./utils/CalldataDecoder.sol";
+import {SettlerBase} from "./SettlerBase.sol";
 import {UnsafeMath} from "./utils/UnsafeMath.sol";
 
 import {ISettlerActions} from "./ISettlerActions.sol";
