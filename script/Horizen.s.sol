@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
 import {Script, console} from "forge-std/Script.sol";
@@ -8,14 +9,13 @@ import {AccountV3Simplified} from "../src/account/AccountV3.sol";
 import {LighterAccount} from "../src/account/LighterAccount.sol";
 import {Escrow} from "../src/Escrow.sol";
 import {AllowanceHolder} from "../src/allowanceholder/AllowanceHolder.sol";
-import {MainnetTakeIntent} from "../src/chains/Mainnet/TakeIntent.sol";
-import {MainnetWaypoint} from "../src/chains/Mainnet/Waypoint.sol";
+import {MainnetTakeIntent} from "../src/chains/Horizen/TakeIntent.sol";
+import {MainnetWaypoint} from "../src/chains/Horizen/Waypoint.sol";
 import {PaymentMethodRegistry} from "../src/PaymentMethodRegistry.sol";
 import {ISettlerBase} from "../src/interfaces/ISettlerBase.sol";
-import {MockUSDC} from "../src/utils/TokenMock.sol";
-import {ZkVerifyProofVerifier} from "../src/chains/Mainnet/ZkVerifyProofVerifier.sol";
+import {ZkVerifyProofVerifier} from "../src/chains/Horizen/ZkVerifyProofVerifier.sol";
 
-contract DeployerContract is Script {
+contract HorizenDeployer is Script {
 
     LighterTicket public ticket;
     ERC6551Registry public registry;

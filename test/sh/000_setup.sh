@@ -108,11 +108,15 @@ create_account_and_get_tba() {
     local nft=$2
     local privateKey=$3
     local nostrPubkey=$4
+    local index=$5
+    if [ -z "$index" ]; then
+        index=0
+    fi
     
     local eoa=$(cast wallet address --private-key=$privateKey)
     cast send $accountManager 'createAccount(address,bytes32)' $eoa $nostrPubkey --value 0.0001ether --private-key $privateKey
     
-    local tokenId=$(cast --to-dec $(cast call $nft "tokenOfOwnerByIndex(address,uint256)" $eoa 0))
+    local tokenId=$(cast --to-dec $(cast call $nft "tokenOfOwnerByIndex(address,uint256)" $eoa $index))
     echo "tokenId: $tokenId" >&2
     local tbaAddress=$(cast call $accountManager "getAccountAddress(uint256)(address)" $tokenId)
     echo "tbaAddress: $tbaAddress" >&2
@@ -133,5 +137,5 @@ export tbaBuyer=$(create_account_and_get_tba $LighterAccount $LighterTicket $buy
 export TBA_BUYER=$tbaBuyer
 
 export eoaSeller=$(cast wallet address --private-key=$sellerPrivKey)
-export tbaSeller=$(create_account_and_get_tba $LighterAccount $LighterTicket $sellerPrivKey $nostrSeller)
+export tbaSeller=$(create_account_and_get_tba $LighterAccount $LighterTicket $sellerPrivKey $nostrSeller 10)
 export TBA_SELLER=$tbaSeller
