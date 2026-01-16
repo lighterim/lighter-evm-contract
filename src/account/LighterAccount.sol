@@ -28,12 +28,12 @@ import {
 contract LighterAccount is Ownable, ReentrancyGuard {
 
     /// @notice LighterTicket contract instance
-    LighterTicket public immutable ticketContract;
+    LighterTicket public immutable TICKET_CONTRACT;
     /// @notice ERC6551Registry address
-    address public immutable registry;
+    address public immutable REGISTRY;
     /// @notice AccountV3 implementation contract address
-    address public immutable accountImpl;
-    bytes32 public immutable salt;
+    address public immutable ACCOUNT_IMPL;
+    bytes32 public immutable SALT;
 
     // the end token id for genesis1(user group for genesis1) and genesis2(user group for genesis2)
     uint8 public constant GENESIS1_END = 10;
@@ -120,11 +120,11 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         if (registry_ == address(0)) revert ZeroAddress();
         if (accountImplementation_ == address(0)) revert ZeroAddress();
         
-        ticketContract = LighterTicket(ticketContract_);
-        registry = registry_;
-        accountImpl= accountImplementation_;
+        TICKET_CONTRACT = LighterTicket(ticketContract_);
+        REGISTRY = registry_;
+        ACCOUNT_IMPL= accountImplementation_;
         rentPrice = rentPrice_;
-        salt = bytes32(uint256(uint160(address(this))));
+        SALT = bytes32(uint256(uint160(address(this))));
     }
 
 
@@ -140,7 +140,7 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     }
 
     function setTicketBaseURI(string calldata newBaseURI) external onlyOwner {
-        ticketContract.setBaseURI(newBaseURI);
+        TICKET_CONTRACT.setBaseURI(newBaseURI);
     }
 
     function authorizeOperator(address operator, bool isAuthorized) external onlyOwner {
@@ -344,25 +344,25 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         if (recipient == address(0)) revert InvalidRecipient();
         
         // 1. Mint NFT
-        tokenId = ticketContract.mintWithURI(recipient, nostrPubKey);
+        tokenId = TICKET_CONTRACT.mintWithURI(recipient, nostrPubKey);
         tbaAddress = _createAccount(tokenId, nostrPubKey, recipient);
     }
 
     function createAccount(uint256 tokenId, bytes32 nostrPubKey) external payable nonReentrant returns (address tbaAddress) {
         if (isDeployedContract(getAccountAddress(tokenId))) revert AccountAlreadyCreated();
         
-        return _createAccount(tokenId, nostrPubKey, ticketContract.ownerOf(tokenId));
+        return _createAccount(tokenId, nostrPubKey, TICKET_CONTRACT.ownerOf(tokenId));
     }
 
     function _createAccount(uint256 tokenId, bytes32 nostrPubKey, address recipient) internal returns (address) {
         if (msg.value < rentPrice) revert InsufficientPayment(rentPrice, msg.value);
         
         // 2. Create TBA (AccountV3 instance)
-        address tbaAddress = IERC6551Registry(registry).createAccount(
-            accountImpl,
-            salt,
+        address tbaAddress = IERC6551Registry(REGISTRY).createAccount(
+            ACCOUNT_IMPL,
+            SALT,
             block.chainid,
-            address(ticketContract),
+            address(TICKET_CONTRACT),
             tokenId
         );
         
@@ -384,19 +384,19 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         if (nftId == 0) revert InvalidTokenId();
         if (recipient == address(0)) revert InvalidRecipient();
 
-        address tbaAddress = IERC6551Registry(registry).account(
-            accountImpl,
-            salt,
+        address tbaAddress = IERC6551Registry(REGISTRY).account(
+            ACCOUNT_IMPL,
+            SALT,
             block.chainid,
-            address(ticketContract),
+            address(TICKET_CONTRACT),
             nftId
         );
 
         if (!isDeployedContract(tbaAddress)) revert InvalidAccountAddress();
-        if (msg.sender != ticketContract.ownerOf(nftId)) revert InvalidSender();
+        if (msg.sender != TICKET_CONTRACT.ownerOf(nftId)) revert InvalidSender();
         if (userHonour[tbaAddress].pendingCount > 0) revert HasPendingTx(tbaAddress);
 
-        string memory hexNostrPubKey = ticketContract.burn(nftId);
+        string memory hexNostrPubKey = TICKET_CONTRACT.burn(nftId);
         uint256 amount = ticketRents[tbaAddress];
         if (amount > 0) {
             delete ticketRents[tbaAddress];
@@ -412,18 +412,18 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         if (msg.value < rentPrice) {
             revert InsufficientPayment(rentPrice, msg.value);
         }
-        address account = IERC6551Registry(registry).account(
-            accountImpl,
-            salt,
+        address account = IERC6551Registry(REGISTRY).account(
+            ACCOUNT_IMPL,
+            SALT,
             block.chainid,
-            address(ticketContract),
+            address(TICKET_CONTRACT),
             nftId
         );
 
         if (!isDeployedContract(account)) revert InvalidAccountAddress();
         if (userHonour[account].pendingCount > 0) revert HasPendingTx(account);
         
-        string memory hexNostrPubKey = ticketContract.tokenURI(nftId);
+        string memory hexNostrPubKey = TICKET_CONTRACT.tokenURI(nftId);
         ticketRents[account] += msg.value;
 
         emit QuotaUpgraded(msg.sender, nftId, account, msg.value, hexNostrPubKey);
@@ -447,7 +447,7 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     /// @return true if the caller is the owner of the token
     function isOwnerCall(address tbaAddress, address caller) public view returns (bool) {
         (uint256 chainId, address tokenContract, uint256 tokenId) = token(tbaAddress);
-        if ((block.chainid == 31337 || chainId == block.chainid) && tokenContract == address(ticketContract)){
+        if ((block.chainid == 31337 || chainId == block.chainid) && tokenContract == address(TICKET_CONTRACT)){
             if(tbaAddress == caller) return true;
             address owner = IERC721(tokenContract).ownerOf(tokenId);
             return owner == caller;
@@ -461,11 +461,11 @@ contract LighterAccount is Ownable, ReentrancyGuard {
      * @return TBA address
      */
     function getAccountAddress(uint256 tokenId) public view returns (address) {
-        return IERC6551Registry(registry).account(
-            accountImpl,
-            salt,
+        return IERC6551Registry(REGISTRY).account(
+            ACCOUNT_IMPL,
+            SALT,
             block.chainid,
-            address(ticketContract),
+            address(TICKET_CONTRACT),
             tokenId
         );
     }
@@ -493,7 +493,7 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         (uint256 chainId, address tokenContract, uint256 tokenId)  = token(tbaAddress);
         if(
             (block.chainid != 31337 && chainId != block.chainid) 
-            || tokenContract != address(ticketContract)
+            || tokenContract != address(TICKET_CONTRACT)
         ) revert InvalidAccountAddress();
 
         // the token id is less than GENESIS1_END, return GENESIS1(1-9)

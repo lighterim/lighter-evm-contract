@@ -7,14 +7,11 @@ import {SafeTransferLib} from "./vendor/SafeTransferLib.sol";
 import {FullMath} from "./vendor/FullMath.sol";
 
 import {InvalidPaymentMethod} from "./core/SettlerErrors.sol";
-import {ISettlerActions} from "./ISettlerActions.sol";
 import {TransientStorage} from "./utils/TransientStorage.sol";
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
 import {SettlerAbstract} from "./SettlerAbstract.sol";
 import {IPaymentMethodRegistry} from "./interfaces/IPaymentMethodRegistry.sol";
 
-import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
-import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer.sol";
 
 
 

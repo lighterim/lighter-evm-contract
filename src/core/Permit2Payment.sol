@@ -1,24 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
-import {Permit2PaymentAbstract} from "./Permit2PaymentAbstract.sol";
-import {revertConfusedDeputy} from "./SettlerErrors.sol";
-import {SettlerAbstract} from "../SettlerAbstract.sol";
-import {IAllowanceHolder} from "../allowanceholder/IAllowanceHolder.sol";
-import {AllowanceHolder} from "../allowanceholder/AllowanceHolder.sol";
-import {FullMath} from "../vendor/FullMath.sol";
-import {SafeTransferLib} from "../vendor/SafeTransferLib.sol";
-import {Panic} from "../utils/Panic.sol";
-import {ParamsHash} from "../utils/ParamsHash.sol";
-import {SettlerBase} from "../SettlerBase.sol";
-import {Context} from "../Context.sol";
-import {IEscrow} from "../interfaces/IEscrow.sol";
-import {LighterAccount} from "../account/LighterAccount.sol";
-
-import {IERC20} from "forge-std/interfaces/IERC20.sol";
-import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer.sol";
 import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
 import {IPermit2} from "@uniswap/permit2/interfaces/IPermit2.sol";
+
+import {Permit2PaymentAbstract} from "./Permit2PaymentAbstract.sol";
+import {IAllowanceHolder} from "../allowanceholder/IAllowanceHolder.sol";
+// import {AllowanceHolder} from "../allowanceholder/AllowanceHolder.sol";
+import {SettlerBase} from "../SettlerBase.sol";
 
 
 
