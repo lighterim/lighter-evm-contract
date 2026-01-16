@@ -11,6 +11,7 @@ A decentralized **Take Intent** processing system built on Ethereum, enabling ga
 - [Overview](#overview)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
+- [Technical Implementation](#technical-implementation)
 - [Core Contracts](#core-contracts)
 - [Quick Start](#quick-start)
 - [Development](#development)
@@ -31,6 +32,8 @@ Lighter EVM Contract is a smart contract system that implements a decentralized 
 - **Permit2 Integration**: Uses Uniswap Permit2 for gasless token authorization and transfers
 - **Token Bound Accounts**: ERC6551-based account system for enhanced user experience
 - **Escrow System**: Secure fund custody with multiple release mechanisms (seller release, verifier release, dispute resolution)
+- **TransientStorage**: EIP-1153 based reentrancy protection for efficient state management
+- **Gas Optimization**: Inline assembly implementations for critical hashing operations
 
 ## ✨ Key Features
 
@@ -66,11 +69,13 @@ The seller authorizes all tokens to `AllowanceHolder` at once via Permit2's `per
 
 - ✅ **EIP-712 Signatures**: Typed data signatures for better UX and security
 - ✅ **ERC6551 Support**: Token Bound Accounts (TBA) for account abstraction
+- ✅ **EIP-1153 TransientStorage**: Efficient reentrancy protection using transient storage (gas-optimized)
 - ✅ **Escrow Custody**: Multi-stage escrow with dispute resolution
 - ✅ **Payment Method Registry**: Configurable payment methods with window periods
 - ✅ **User Honour System**: Track user reputation and transaction history
-- ✅ **Waypoint Support**: Additional verification layer (in development)
-- ✅ **ZK Verification**: Zero-knowledge proof verification support
+- ✅ **Waypoint Support**: Escrow lifecycle management (payment, cancellation, dispute, resolution)
+- ✅ **ZK Verification**: Zero-knowledge proof verification support (ZkVerifyProofVerifier)
+- ✅ **Gas-Optimized Hashing**: Inline assembly implementations for efficient keccak256 hashing
 
 ## 🏗️ Architecture
 
@@ -78,67 +83,142 @@ The seller authorizes all tokens to `AllowanceHolder` at once via Permit2's `per
 
 The project uses a modular multiple inheritance architecture, following the 0x-settler design pattern:
 
-```
-AbstractContext
-    ↓
-Context (escrow, relayer, signature verification)
-    ↓
-    ├─→ SettlerAbstract → SettlerBase
-    │       ↓
-    │   Permit2PaymentTakeIntent (Permit2 payment logic)
-    │       ↓
-    │   Settler (core execution logic)
-    │       ↓
-    │   MainnetTakeIntent (mainnet implementation)
-    │
-    ├─→ Permit2PaymentAbstract (Permit2 abstract interface)
-    ├─→ WaypointAbstract (Waypoint functionality)
-    └─→ FinalizeAbstract (Finalize functionality, in development)
-```
+**Three Main Business Lines:**
+
+1. **Take Intent Line**:
+   ```
+   Context
+     ↓
+   SettlerAbstract → SettlerBase
+     ↓
+   Permit2PaymentAbstract → Permit2PaymentTakeIntent
+     ↓
+   Settler (core execution logic)
+     ↓
+   MainnetTakeIntent (mainnet implementation)
+   ```
+
+2. **Waypoint Line**:
+   ```
+   Context
+     ↓
+   SettlerAbstract → SettlerBase
+     ↓
+   WaypointAbstract
+     ↓
+   SettlerWaypoint
+     ↓
+   MainnetWaypoint (mainnet implementation)
+   ```
+
+3. **Verifier Line** (in development):
+   ```
+   Context
+     ↓
+   VerifierAbstract
+     ↓
+   ZkVerifyProofVerifier (mainnet implementation)
+   ```
+
+**Core Foundation:**
+- **Context**: Base contract providing escrow, relayer, and signature verification
+- **SettlerBase**: Core base contract with TransientStorage-based reentrancy protection, payment method registry, and fee calculations
 
 ### Directory Structure
 
 ```
 src/
 ├── account/              # ERC6551 Token Bound Account implementation
-│   ├── LighterAccount.sol
-│   ├── AccountV3.sol
-│   └── TokenBoundConfig.sol
+│   ├── LighterAccount.sol      # Main account contract with honour system
+│   ├── AccountV3.sol          # ERC6551 account implementation
+│   ├── ERC6551Registry.sol     # ERC6551 registry
+│   └── TokenBoundConfig.sol   # TBA configuration
 ├── allowanceholder/      # Permit2 allowance holder for bulk transactions
-│   └── AllowanceHolder.sol
+│   ├── AllowanceHolder.sol
+│   └── IAllowanceHolder.sol
 ├── chains/              # Chain-specific implementations
 │   └── Mainnet/
-│       ├── TakeIntent.sol
-│       ├── Waypoint.sol
-│       └── Common.sol
-├── core/                # Core abstract contracts
-│   ├── Permit2Payment.sol
-│   ├── SettlerErrors.sol
-│   ├── WaypointAbstract.sol
-│   └── ZkVerifier.sol
+│       ├── TakeIntent.sol           # Mainnet take intent implementation
+│       ├── Waypoint.sol            # Mainnet waypoint implementation
+│       ├── ZkVerifyProofVerifier.sol # ZK proof verifier
+│       └── Common.sol               # Common utilities
+├── core/                # Core abstract contracts and implementations
+│   ├── Permit2Payment.sol          # Permit2 payment implementation
+│   ├── Permit2PaymentAbstract.sol  # Permit2 payment abstract
+│   ├── SettlerErrors.sol           # Custom error definitions
+│   ├── WaypointAbstract.sol        # Waypoint abstract contract
+│   ├── VerifierAbstract.sol        # Verifier abstract contract
+│   └── ZkVerifier.sol              # ZK verifier base
 ├── interfaces/          # Interface definitions
-│   ├── ISettlerBase.sol
-│   ├── ISettlerTakeIntent.sol
-│   ├── IEscrow.sol
+│   ├── ISettlerBase.sol            # Core data structures
+│   ├── ISettlerTakeIntent.sol      # Take intent interface
+│   ├── ISettlerWaypoint.sol        # Waypoint interface
+│   ├── IEscrow.sol                 # Escrow interface
+│   ├── IPaymentMethodRegistry.sol  # Payment method registry interface
 │   └── ...
 ├── utils/              # Utility libraries
-│   ├── ParamsHash.sol
-│   ├── SignatureVerification.sol
-│   └── UnsafeMath.sol
-├── Escrow.sol          # Escrow contract
-├── Settler.sol         # Core settler contract
+│   ├── ParamsHash.sol              # EIP-712 parameter hashing (gas-optimized)
+│   ├── TransientStorage.sol        # EIP-1153 transient storage for reentrancy
+│   ├── SignatureVerification.sol   # Signature verification utilities
+│   ├── UnsafeMath.sol              # Unsafe math operations
+│   ├── Permit2Helper.sol           # Permit2 helper functions
+│   └── ...
+├── vendor/             # Third-party vendor libraries
+│   ├── SafeTransferLib.sol         # Safe token transfer library
+│   ├── FullMath.sol                # Full precision math
+│   └── ...
+├── Escrow.sol          # Escrow contract (fund custody)
+├── Settler.sol         # Core settler contract (intent execution)
 ├── SettlerBase.sol     # Base settler functionality
-└── PaymentMethodsRegistry.sol
+├── SettlerAbstract.sol # Abstract settler interface
+├── SettlerWaypoint.sol # Waypoint settler implementation
+├── PaymentMethodRegistry.sol # Payment method registry
+└── ISettlerActions.sol # Action selectors
 ```
+
+## 🔧 Technical Implementation
+
+### Gas Optimization
+
+The project implements several gas optimization techniques:
+
+1. **EIP-1153 TransientStorage**: Uses transient storage (`tload`/`tstore`) instead of permanent storage for reentrancy protection, saving ~20,000 gas per operation
+2. **Inline Assembly Hashing**: All `ParamsHash` functions use inline assembly for `keccak256` hashing, avoiding `abi.encode` overhead
+3. **CalldataDecoder**: Optimized calldata decoding without bounds checking (documented trade-off for gas efficiency)
+4. **Batch Operations**: Supports bulk transactions through `AllowanceHolder` for efficient token transfers
+
+### Reentrancy Protection
+
+The system uses a multi-layered reentrancy protection approach:
+
+- **TransientStorage**: EIP-1153 based protection for transaction-level state
+- **ReentrancyGuard**: OpenZeppelin's `ReentrancyGuard` in Escrow contract
+- **State Validation**: Ensures payer, witness, and intent state are properly managed
+
+### Code Quality
+
+- **Foundry Linting**: All code follows Foundry linting recommendations
+- **Gas-Optimized Patterns**: Inline assembly where appropriate for critical paths
+- **Comprehensive Testing**: Unit tests for core libraries (ParamsHash, etc.)
+- **Code Review**: Regular code reviews and security analysis
 
 ## 📦 Core Contracts
 
 ### Settler Contracts
 
-- **`Settler`**: Core abstract contract handling transaction intent execution logic
-- **`SettlerBase`**: Base functionality including payment method registry, domain separator, and intent validation
-- **`MainnetTakeIntent`**: Concrete implementation for mainnet, inherits from `Settler`
-- **`SettlerWaypoint`**: Waypoint functionality for additional verification
+- **`SettlerAbstract`**: Abstract interface defining `_dispatch` and `_dispatchVIP` methods
+- **`SettlerBase`**: Core base contract providing:
+  - EIP-1153 TransientStorage-based reentrancy protection
+  - Payment method registry integration
+  - Fee calculation utilities (`getAmountWithFee`, `getFeeAmount`)
+  - Intent validation and state management
+- **`Settler`**: Core execution contract handling transaction intent execution logic
+  - Implements `_dispatch` for action routing
+  - Supports multiple intent types (seller intent, buyer intent, bulk sell)
+- **`MainnetTakeIntent`**: Mainnet implementation inheriting from `Settler`
+- **`SettlerWaypoint`**: Waypoint contract for escrow lifecycle management
+  - Handles payment, cancellation, disputes, and resolution
+- **`MainnetWaypoint`**: Mainnet waypoint implementation
 
 ### Account & Token Management
 
@@ -159,10 +239,22 @@ src/
 
 ### Core Interfaces
 
-- **`ISettlerBase`**: Core data structures (IntentParams, EscrowParams, EscrowStatus)
+- **`ISettlerBase`**: Core data structures (IntentParams, EscrowParams, EscrowStatus, PaymentMethodConfig)
 - **`ISettlerTakeIntent`**: Interface for take intent functionality
-- **`IEscrow`**: Escrow contract interface
+- **`ISettlerWaypoint`**: Interface for waypoint functionality
+- **`IEscrow`**: Escrow contract interface with full lifecycle management
 - **`ISettlerActions`**: Action selectors for transaction execution
+- **`IPaymentMethodRegistry`**: Payment method registry interface
+
+### Utility Libraries
+
+- **`ParamsHash`**: Gas-optimized EIP-712 parameter hashing using inline assembly
+  - Supports `Range`, `IntentParams`, `EscrowParams`, `TokenPermissions`
+  - All hash functions optimized with inline assembly for gas efficiency
+- **`TransientStorage`**: EIP-1153 transient storage library for reentrancy protection
+  - Manages payer, witness, intentTypeHash, and tokenPermissions in transient storage
+  - Provides efficient state management without permanent storage costs
+- **`CalldataDecoder`**: Efficient calldata decoding library (used in SettlerBase)
 
 ## 🚀 Quick Start
 
@@ -261,11 +353,17 @@ forge test
 # Test Settler functionality
 forge test --match-path test/Settler.t.sol -vvvvv
 
-# Test User Transaction
-forge test --match-path test/UserTxn.t.sol -vvvvv
+# Test Take Intent
+forge test --match-path test/TakeIntent.t.sol -vvvvv
 
-# Test LighterAccount
-forge test --match-path test/LighterAccount.ts -vvvvv
+# Test Waypoint
+forge test --match-path test/Waypoint.t.sol -vvvvv
+
+# Test unit tests (ParamsHash, etc.)
+forge test --match-path test/unit/ -vvvvv
+
+# Test Permit2 transfers
+forge test --match-path test/Permit2TransferTest.t.sol -vvvvv
 ```
 
 ### Fork Testing
@@ -283,7 +381,15 @@ forge test --match-path test/TakeIntent.t.sol --ffi -vvvvv
 ### Test Coverage
 
 ```bash
+# Generate coverage report
 forge coverage
+
+# Run unit tests
+forge test --match-path test/unit/ -vv
+
+# Run integration tests
+forge test --match-path test/TakeIntent.t.sol -vv
+forge test --match-path test/Waypoint.t.sol -vv
 ```
 
 ## 📦 Deployment
@@ -339,9 +445,9 @@ For detailed deployment instructions, see [DEPLOYMENT_README.md](./DEPLOYMENT_RE
 
 ### Known Limitations
 
-1. **Finalize Branch**: `FinalizeAbstract` currently only has abstract definitions
+1. **Verifier Branch**: `VerifierAbstract` and ZK verification are in active development
 2. **Signature Replay**: Consider adding nonce mechanism for additional protection
-3. **Waypoint**: Waypoint functionality is in active development
+3. **CalldataDecoder**: Uses optimized decoding without bounds checking (documented trade-off for gas efficiency)
 
 ### Security Best Practices
 
@@ -354,9 +460,11 @@ For detailed deployment instructions, see [DEPLOYMENT_README.md](./DEPLOYMENT_RE
 
 ### Core Documentation
 
-- [Foundry Setup Guide](./FOUNDRY_SETUP.md) - Foundry project setup and configuration
-- [Deployment Guide](./DEPLOYMENT_README.md) - Detailed deployment instructions
-- [DApp README](./DAPP_README.md) - Frontend application documentation
+- [Code Review Report](./CODE_REVIEW_REPORT.md) - Comprehensive code review
+- [Security Analysis](./SECURITY_ANALYSIS.md) - Security considerations
+- [Inheritance Structure](./INHERITANCE_STRUCTURE.md) - Contract inheritance details
+- [Local Test Guide](./LOCAL_TEST_GUIDE.md) - Local testing instructions
+- [Test Run Guide](./TEST_RUN_GUIDE.md) - Testing guidelines
 
 ### Contract Documentation
 
@@ -369,7 +477,9 @@ For detailed deployment instructions, see [DEPLOYMENT_README.md](./DEPLOYMENT_RE
 - [Permit2 Documentation](https://docs.uniswap.org/contracts/permit2/overview)
 - [ERC6551 Standard](https://eips.ethereum.org/EIPS/eip-6551)
 - [EIP-712 Standard](https://eips.ethereum.org/EIPS/eip-712)
+- [EIP-1153 TransientStorage](https://eips.ethereum.org/EIPS/eip-1153) - Transient storage for reentrancy protection
 - [Foundry Documentation](https://book.getfoundry.sh/)
+- [Foundry Linting Guide](https://getfoundry.sh/forge/linting/) - Code quality and gas optimization
 
 ## 🤝 Contributing
 
