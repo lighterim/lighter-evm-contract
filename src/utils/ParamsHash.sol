@@ -64,30 +64,195 @@ library ParamsHash {
 
     // string public constant _PERMIT_BATCH_WITNESS_TRANSFER_FROM_TYPEHASH_STUB =
     //     "PermitBatchWitnessTransferFrom(TokenPermissions[] permitted,address spender,uint256 nonce,uint256 deadline,";
-    function hashWithWitness(ISettlerBase.IntentParams memory intentParams) internal pure returns (bytes32) {
-        bytes32 rangeHash = keccak256(abi.encode(_RANGE_TYPEHASH, intentParams.range));
-        return keccak256(abi.encode(_INTENT_PARAMS_TYPEHASH, intentParams.token, rangeHash, intentParams.expiryTime, intentParams.currency, intentParams.paymentMethod, intentParams.payeeDetails, intentParams.price));
+    function hashWithWitness(ISettlerBase.IntentParams memory intentParams) internal pure returns (bytes32 result) {
+        // First compute rangeHash
+        bytes32 rangeHash = hash(intentParams.range);
+        
+        // Extract fields to ensure proper encoding (especially for uint64)
+        address token = intentParams.token;
+        uint64 expiryTime = intentParams.expiryTime;
+        bytes32 currency = intentParams.currency;
+        bytes32 paymentMethod = intentParams.paymentMethod;
+        bytes32 payeeDetails = intentParams.payeeDetails;
+        uint256 price = intentParams.price;
+        
+        // Then compute main hash
+        bytes32 typeHash = _INTENT_PARAMS_TYPEHASH;
+        assembly ("memory-safe") {
+            let ptr := mload(0x40)
+            
+            // Store _INTENT_PARAMS_TYPEHASH (32 bytes)
+            mstore(ptr, typeHash)
+            
+            // Store token (address, 32 bytes padded) at offset 0x20
+            mstore(add(ptr, 0x20), token)
+            
+            // Store rangeHash (bytes32) at offset 0x40
+            mstore(add(ptr, 0x40), rangeHash)
+            
+            // Store expiryTime (uint64, encoded as uint256 in abi.encode)
+            // abi.encode converts uint64 to uint256 (32 bytes, right-aligned)
+            mstore(add(ptr, 0x60), expiryTime)
+            
+            // Store currency (bytes32) at offset 0x80
+            mstore(add(ptr, 0x80), currency)
+            
+            // Store paymentMethod (bytes32) at offset 0xa0
+            mstore(add(ptr, 0xa0), paymentMethod)
+            
+            // Store payeeDetails (bytes32) at offset 0xc0
+            mstore(add(ptr, 0xc0), payeeDetails)
+            
+            // Store price (uint256) at offset 0xe0
+            mstore(add(ptr, 0xe0), price)
+            
+            // Compute keccak256 hash of 0x100 bytes (8 * 32 bytes = 256 bytes)
+            result := keccak256(ptr, 0x100)
+        }
     }
     
-    function hash(ISettlerBase.IntentParams memory intentParams) internal pure returns (bytes32) {
-        bytes32 rangeHash = keccak256(abi.encode(_RANGE_TYPEHASH, intentParams.range));
-        return keccak256(abi.encode(_INTENT_PARAMS_TYPEHASH, intentParams.token, rangeHash, intentParams.expiryTime, intentParams.currency, intentParams.paymentMethod, intentParams.payeeDetails, intentParams.price));
-    }
-    
-    function hash(ISettlerBase.Range memory range) internal pure returns (bytes32) {
-        return keccak256(abi.encode(_RANGE_TYPEHASH, range));
+    function hash(ISettlerBase.IntentParams memory intentParams) internal pure returns (bytes32 result) {
+        // First compute rangeHash
+        bytes32 rangeHash = hash(intentParams.range);
+        
+        // Extract fields to ensure proper encoding (especially for uint64)
+        address token = intentParams.token;
+        uint64 expiryTime = intentParams.expiryTime;
+        bytes32 currency = intentParams.currency;
+        bytes32 paymentMethod = intentParams.paymentMethod;
+        bytes32 payeeDetails = intentParams.payeeDetails;
+        uint256 price = intentParams.price;
+        
+        // Then compute main hash
+        bytes32 typeHash = _INTENT_PARAMS_TYPEHASH;
+        assembly ("memory-safe") {
+            let ptr := mload(0x40)
+            
+            // Store _INTENT_PARAMS_TYPEHASH (32 bytes)
+            mstore(ptr, typeHash)
+            
+            // Store token (address, 32 bytes padded) at offset 0x20
+            mstore(add(ptr, 0x20), token)
+            
+            // Store rangeHash (bytes32) at offset 0x40
+            mstore(add(ptr, 0x40), rangeHash)
+            
+            // Store expiryTime (uint64, encoded as uint256 in abi.encode)
+            // abi.encode converts uint64 to uint256 (32 bytes, right-aligned)
+            mstore(add(ptr, 0x60), expiryTime)
+            
+            // Store currency (bytes32) at offset 0x80
+            mstore(add(ptr, 0x80), currency)
+            
+            // Store paymentMethod (bytes32) at offset 0xa0
+            mstore(add(ptr, 0xa0), paymentMethod)
+            
+            // Store payeeDetails (bytes32) at offset 0xc0
+            mstore(add(ptr, 0xc0), payeeDetails)
+            
+            // Store price (uint256) at offset 0xe0
+            mstore(add(ptr, 0xe0), price)
+            
+            // Compute keccak256 hash of 0x100 bytes (8 * 32 bytes = 256 bytes)
+            result := keccak256(ptr, 0x100)
+        }
     }
 
-    function hash(ISettlerBase.EscrowParams memory escrowParams) internal pure returns (bytes32) {
-        return keccak256(abi.encode(_ESCROW_PARAMS_TYPEHASH, escrowParams.id, escrowParams.token, escrowParams.volume, escrowParams.price, escrowParams.usdRate, escrowParams.payer, escrowParams.seller, escrowParams.sellerFeeRate, escrowParams.paymentMethod, escrowParams.currency, escrowParams.payeeDetails, escrowParams.buyer, escrowParams.buyerFeeRate));
+    function hash(ISettlerBase.Range memory range) internal pure returns (bytes32 result) {
+        bytes32 typeHash = _RANGE_TYPEHASH;
+        assembly ("memory-safe") {
+            // Load free memory pointer
+            let ptr := mload(0x40)
+            
+            // Store _RANGE_TYPEHASH (32 bytes)
+            mstore(ptr, typeHash)
+            
+            // Store min (32 bytes) at offset 0x20
+            mstore(add(ptr, 0x20), mload(range))
+            
+            // Store max (32 bytes) at offset 0x40
+            mstore(add(ptr, 0x40), mload(add(range, 0x20)))
+            
+            // Compute keccak256 hash of 0x60 bytes (3 * 32 bytes = 96 bytes)
+            result := keccak256(ptr, 0x60)
+        }
+    }
+
+    function hash(ISettlerBase.EscrowParams memory escrowParams) internal pure returns (bytes32 result) {
+        bytes32 typeHash = _ESCROW_PARAMS_TYPEHASH;
+        assembly ("memory-safe") {
+            // Load free memory pointer
+            let ptr := mload(0x40)
+            
+            // Store _ESCROW_PARAMS_TYPEHASH (32 bytes)
+            mstore(ptr, typeHash)
+            
+            // Store id (32 bytes) at offset 0x20
+            mstore(add(ptr, 0x20), mload(escrowParams))
+            
+            // Store token (address, 32 bytes padded) at offset 0x40
+            mstore(add(ptr, 0x40), mload(add(escrowParams, 0x20)))
+            
+            // Store volume (32 bytes) at offset 0x60
+            mstore(add(ptr, 0x60), mload(add(escrowParams, 0x40)))
+            
+            // Store price (32 bytes) at offset 0x80
+            mstore(add(ptr, 0x80), mload(add(escrowParams, 0x60)))
+            
+            // Store usdRate (32 bytes) at offset 0xa0
+            mstore(add(ptr, 0xa0), mload(add(escrowParams, 0x80)))
+            
+            // Store payer (address, 32 bytes padded) at offset 0xc0
+            mstore(add(ptr, 0xc0), mload(add(escrowParams, 0xa0)))
+            
+            // Store seller (address, 32 bytes padded) at offset 0xe0
+            mstore(add(ptr, 0xe0), mload(add(escrowParams, 0xc0)))
+            
+            // Store sellerFeeRate (32 bytes) at offset 0x100
+            mstore(add(ptr, 0x100), mload(add(escrowParams, 0xe0)))
+            
+            // Store paymentMethod (bytes32) at offset 0x120
+            mstore(add(ptr, 0x120), mload(add(escrowParams, 0x100)))
+            
+            // Store currency (bytes32) at offset 0x140
+            mstore(add(ptr, 0x140), mload(add(escrowParams, 0x120)))
+            
+            // Store payeeDetails (bytes32) at offset 0x160
+            mstore(add(ptr, 0x160), mload(add(escrowParams, 0x140)))
+            
+            // Store buyer (address, 32 bytes padded) at offset 0x180
+            mstore(add(ptr, 0x180), mload(add(escrowParams, 0x160)))
+            
+            // Store buyerFeeRate (32 bytes) at offset 0x1a0
+            mstore(add(ptr, 0x1a0), mload(add(escrowParams, 0x180)))
+            
+            // Compute keccak256 hash of 0x1c0 bytes (14 * 32 bytes = 448 bytes)
+            result := keccak256(ptr, 0x1c0)
+        }
     }
 
     function hash(ISignatureTransfer.TokenPermissions memory permitted)
         internal
         pure
-        returns (bytes32)
+        returns (bytes32 result)
     {
-        return keccak256(abi.encode(_TOKEN_PERMISSIONS_TYPEHASH, permitted));
+        bytes32 typeHash = _TOKEN_PERMISSIONS_TYPEHASH;
+        assembly ("memory-safe") {
+            // Load free memory pointer
+            let ptr := mload(0x40)
+            
+            // Store _TOKEN_PERMISSIONS_TYPEHASH (32 bytes)
+            mstore(ptr, typeHash)
+            
+            // Store token (address, 32 bytes padded) at offset 0x20
+            mstore(add(ptr, 0x20), mload(permitted))
+            
+            // Store amount (32 bytes) at offset 0x40
+            mstore(add(ptr, 0x40), mload(add(permitted, 0x20)))
+            
+            // Compute keccak256 hash of 0x60 bytes (3 * 32 bytes = 96 bytes)
+            result := keccak256(ptr, 0x60)
+        }
     }
 
     /*

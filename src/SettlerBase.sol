@@ -72,14 +72,6 @@ abstract contract SettlerBase is ISettlerBase, SettlerAbstract {
         return TransientStorage.getTokenPermissionsHash();
     }
 
-    function clearPayer(address expectedOldPayer) internal {
-        TransientStorage.clearPayer(expectedOldPayer);
-    }
-
-    function clearTokenPermissionsHash() internal {
-        TransientStorage.clearTokenPermissionsHash();
-    }
-
     function getAndClearWitness() internal returns (bytes32) {
         return TransientStorage.getAndClearWitness();
     }
@@ -90,6 +82,14 @@ abstract contract SettlerBase is ISettlerBase, SettlerAbstract {
 
     function clearIntentTypeHash() internal {
         TransientStorage.clearIntentTypeHash();
+    }
+
+    function cleanupButKeepWitness(address expectedOldPayer) internal {
+        TransientStorage.cleanupButKeepWitness(expectedOldPayer);
+    }
+
+    function clearPayerAndTokenPermissionsHash(address expectedOldPayer) internal {
+        TransientStorage.clearPayerAndTokenPermissionsHash(expectedOldPayer);
     }
 
     /**

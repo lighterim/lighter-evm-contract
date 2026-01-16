@@ -56,8 +56,7 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent {
             address payer = getPayer();
             _transferFrom(permit, transferDetails, payer, sig);
             
-            clearPayer(payer);
-            clearTokenPermissionsHash();
+            clearPayerAndTokenPermissionsHash(payer);
         }
         else if(action == uint32(ISettlerActions.SIGNATURE_TRANSFER_FROM_WITH_WITNESS.selector)) {
             // take seller intent
@@ -76,9 +75,7 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent {
             address payer = getPayer();
             _transferFromIKnowWhatImDoing(permit, transferDetails, payer, intentParamsHash, ParamsHash._INTENT_WITNESS_TYPE_STRING, sig);
             
-            clearPayer(payer);
-            clearIntentTypeHash();
-            clearTokenPermissionsHash();
+            cleanupButKeepWitness(payer);
         }
         else if (action == uint32(ISettlerActions.BULK_SELL_TRANSFER_FROM.selector)) {
             // take bulk sell intent
@@ -104,9 +101,7 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent {
             // Do not verify spender allowance, as transferFrom will automatically verify allowance and call relationship
             _allowanceHolderTransferFrom(details.token, payer, details.to, details.amount);
             
-            clearPayer(payer);
-            clearIntentTypeHash();
-            clearTokenPermissionsHash();
+            cleanupButKeepWitness(payer);
         } 
         else{
             return false;
