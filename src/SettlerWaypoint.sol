@@ -3,18 +3,14 @@ pragma solidity ^0.8.25;
 
 import {ISettlerWaypoint} from "./interfaces/ISettlerWaypoint.sol";
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
-
-import {CalldataDecoder} from "./utils/CalldataDecoder.sol";
 import {SettlerBase} from "./SettlerBase.sol";
-import {UnsafeMath} from "./utils/UnsafeMath.sol";
 
 import {ISettlerActions} from "./ISettlerActions.sol";
 import {WaypointAbstract} from "./core/WaypointAbstract.sol";
 import {revertActionInvalid} from "./core/SettlerErrors.sol";
 
 abstract contract SettlerWaypoint is ISettlerWaypoint, WaypointAbstract, SettlerBase {
-    using UnsafeMath for uint256;
-    using CalldataDecoder for bytes[];
+    
 
     function _tokenId() internal pure virtual override returns (uint256) {
         return 3;
@@ -92,27 +88,6 @@ abstract contract SettlerWaypoint is ISettlerWaypoint, WaypointAbstract, Settler
     //     _;
     // }
     
-    
-
-    function _executeWaypoint(bytes[] calldata actions)
-        internal
-        returns (bool){   
-        if(actions.length == 0) revertActionInvalid(0, 0, msg.data[0:0]);
-
-        (uint256 action, bytes calldata data) = actions.decodeCall(0);
-        if (!_dispatchVIP(action, data)) {
-            revertActionInvalid(0, action, data);
-        }
-
-        for (uint256 i = 1; i < actions.length; i = i.unsafeInc()) {
-            (uint256 action_, bytes calldata data_) = actions.decodeCall(i);
-            if (!_dispatch(i, action_, data_)) {
-                revertActionInvalid(i, action, data);
-            }
-        }
-
-        return true;
-    }
 
     function execute(
         bytes32 /*escrowTypedDataHash*/,
@@ -120,7 +95,7 @@ abstract contract SettlerWaypoint is ISettlerWaypoint, WaypointAbstract, Settler
     ) external payable override
         //placeWaypoint(msg.sender, escrowTypedDataHash)
         returns (bool) {
-        return _executeWaypoint(actions);
+        return _generateDispatch(actions);
     }
 
 }

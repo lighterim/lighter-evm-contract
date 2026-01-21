@@ -290,7 +290,7 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
             if(block.timestamp < canCancelTs) revert SellerCancelWithinWindow(canCancelTs);
         }
         
-        uint256 refundAmount = escrowParams.volume + sellerFee;
+        uint256 refundAmount = (escrowParams.volume + sellerFee);
         sellerEscrow[escrowParams.seller][escrowParams.token] -= refundAmount;
         escrowData.status = ISettlerBase.EscrowStatus.SellerCancelled;
         escrowData.lastActionTs = uint64(block.timestamp);

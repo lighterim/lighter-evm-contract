@@ -18,9 +18,10 @@ library CalldataDecoder {
                 add(
                     data.offset,
                     // We allow the indirection/offset to `calls[i]` to be negative
-                    calldataload(
-                        add(shl(0x05, i), data.offset) // can't overflow; we assume `i` is in-bounds
-                    )
+                    calldataload(i)
+                    // calldataload(
+                    //     add(shl(0x05, i), data.offset) // can't overflow; we assume `i` is in-bounds
+                    // )
                 )
             // now we load `args.length` and set `args.offset` to the start of data
             args.length := calldataload(args.offset)

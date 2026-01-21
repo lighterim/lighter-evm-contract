@@ -341,6 +341,7 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         nonReentrant
         returns (uint256 tokenId, address tbaAddress) 
     {
+        if (msg.value < rentPrice) revert InsufficientPayment(rentPrice, msg.value);
         if (recipient == address(0)) revert InvalidRecipient();
         
         // 1. Mint NFT
@@ -348,15 +349,13 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         tbaAddress = _createAccount(tokenId, nostrPubKey, recipient);
     }
 
-    function createAccount(uint256 tokenId, bytes32 nostrPubKey) external payable nonReentrant returns (address tbaAddress) {
+    function createAccount(uint256 tokenId, bytes32 nostrPubKey) external nonReentrant returns (address tbaAddress) {
         if (isDeployedContract(getAccountAddress(tokenId))) revert AccountAlreadyCreated();
         
         return _createAccount(tokenId, nostrPubKey, TICKET_CONTRACT.ownerOf(tokenId));
     }
 
     function _createAccount(uint256 tokenId, bytes32 nostrPubKey, address recipient) internal returns (address) {
-        if (msg.value < rentPrice) revert InsufficientPayment(rentPrice, msg.value);
-        
         // 2. Create TBA (AccountV3 instance)
         address tbaAddress = IERC6551Registry(REGISTRY).createAccount(
             ACCOUNT_IMPL,
@@ -409,9 +408,10 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     /// @notice upgrade quota
     /// @param nftId token id
     function upgradeQuota(uint256  nftId) external payable nonReentrant {
-        if (msg.value < rentPrice) {
-            revert InsufficientPayment(rentPrice, msg.value);
-        }
+        // genesis1 and genesis2 ticket id are not allowed to upgrade quota
+        if (nftId < LIGHTER_TICKET_ID_START) revert InvalidTokenId();
+        if (msg.value < rentPrice) revert InsufficientPayment(rentPrice, msg.value);
+
         address account = IERC6551Registry(REGISTRY).account(
             ACCOUNT_IMPL,
             SALT,

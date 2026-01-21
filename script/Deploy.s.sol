@@ -33,10 +33,14 @@ contract DeployerContract is Script {
     address public deployer;
     address public zkVerify;
     address public usdc;
+    address public registryAddr;
+    address public accountImplAddr;
 
     function setUp() public {
         deployer = vm.envAddress("DEPLOYER");
         zkVerify = vm.envAddress("ZK_VERIFY");
+        registryAddr = vm.envAddress("ERC6551_REGISTRY");
+        accountImplAddr = vm.envAddress("ACCOUNT_V3_IMPL");
         usdc = vm.envAddress("USDC");
         // MockUSDC u = new MockUSDC();
         // usdc = address(u);
@@ -52,11 +56,11 @@ contract DeployerContract is Script {
         console.log("LighterTicket deployed at:", address(ticket));
         
         console.log("Deploying ERC6551Registry...");
-        registry = new ERC6551Registry();
+        registry = ERC6551Registry(registryAddr);
         console.log("ERC6551Registry deployed at:", address(registry));
         
         console.log("Deploying AccountV3Simplified...");
-        accountImpl = new AccountV3Simplified();
+        accountImpl = AccountV3Simplified(payable(accountImplAddr));
         console.log("AccountV3Simplified deployed at:", address(accountImpl));
         
         console.log("Deploying LighterAccount...");

@@ -26,6 +26,9 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
     using ParamsHash for ISettlerBase.IntentParams;
     using ParamsHash for ISignatureTransfer.TokenPermissions;
     
+    //nullifier hash => takenBuyerIntents
+    mapping(bytes32 => bool) takenBuyerIntents;
+    
     constructor(
         address lighterRelayer, IEscrow escrow, LighterAccount lighterAccount,
         IPaymentMethodRegistry paymentMethodRegistry, bytes20 gitCommit, IAllowanceHolder allowanceHolder
@@ -111,7 +114,10 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
             if(isInitiatedBySeller){
                 /// the caller is from seller ==> 3. takeBuyerIntent
                 /// verify buyer intent signature
-                makesureIntentParams(escrowParams.buyer, _domainSeparator(), intentParams, makerIntentSig);
+                bytes32 intentTypedHash = makesureIntentParams(escrowParams.buyer, _domainSeparator(), intentParams, makerIntentSig);
+                if (takenBuyerIntents[intentTypedHash]) revert InvalidIntent();
+                takenBuyerIntents[intentTypedHash] = true;
+                
                 clearIntentTypeHash();
             }
 

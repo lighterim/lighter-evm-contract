@@ -5,13 +5,16 @@ import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
 import {SafeTransferLib} from "./vendor/SafeTransferLib.sol";
 import {FullMath} from "./vendor/FullMath.sol";
-
+import {UnsafeMath} from "./utils/UnsafeMath.sol";
+import {CalldataDecoder} from "./core/CalldataDecoder.sol";
 import {InvalidPaymentMethod} from "./core/SettlerErrors.sol";
 import {TransientStorage} from "./utils/TransientStorage.sol";
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
 import {SettlerAbstract} from "./SettlerAbstract.sol";
 import {IPaymentMethodRegistry} from "./interfaces/IPaymentMethodRegistry.sol";
-
+import {
+    revertActionInvalid, InvalidActionsLength
+    } from "./core/SettlerErrors.sol"; 
 
 
 
@@ -19,6 +22,8 @@ abstract contract SettlerBase is ISettlerBase, SettlerAbstract {
     using SafeTransferLib for IERC20;
     using SafeTransferLib for address payable;
     using FullMath for uint256;
+    using CalldataDecoder for bytes[];
+    using UnsafeMath for uint256;
 
     uint256 constant public BASIS_POINTS_BASE = 10000;
     uint8 constant public USD_DECIMALS = 6;
@@ -107,6 +112,32 @@ abstract contract SettlerBase is ISettlerBase, SettlerAbstract {
      */
     function getFeeAmount(uint256 amount, uint256 feeRate) public pure returns (uint256) {
         return amount.mulDivUp(feeRate, BASIS_POINTS_BASE);
+    }
+
+    function _generateDispatch(bytes[] calldata actions) internal virtual returns (bool){
+        if (actions.length > 100) revert InvalidActionsLength();
+
+        uint256 it;
+        assembly ("memory-safe") {
+            it := actions.offset
+        }
+        {
+            (uint256 action, bytes calldata data) = actions.decodeCall(it);
+            if (!_dispatchVIP(action, data)) {
+                if (!_dispatch(0, action, data)) {
+                    revertActionInvalid(0, action, data);
+                }
+            }
+        }
+        
+        it = it.unsafeAdd(32);
+        for (uint256 i = 1; i < actions.length; (i, it) = (i.unsafeInc(), it.unsafeAdd(32))) {
+            (uint256 action, bytes calldata data) = actions.decodeCall(it);
+            if (!_dispatch(i, action, data)) {
+                revertActionInvalid(i, action, data);
+            }
+        }
+        return true;
     }
 
     function _dispatchVIP(uint256 action, bytes calldata data) internal virtual returns (bool);

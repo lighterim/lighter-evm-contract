@@ -7,21 +7,18 @@ import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer
 
 import {ISettlerTakeIntent} from "./interfaces/ISettlerTakeIntent.sol";
 import {Permit2PaymentTakeIntent} from "./core/Permit2Payment.sol";
-import {CalldataDecoder} from "./utils/CalldataDecoder.sol";
-import {UnsafeMath} from "./utils/UnsafeMath.sol";
+
 import {ISettlerActions} from "./ISettlerActions.sol";
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
 import {ParamsHash} from "./utils/ParamsHash.sol";
 import {
-    revertActionInvalid, InvalidWitness, InvalidPayer, InvalidIntent, InvalidActionsLength, InvalidTokenPermissions
+    InvalidWitness, InvalidPayer, InvalidIntent, InvalidTokenPermissions
     } from "./core/SettlerErrors.sol";
 // import {console} from "forge-std/console.sol";
 
 
 abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent {
 
-    using UnsafeMath for uint256;
-    using CalldataDecoder for bytes[];
     using ParamsHash for ISettlerBase.IntentParams;
     using ParamsHash for ISettlerBase.EscrowParams;
     using ParamsHash for ISignatureTransfer.TokenPermissions;
@@ -121,25 +118,7 @@ abstract contract Settler is ISettlerTakeIntent, Permit2PaymentTakeIntent {
         takeIntent(payer, tokenPermissionsHash, escrowTypedHash, intentTypeHash)
         returns (bool)
     {
-        if (actions.length > 100) revert InvalidActionsLength();
-
-        if (actions.length != 0) {
-            (uint256 action, bytes calldata data) = actions.decodeCall(0);
-            if (!_dispatchVIP(action, data)) {
-                if (!_dispatch(0, action, data)) {
-                    revertActionInvalid(0, action, data);
-                }
-            }
-        }
-
-        for (uint256 i = 1; i < actions.length; i = i.unsafeInc()) {
-            (uint256 action, bytes calldata data) = actions.decodeCall(i);
-            if (!_dispatch(i, action, data)) {
-                revertActionInvalid(i, action, data);
-            }
-        }
-
-        return true;
+        return _generateDispatch(actions);
     }
 
 }

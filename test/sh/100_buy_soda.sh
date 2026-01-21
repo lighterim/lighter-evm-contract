@@ -81,10 +81,7 @@ export relayerPrivKey=${RELAYER_PRIVATE_KEY:-$sellerPrivKey}  # Default to selle
 export tbaBuyer=$TBA_BUYER
 export tbaSeller=$TBA_SELLER
 export tradeId=${TRADE_ID:-1}
-
-
-# Contract addresses (can be overridden via environment variables)
-export usdc=${USDC:-0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238}
+export usdc=${USDC}
 export permit2=0x000000000022D473030F116dDEE9F6B43aC78BA3  # Standard Permit2 address
 export usdcDecimals=6
 

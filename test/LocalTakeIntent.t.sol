@@ -67,7 +67,6 @@ contract LocalTakeIntentTest is Permit2Signature {
         lighterAccount = new LighterAccount(address(lighterTicket), address(registry), address(accountImpl), rentPrice);
         lighterTicket.transferOwnership(address(lighterAccount));
         escrow = new Escrow(lighterAccount, relayer);
-        vm.prank(relayer);
         escrow.whitelistToken(address(usdc), true);
         allowanceHolder = new AllowanceHolder();
         
@@ -114,6 +113,7 @@ contract LocalTakeIntentTest is Permit2Signature {
             allowanceHolder
         );
         takeIntentDomain = settler.getDomainSeparator();
+        
         escrow.authorizeCreator(address(settler), true);
         lighterAccount.authorizeOperator(address(settler), true);
 
