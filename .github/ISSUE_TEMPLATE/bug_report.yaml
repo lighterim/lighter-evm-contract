@@ -1,0 +1,79 @@
+name: "Bug Report (Contract)"
+description: "Report a bug related to the lighter-evm-contract interactions"
+title: "[BUG]: <Short Description>"
+labels: ["bug", "smart-contract"]
+assignees: ["dust"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+  
+  - type: input
+    id: network
+    attributes:
+      label: Network
+      placeholder: "e.g. Sepolia, Ethereum Mainnet, Arbitrum One"
+    validations:
+      required: true
+
+  - type: input
+    id: wallet_identifiers
+    attributes:
+      label: Identifiers (Wallet/NFT/TBA/Nostr)
+      placeholder: "Wallet Address / NFT ID / TBA Address / Nostr npub"
+    validations:
+      required: true
+
+  - type: input
+    id: tx_hash
+    attributes:
+      label: Relevant Transaction Hash
+      placeholder: "0x..."
+
+  - type: dropdown
+    id: operation
+    attributes:
+      label: Business Operation
+      description: "Which operation were you performing when the error occurred?"
+      options:
+        - Post Intent
+        - Take
+        - Made Payment
+        - Cancel
+        - Release
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: "A clear and concise description of what the bug is."
+    validations:
+      required: true
+
+  - type: textarea
+    id: error_message
+    attributes:
+      label: Error Message / Revert Reason
+      description: "Paste the error returned by the contract, wallet, or console."
+      render: shell
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps To Reproduce
+      placeholder: |
+        1. Connect to...
+        2. Click on...
+        3. Confirm TX...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: Expected Behavior
+      description: "What should have happened?"
