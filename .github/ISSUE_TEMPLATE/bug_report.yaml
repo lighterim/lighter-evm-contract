@@ -1,4 +1,4 @@
-name: "Bug Report (Contract)"
+name: "Bug Report"
 description: "Report a bug related to the lighter-evm-contract interactions"
 title: "[BUG]: <Short Description>"
 labels: ["bug", "smart-contract"]
