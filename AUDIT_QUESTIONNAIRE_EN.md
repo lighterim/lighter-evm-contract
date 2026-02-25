@@ -751,6 +751,6 @@ function authorizeVerifier(address verifier, bool isAuthorized) external onlyOwn
 
 ---
 
-**Audit Completion Date**: 2024  
-**Auditor**: [Auditor Name]  
+**Audit Completion Date**: 2026.1.19  
+**Auditor**: Peers  
 **Version**: 1.0
