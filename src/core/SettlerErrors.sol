@@ -61,6 +61,8 @@ error NoPendingTx(address account);
 error InvalidRentPrice();
 
 error InsufficientQuota(address account);
+error InsufficientAccumulatedUsd(uint256 required, uint256 provided);
+error InsufficientCompletedRatioBp(uint32 required, uint32 provided);
 
 error EscrowAlreadyExists(bytes32 escrowHash);
 
@@ -69,6 +71,7 @@ error EscrowNotExists(bytes32 escrowHash);
 error InvalidEscrowStatus(bytes32 escrowHash, ISettlerBase.EscrowStatus actual);
 
 error InvalidEscrowSignature();
+error InvalidResolvedResultSignature();
 
 error InvalidIntentSignature();
 

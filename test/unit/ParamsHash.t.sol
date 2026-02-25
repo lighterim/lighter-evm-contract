@@ -294,7 +294,10 @@ contract ParamsHashTest is Test {
             currency: bytes32(uint256(0xABCD)),
             paymentMethod: bytes32(uint256(0xEF01)),
             payeeDetails: bytes32(uint256(0x2345)),
-            price: 1000000000000000000 // 1e18
+            price: 1000000000000000000, // 1e18
+            clientId: 0,
+            accumulatedUsd: 0,
+            completedRatioBp: 0
         });
     }
 

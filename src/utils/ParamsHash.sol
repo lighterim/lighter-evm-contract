@@ -16,7 +16,7 @@ library ParamsHash {
     string public constant _RANGE_TYPE = "Range(uint256 min,uint256 max)";
     string public constant _INTENT_PARAMS_TYPE = string(
         abi.encodePacked(
-            "IntentParams(address token,Range range,uint64 expiryTime,bytes32 currency,bytes32 paymentMethod,bytes32 payeeDetails,uint256 price)",
+            "IntentParams(address token,Range range,uint64 expiryTime,bytes32 currency,bytes32 paymentMethod,bytes32 payeeDetails,uint256 price,uint256 clientId,uint256 accumulatedUsd,uint32 completedRatioBp)",
             _RANGE_TYPE
         )
     );
@@ -38,76 +38,28 @@ library ParamsHash {
         "EscrowParams(uint256 id,address token,uint256 volume,uint256 price,uint256 usdRate,address payer,address seller,uint256 sellerFeeRate,bytes32 paymentMethod,bytes32 currency,bytes32 payeeDetails,address buyer,uint256 buyerFeeRate)"
     );
 
-    /*
-    bytes32 public constant _PERMIT_DETAILS_TYPEHASH =
-        keccak256("PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)");
-
-    bytes32 public constant _PERMIT_SINGLE_TYPEHASH = keccak256(
-        "PermitSingle(PermitDetails details,address spender,uint256 sigDeadline)PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)"
+    bytes32 public constant _RESOLVED_RESULT_TYPEHASH = keccak256(
+        "ResolvedResult(bytes32 escrowHash,uint16 buyerThresholdBp)"
     );
-
-    bytes32 public constant _PERMIT_BATCH_TYPEHASH = keccak256(
-        "PermitBatch(PermitDetails[] details,address spender,uint256 sigDeadline)PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)"
-    );
-
-    bytes32 public constant _TOKEN_PERMISSIONS_TYPEHASH = keccak256("TokenPermissions(address token,uint256 amount)");
-
-    bytes32 public constant _PERMIT_TRANSFER_FROM_TYPEHASH = keccak256(
-        "PermitTransferFrom(TokenPermissions permitted,address spender,uint256 nonce,uint256 deadline)TokenPermissions(address token,uint256 amount)"
-    );
-
-    bytes32 public constant _PERMIT_BATCH_TRANSFER_FROM_TYPEHASH = keccak256(
-        "PermitBatchTransferFrom(TokenPermissions[] permitted,address spender,uint256 nonce,uint256 deadline)TokenPermissions(address token,uint256 amount)"
-    );
-
-    */
 
     // string public constant _PERMIT_BATCH_WITNESS_TRANSFER_FROM_TYPEHASH_STUB =
     //     "PermitBatchWitnessTransferFrom(TokenPermissions[] permitted,address spender,uint256 nonce,uint256 deadline,";
     function hashWithWitness(ISettlerBase.IntentParams memory intentParams) internal pure returns (bytes32 result) {
-        // First compute rangeHash
-        bytes32 rangeHash = hash(intentParams.range);
-        
-        // Extract fields to ensure proper encoding (especially for uint64)
-        address token = intentParams.token;
-        uint64 expiryTime = intentParams.expiryTime;
-        bytes32 currency = intentParams.currency;
-        bytes32 paymentMethod = intentParams.paymentMethod;
-        bytes32 payeeDetails = intentParams.payeeDetails;
-        uint256 price = intentParams.price;
-        
-        // Then compute main hash
-        bytes32 typeHash = _INTENT_PARAMS_TYPEHASH;
+        return hash(intentParams);
+    }
+
+    function hash(ISettlerBase.ResolvedResult memory resolvedResult) internal pure returns (bytes32 result) {
+        bytes32 typeHash = _RESOLVED_RESULT_TYPEHASH;
+        bytes32 escrowHash = resolvedResult.escrowHash;
+        uint16 buyerThresholdBp = resolvedResult.buyerThresholdBp;
+
         assembly ("memory-safe") {
             let ptr := mload(0x40)
-            
-            // Store _INTENT_PARAMS_TYPEHASH (32 bytes)
             mstore(ptr, typeHash)
-            
-            // Store token (address, 32 bytes padded) at offset 0x20
-            mstore(add(ptr, 0x20), token)
-            
-            // Store rangeHash (bytes32) at offset 0x40
-            mstore(add(ptr, 0x40), rangeHash)
-            
-            // Store expiryTime (uint64, encoded as uint256 in abi.encode)
-            // abi.encode converts uint64 to uint256 (32 bytes, right-aligned)
-            mstore(add(ptr, 0x60), expiryTime)
-            
-            // Store currency (bytes32) at offset 0x80
-            mstore(add(ptr, 0x80), currency)
-            
-            // Store paymentMethod (bytes32) at offset 0xa0
-            mstore(add(ptr, 0xa0), paymentMethod)
-            
-            // Store payeeDetails (bytes32) at offset 0xc0
-            mstore(add(ptr, 0xc0), payeeDetails)
-            
-            // Store price (uint256) at offset 0xe0
-            mstore(add(ptr, 0xe0), price)
-            
-            // Compute keccak256 hash of 0x100 bytes (8 * 32 bytes = 256 bytes)
-            result := keccak256(ptr, 0x100)
+            mstore(add(ptr, 0x20), escrowHash)
+            mstore(add(ptr, 0x40), buyerThresholdBp)
+            // Compute keccak256 hash of 0x60 bytes (3 * 32 bytes = 96 bytes)
+            result := keccak256(ptr, 0x60) // 0x60 = 96
         }
     }
     
@@ -122,6 +74,9 @@ library ParamsHash {
         bytes32 paymentMethod = intentParams.paymentMethod;
         bytes32 payeeDetails = intentParams.payeeDetails;
         uint256 price = intentParams.price;
+        uint256 clientId = intentParams.clientId;
+        uint256 accumulatedUsd = intentParams.accumulatedUsd;
+        uint32 completedRatioBp = intentParams.completedRatioBp;
         
         // Then compute main hash
         bytes32 typeHash = _INTENT_PARAMS_TYPEHASH;
@@ -153,8 +108,17 @@ library ParamsHash {
             // Store price (uint256) at offset 0xe0
             mstore(add(ptr, 0xe0), price)
             
-            // Compute keccak256 hash of 0x100 bytes (8 * 32 bytes = 256 bytes)
-            result := keccak256(ptr, 0x100)
+            // Store clientId (uint256) at offset 0x100
+            mstore(add(ptr, 0x100), clientId)
+            
+            // Store accumulatedUsd (uint256) at offset 0x120
+            mstore(add(ptr, 0x120), accumulatedUsd)
+            
+            // Store completedRatioBp (uint32) at offset 0x140
+            mstore(add(ptr, 0x140), completedRatioBp)
+            
+            // Compute keccak256 hash of 0x160 bytes (11 * 32 bytes = 352 bytes)
+            result := keccak256(ptr, 0x160) // 0x160 = 352
         }
     }
 

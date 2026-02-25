@@ -339,7 +339,7 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         uint32 disputeWindowSeconds,
         uint16 buyerThresholdBp, 
         address tbaArbitrator, 
-        bytes32 escrowTypedHash, 
+        bytes32 resolvedResultTypedHash, 
         bytes memory counterpartySig
     ) external onlyAuthorizedExecutor returns(bool isInitiatedByBuyer){
 
@@ -365,7 +365,7 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
             address expectedSigner = isInitiatedByBuyer ? seller : buyer;
 
             // 3. Verify signature (Most expensive check - performed only if time window is valid)
-            if (!SignatureChecker.isValidSignatureNow(expectedSigner, escrowTypedHash, counterpartySig)) {
+            if (!SignatureChecker.isValidSignatureNow(expectedSigner, resolvedResultTypedHash, counterpartySig)) {
                 revert InvalidCounterpartySignature();
             }
         }

@@ -122,7 +122,7 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
             }
 
             makesureTradeValidation(escrowParams, intentParams, !isInitiatedBySeller); // isInitiatedByBuyer
-            _makeEscrow(escrowHash, escrowParams);
+            _makeEscrow(escrowHash, escrowParams, isInitiatedBySeller, intentParams.accumulatedUsd, intentParams.completedRatioBp);
             return true;
         }
 
@@ -131,13 +131,21 @@ contract MainnetTakeIntent is Settler, MainnetMixin,  EIP712 {
 
     function _makeEscrow(
         bytes32 escrowHash,
-        ISettlerBase.EscrowParams memory escrowParams
+        ISettlerBase.EscrowParams memory escrowParams,
+        bool isInitiatedBySeller,
+        uint256 accumulatedUsd,
+        uint32 completedRatioBp
     ) internal {
         address buyer = escrowParams.buyer;
         address seller = escrowParams.seller;
         uint256 volume = escrowParams.volume;
         
-        lighterAccount.addPendingTx(buyer, seller);
+        if(isInitiatedBySeller){
+            lighterAccount.makesurePendingTx(buyer, seller, accumulatedUsd, completedRatioBp);
+        }
+        else{
+            lighterAccount.makesurePendingTx(seller, buyer, accumulatedUsd, completedRatioBp);
+        }
         
         uint256 sellerFee = getFeeAmount(volume, escrowParams.sellerFeeRate);
         escrow.create(

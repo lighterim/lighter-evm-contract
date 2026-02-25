@@ -21,7 +21,10 @@ contract ParamsHashDebugTest is Test {
             currency: bytes32(uint256(0xABCD)),
             paymentMethod: bytes32(uint256(0xEF01)),
             payeeDetails: bytes32(uint256(0x2345)),
-            price: 1000000000000000000
+            price: 1000000000000000000,
+            clientId: 0,
+            accumulatedUsd: 0,
+            completedRatioBp: 0
         });
 
         bytes32 hash1 = intentParams.hash();

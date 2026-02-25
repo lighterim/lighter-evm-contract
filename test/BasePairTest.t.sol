@@ -181,7 +181,10 @@ abstract contract BasePairTest is Test, GasSnapshot, Permit2Signature, MainnetDe
             currency: getCurrency(), 
             paymentMethod: getPaymentMethod(),
             payeeDetails: getPayeeDetails(),
-            price: getPrice()
+            price: getPrice(),
+            clientId: 0,
+            accumulatedUsd: 0,
+            completedRatioBp: 0
         });
     }
 

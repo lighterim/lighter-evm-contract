@@ -370,7 +370,10 @@ contract LocalTakeIntentTest is Permit2Signature {
             currency: getCurrency(), 
             paymentMethod: getPaymentMethod(),
             payeeDetails: getPayeeDetails(),
-            price: getPrice()
+            price: getPrice(),
+            clientId: 0,
+            accumulatedUsd: 0,
+            completedRatioBp: 0
         });
     }
 

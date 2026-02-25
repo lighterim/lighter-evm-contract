@@ -37,6 +37,9 @@ interface ISettlerBase {
         bytes32 paymentMethod;
         bytes32 payeeDetails;           // payee details(payee id and account) for payment method
         uint256 price;
+        uint256 clientId;
+        uint256 accumulatedUsd;
+        uint32 completedRatioBp;
     }
     
     struct EscrowParams {
@@ -76,7 +79,12 @@ interface ISettlerBase {
         uint32 releaseSeconds;
         uint64 cancelTs;
         uint64 lastActionTs;
-    } 
+    }
+
+    struct ResolvedResult {
+        bytes32 escrowHash;
+        uint16 buyerThresholdBp;
+    }
 
     struct PaymentMethodConfig {
         uint32 windowSeconds;

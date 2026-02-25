@@ -12,7 +12,7 @@ import {ISettlerBase} from "../../interfaces/ISettlerBase.sol";
 import {IEscrow} from "../../interfaces/IEscrow.sol";
 import {LighterAccount} from "../../account/LighterAccount.sol";
 import {ParamsHash} from "../../utils/ParamsHash.sol";
-import {UnauthorizedCaller, InvalidArbitratorTicket, InvalidArbitratorSignature} from "../../core/SettlerErrors.sol";
+import {UnauthorizedCaller, InvalidArbitratorTicket} from "../../core/SettlerErrors.sol";
 
 
 contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
@@ -160,8 +160,9 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
         bytes memory counterpartySig
     ) internal virtual override{
         if(lighterAccount.getTicketType(tbaArbitrator) != ISettlerBase.TicketType.GENESIS2) revert InvalidArbitratorTicket();
-        (bytes32 escrowHash, bytes32 escrowTypedHash) = makesureEscrowParams(_domainSeparator(), escrowParams, sig);
-        if(!isValidSignature(tbaArbitrator, escrowTypedHash, arbitratorSig)) revert InvalidArbitratorSignature();
+        bytes32 domainSeparator = _domainSeparator();
+        (bytes32 escrowHash,) = makesureEscrowParams(domainSeparator, escrowParams, sig);
+        (,bytes32 resolvedResultTypedHash) = makesureResolvedResult(domainSeparator, escrowHash, buyerThresholdBp, arbitratorSig);
         if(
             !lighterAccount.isOwnerCall(escrowParams.buyer, sender) 
             && !lighterAccount.isOwnerCall(escrowParams.seller, sender)
@@ -176,7 +177,7 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
             escrowHash, escrowParams, 
             buyerFee, sellerFee,
             disputeWindowSeconds,
-            buyerThresholdBp, tbaArbitrator, escrowTypedHash, counterpartySig
+            buyerThresholdBp, tbaArbitrator, resolvedResultTypedHash, counterpartySig
         );
 
         uint256 buyerAmount = 0;

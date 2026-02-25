@@ -13,7 +13,7 @@ import "../interfaces/ISettlerBase.sol";
 import {
     ZeroAddress, InvalidAccountAddress, InvalidRecipient, InvalidRentPrice, HasPendingTx,
     InsufficientPayment, InvalidSender, InvalidTokenId, AccountAlreadyCreated,
-    UnauthorizedExecutor, NoPendingTx, InsufficientQuota
+    UnauthorizedExecutor, NoPendingTx, InsufficientQuota, InsufficientAccumulatedUsd, InsufficientCompletedRatioBp
     } from "../core/SettlerErrors.sol";
 
 /**
@@ -42,6 +42,7 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     // the start token id for lighter user(user group for lighter user).
     uint256 public constant LIGHTER_TICKET_ID_START = 10000;
     
+    uint256 constant internal BASIS_POINTS_BASE = 10000;
     /// @notice Total number of rented tickets
     uint256 public totalRented;
     /// @notice Rent price for a single ticket
@@ -150,11 +151,36 @@ contract LighterAccount is Ownable, ReentrancyGuard {
 
     // ============ Internal(authorized) Functions ============
     /// @notice add pending tx count
-    /// @param tbaBuyer tba buyer address
-    /// @param tbaSeller tba seller address
-    function addPendingTx(address tbaBuyer, address tbaSeller) public onlyAuthorized {
-        _addPendingTx(tbaBuyer);
-        _addPendingTx(tbaSeller);
+    /// @param tbaMaker tba maker address
+    /// @param tbaTaker tba taker address
+    /// @param accumulatedUsd accumulated usd amount. For example, if the maker requires taker to have at least 1000 usd accumulated, then the accumulatedUsd should be 1000 * 10^USD_DECIMALS
+    /// @param completedRatioBp completed ratio bp (10000 = 100%) for example, if the maker requires taker to have at least 50% completed ratio, then the completedRatioBp should be 5000.
+    function makesurePendingTx(address tbaMaker, address tbaTaker, uint256 accumulatedUsd, uint32 completedRatioBp) public onlyAuthorized {
+        // 检查taker符合maker所要求的条件。如: taker的累计交易额和完成率。
+        _makesureTakerEligibility(tbaTaker, accumulatedUsd, completedRatioBp);
+        _addPendingTx(tbaMaker);
+        _addPendingTx(tbaTaker);
+    }
+
+    function _makesureTakerEligibility(address taker, uint256 accumulatedUsd, uint32 completedRatioBp) private view {
+        if (accumulatedUsd > 0 || completedRatioBp > 0) {
+            
+            ISettlerBase.Honour memory honour = userHonour[taker];
+
+            if(accumulatedUsd > 0 && accumulatedUsd > honour.accumulatedUsd) revert InsufficientAccumulatedUsd(accumulatedUsd, honour.accumulatedUsd);
+
+            if (completedRatioBp > 0){
+                if (honour.count == 0 && honour.cancelledCount == 0) revert InsufficientCompletedRatioBp(completedRatioBp, 0);
+                uint32 currentCompletedRatioBp;
+                unchecked{
+                    // calculate the completed ratio bp, the result is a uint32 value.(It's safe to cast to uint32 because the result is always less than BASIS_POINTS_BASE)
+                    // forge-lint: disable-next-line(unsafe-typecast)
+                    currentCompletedRatioBp = uint32(uint256(honour.count) * BASIS_POINTS_BASE / uint256(honour.count + honour.cancelledCount));
+                }
+                if (completedRatioBp > currentCompletedRatioBp) revert InsufficientCompletedRatioBp(completedRatioBp, currentCompletedRatioBp);
+            }
+            
+        }
     }
 
     function _addPendingTx(address account) private {
