@@ -31,7 +31,6 @@ contract LighterTicket is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
 
     // Events
     event TokenMinted(address indexed to, uint256 indexed tokenId, bytes32 nostrPubKey);
-    event GenesisMinted(address indexed to,uint8 start, uint8 end);
     event TokenBurned(uint256 indexed tokenId, string hexNostrPubKey);
     event BaseURIUpdated(string newBaseURI);
 
@@ -47,7 +46,7 @@ contract LighterTicket is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
         string memory baseUri_
     ) ERC721(name_, symbol_) Ownable(msg.sender) {
         _baseTokenUri = baseUri_;
-        _tokenIdCounter = 1;
+        _tokenIdCounter = LIGHTER_TICKET_ID_START;
     }
 
     /**
@@ -68,21 +67,15 @@ contract LighterTicket is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
         return tokenId;
     }
 
-    function genesisMint(address to, uint8 end) external onlyOwner {
-        if(_tokenIdCounter >= GENESIS2_END || end >= GENESIS2_END) revert DenyMint();
+    function genesisMint(address to, uint8 nftId, bytes32 nostrPubKey) external onlyOwner {
+        uint256 tokenId = uint256(nftId);
+        if(nftId >= GENESIS2_END || super._ownerOf(tokenId) != address(0)) revert DenyMint();
 
-        uint256 tokenId = _tokenIdCounter;
-        uint8 start = uint8(tokenId);
-        for (; tokenId <= end; tokenId++) {
-            _tokenIdCounter++;
-            _safeMint(to, tokenId);
-        }
+        string memory metadataURI = LibString.toHexString(uint256(nostrPubKey));
+        _safeMint(to, tokenId);
+        _setTokenURI(tokenId, metadataURI);
 
-        // if(tokenId >= GENESIS2_END){
-            _tokenIdCounter = LIGHTER_TICKET_ID_START;
-        // }
-
-        emit GenesisMinted(to, start, end);        
+        emit TokenMinted(to, tokenId, nostrPubKey);
     }
 
     function setTokenURI(uint256 tokenId, bytes32 nostrPubKey) external onlyOwner {

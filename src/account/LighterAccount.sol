@@ -149,6 +149,14 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         emit OperatorAuthorized(operator, isAuthorized);
     }
 
+    function createAccount(uint8 nftId, address to,  bytes32 nostrPubKey) external nonReentrant onlyOwner returns (address tbaAddress) {
+        uint256 tokenId = uint256(nftId);
+        if (isDeployedContract(getAccountAddress(tokenId))) revert AccountAlreadyCreated();
+
+        TICKET_CONTRACT.genesisMint(to, nftId, nostrPubKey);
+        return _createAccount(tokenId, nostrPubKey, to);
+    }
+
     // ============ Internal(authorized) Functions ============
     /// @notice add pending tx count
     /// @param tbaMaker tba maker address
@@ -373,12 +381,6 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         // 1. Mint NFT
         tokenId = TICKET_CONTRACT.mintWithURI(recipient, nostrPubKey);
         tbaAddress = _createAccount(tokenId, nostrPubKey, recipient);
-    }
-
-    function createAccount(uint256 tokenId, bytes32 nostrPubKey) external nonReentrant returns (address tbaAddress) {
-        if (isDeployedContract(getAccountAddress(tokenId))) revert AccountAlreadyCreated();
-        
-        return _createAccount(tokenId, nostrPubKey, TICKET_CONTRACT.ownerOf(tokenId));
     }
 
     function _createAccount(uint256 tokenId, bytes32 nostrPubKey, address recipient) internal returns (address) {
