@@ -137,5 +137,5 @@ export tbaBuyer=$(create_account_and_get_tba $LighterAccount $LighterTicket $buy
 export TBA_BUYER=$tbaBuyer
 
 export eoaSeller=$(cast wallet address --private-key=$sellerPrivKey)
-export tbaSeller=$(create_account_and_get_tba $LighterAccount $LighterTicket $sellerPrivKey $nostrSeller 10)
+export tbaSeller=$(create_account_and_get_tba $LighterAccount $LighterTicket $sellerPrivKey $nostrSeller)
 export TBA_SELLER=$tbaSeller

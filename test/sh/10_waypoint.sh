@@ -77,18 +77,15 @@ fi
 # Load sensitive information from environment variables
 export buyerPrivKey=$BUYER_PRIVATE_KEY
 export sellerPrivKey=$SELLER_PRIVATE_KEY
-export relayerPrivKey=${RELAYER_PRIVATE_KEY:-$sellerPrivKey}  # Default to seller if not set
+export relayerPrivKey=${RELAYER_PRIVATE_KEY:-$sellerPrivKey}
 export tbaBuyer=$TBA_BUYER
 export tbaSeller=$TBA_SELLER
 export tradeId=${TRADE_ID:-1}
 
-
-# Contract addresses (can be overridden via environment variables)
 export usdc=${USDC:-0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238}
-export permit2=0x000000000022D473030F116dDEE9F6B43aC78BA3  # Standard Permit2 address
+export permit2=0x000000000022D473030F116dDEE9F6B43aC78BA3
 export usdcDecimals=6
 
-# Load contract addresses from environment or use defaults
 export LighterAccount=${LIGHTER_ACCOUNT:-0x31d42A0f1C9d338B5477fce674745835CEEde398}
 export LighterTicket=${LIGHTER_TICKET:-0xac70D4678Bc57B402c58F863a79d3437425C7305}
 export Escrow=${ESCROW:-0x6C99AF667b8Ea8c7f7B2083F08CfDb8feF653B87}

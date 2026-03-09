@@ -82,18 +82,18 @@ fi
 # Load sensitive information from environment variables
 export buyerPrivKey=$BUYER_PRIVATE_KEY
 export sellerPrivKey=$SELLER_PRIVATE_KEY
-export relayerPrivKey=${RELAYER_PRIVATE_KEY:-$sellerPrivKey}  # Default to seller if not set
+export relayerPrivKey=${RELAYER_PRIVATE_KEY:-$sellerPrivKey}
 export tbaBuyer=$TBA_BUYER
 export tbaSeller=$TBA_SELLER
 export tradeId=${TRADE_ID:-3}
+export clientId=1234567
+export accumulatedUsd=0
+export completedRatioBp=0
 
-
-# Contract addresses (can be overridden via environment variables)
 export usdc=${USDC:-0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238}
-export permit2=0x000000000022D473030F116dDEE9F6B43aC78BA3  # Standard Permit2 address
+export permit2=0x000000000022D473030F116dDEE9F6B43aC78BA3
 export usdcDecimals=6
 
-# Load contract addresses from environment or use defaults
 export LighterAccount=${LIGHTER_ACCOUNT:-0x31d42A0f1C9d338B5477fce674745835CEEde398}
 export LighterTicket=${LIGHTER_TICKET:-0xac70D4678Bc57B402c58F863a79d3437425C7305}
 export Escrow=${ESCROW:-0x6C99AF667b8Ea8c7f7B2083F08CfDb8feF653B87}
@@ -139,20 +139,21 @@ read -r allowance nonce expiry <<< $(cast abi-decode -i "decodeResult(uint160,ui
 echo "AllowanceHolder: allowance: $allowance, Nonce: $nonce, Expiry: $expiry"
 
 
-### TODO: go on...
-cast send $permit2 'permit(address,(address,uint160,uint48,uint48),address,uint256),bytes' $eoaSeller "($usdc,$permit2Amount,$expiryTime,$nonce)" $AllowanceHolder $expiryTime  --private-key=$sellerPrivKey
+### toddo... go on...
+export sig=$(cast wallet sign --no-hash )
+cast send $permit2 'permit(address,(address,uint160,uint48,uint48),address,uint256),bytes)' $eoaSeller "($usdc,$permit2Amount,$expiryTime,$nonce)" $AllowanceHolder $expiryTime  --private-key=$sellerPrivKey
 
 
-export intentParams="($usdc,($amount,$amount), $expiryTime, $currency, $paymentMethod, $payeeDetails, $price)"
+export intentParams="($usdc,($amount,$amount), $expiryTime, $currency, $paymentMethod, $payeeDetails, $price, $clientId, $accumulatedUsd, $completedRatioBp)"
 export escrowParms="($tradeId, $usdc, $amount, $price, $usdRate, $eoaSeller, $tbaSeller, $sellerFeeRate, $paymentMethod, $currency, $payeeDetails, $tbaBuyer, $buyerFeeRate)"
 # getIntentTypedHash((address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256)) # token, range, expiryTime, currency, paymentMethod, payeeDetails, price
-export intentTypedHash=$(cast call $TakeIntent "getIntentTypedHash((address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256))" $intentParams)
 # getEscrowTypedHash((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256)) # id, token, volume, price, usdRate, payer, seller, sellerFeeRate, paymentMethod, currency, payeeDetails, buyer, buyerFeeRate
+export intentTypedHash=$(cast call $TakeIntent "getIntentTypedHash((address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256,uint256,uint256,uint32))" $intentParams)
 export escrowTypedHash=$(cast call $TakeIntent "getEscrowTypedHash((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256))" $escrowParms)
 export tokenPermissionsHash=$(cast call $TakeIntent "getTokenPermissionsHash((address,uint256))" "($usdc, $permit2Amount)")
 
 export sellSignHash=$(cast call $Permit2Helper \
-  "getPermitWitnessTransferFromHash((address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256),((address,uint256),uint256,uint256))" \
+  "getPermitWitnessTransferFromHash((address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256,uint256,uint256,uint32),((address,uint256),uint256,uint256))" \
   $intentParams \
   "(($usdc,$permit2Amount),$permit2Nonce,$expiryTime)")
 export sig=$(cast wallet sign --no-hash $sellSignHash --private-key=$sellerPrivKey)
@@ -161,17 +162,13 @@ export relayerSig=$(cast wallet sign --no-hash $escrowTypedHash --private-key=$r
 # Build PermitTransferFrom structure
 # PermitTransferFrom: (TokenPermissions(token, amount), nonce, deadline)
 export permit="(($usdc,$permit2Amount),$permit2Nonce,$expiryTime)"
-
-# Build SignatureTransferDetails structure  
-# SignatureTransferDetails: (to, requestedAmount)
 export transferDetails="($Escrow,$permit2Amount)"
 
 # Build actions array
 # Action 1: ESCROW_AND_INTENT_CHECK(escrowParams, intentParams, bytes(""))
 export emptyBytes="0x"
-# Get function selector and encode parameters
-export action1Selector=$(cast sig "ESCROW_AND_INTENT_CHECK((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),(address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256),bytes)")
-export action1Params=$(cast abi-encode "x((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),(address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256),bytes)" "$escrowParms" "$intentParams" "$emptyBytes")
+export action1Selector=$(cast sig "ESCROW_AND_INTENT_CHECK((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),(address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256,uint256,uint256,uint32),bytes)")
+export action1Params=$(cast abi-encode "x((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),(address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256,uint256,uint256,uint32),bytes)" "$escrowParms" "$intentParams" "$emptyBytes")
 export action1Data="${action1Selector}${action1Params:2}"
  # Remove 0x prefix from params and combine
 
@@ -181,8 +178,8 @@ export action2Params=$(cast abi-encode "x((uint256,address,uint256,uint256,uint2
 export action2Data="${action2Selector}${action2Params:2}"
 
 # Action 3: SIGNATURE_TRANSFER_FROM_WITH_WITNESS(permit, transferDetails, intentParams, sig)
-export action3Selector=$(cast sig "SIGNATURE_TRANSFER_FROM_WITH_WITNESS(((address,uint256),uint256,uint256),(address,uint256),(address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256),bytes)")
-export action3Params=$(cast abi-encode "x(((address,uint256),uint256,uint256),(address,uint256),(address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256),bytes)" $permit $transferDetails $intentParams $sig)
+export action3Selector=$(cast sig "SIGNATURE_TRANSFER_FROM_WITH_WITNESS(((address,uint256),uint256,uint256),(address,uint256),(address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256,uint256,uint256,uint32),bytes)")
+export action3Params=$(cast abi-encode "x(((address,uint256),uint256,uint256),(address,uint256),(address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256,uint256,uint256,uint32),bytes)" $permit $transferDetails $intentParams $sig)
 export action3Data="${action3Selector}${action3Params:2}"
 
 # Note: For bytes[] encoding in cast abi-encode, we need to ensure each bytes value is properly formatted

@@ -151,13 +151,13 @@ echo "ZkVerifyProofVerifier: $ZkVerifyProofVerifier"
 echo "Permit2Helper: $Permit2Helper"
 echo "=========================================="
 
-export intentParams="($usdc,($amount,$amount), $expiryTime, $currency, $paymentMethod, $payeeDetails, $price)"
+export intentParams="($usdc,($amount,$amount), $expiryTime, $currency, $paymentMethod, $payeeDetails, $price, $clientId, $accumulatedUsd, $completedRatioBp)"
 export escrowParms="($tradeId, $usdc, $amount, $price, $usdRate, $eoaSeller, $tbaSeller, $sellerFeeRate, $paymentMethod, $currency, $payeeDetails, $tbaBuyer, $buyerFeeRate)"
 export permit="(($usdc,$permit2Amount),$permit2Nonce,$expiryTime)"
-export intentTypedHash=$(cast call $TakeIntent "getIntentTypedHash((address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256))" "$intentParams")
+export intentTypedHash=$(cast call $TakeIntent "getIntentTypedHash((address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256,uint256,uint256,uint32))" "$intentParams")
 export escrowTypedHash=$(cast call $TakeIntent "getEscrowTypedHash((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256))" "$escrowParms")
 export tokenPermissionsHash=$(cast call $TakeIntent "getTokenPermissionsHash((address,uint256))" "($usdc, $permit2Amount)")
-export sellSignHash=$(cast call $Permit2Helper "getPermitWitnessTransferFromHash((address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256),((address,uint256),uint256,uint256))" "$intentParams" "$permit")
+export sellSignHash=$(cast call $Permit2Helper "getPermitWitnessTransferFromHash((address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256,uint256,uint256,uint32),((address,uint256),uint256,uint256))" "$intentParams" "$permit")
 echo "sellSignHash: $sellSignHash"
 echo "intentParams: $intentParams"
 
@@ -186,9 +186,9 @@ echo "=========================================="
 export transferDetails="($Escrow,$permit2Amount)"
 
 export emptyBytes="0x"
-export action1Selector=$(cast sig "ESCROW_AND_INTENT_CHECK((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),(address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256),bytes)")
+export action1Selector=$(cast sig "ESCROW_AND_INTENT_CHECK((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),(address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256,uint256,uint256,uint32),bytes)")
 echo "action1Selector: $action1Selector"
-export action1Params=$(cast abi-encode "x((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),(address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256),bytes)" "$escrowParms" "$intentParams" $emptyBytes)
+export action1Params=$(cast abi-encode "x((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),(address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256,uint256,uint256,uint32),bytes)" "$escrowParms" "$intentParams" $emptyBytes)
 echo "action1Params: $action1Params"
 export action1Data="${action1Selector}${action1Params:2}"
 export action2Selector=$(cast sig "ESCROW_PARAMS_CHECK((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),bytes)")
@@ -197,9 +197,9 @@ export action2Params=$(cast abi-encode "x((uint256,address,uint256,uint256,uint2
 echo "action2Params: $action2Params"
 
 export action2Data="${action2Selector}${action2Params:2}"
-export action3Selector=$(cast sig "SIGNATURE_TRANSFER_FROM_WITH_WITNESS(((address,uint256),uint256,uint256),(address,uint256),(address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256),bytes)")
+export action3Selector=$(cast sig "SIGNATURE_TRANSFER_FROM_WITH_WITNESS(((address,uint256),uint256,uint256),(address,uint256),(address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256,uint256,uint256,uint32),bytes)")
 echo "action3Selector: $action3Selector"
-export action3Params=$(cast abi-encode "x(((address,uint256),uint256,uint256),(address,uint256),(address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256),bytes)" "$permit" "$transferDetails" "$intentParams" "$sig")
+export action3Params=$(cast abi-encode "x(((address,uint256),uint256,uint256),(address,uint256),(address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256,uint256,uint256,uint32),bytes)" "$permit" "$transferDetails" "$intentParams" "$sig")
 echo "action3Params: $action3Params" 
 export action3Data="${action3Selector}${action3Params:2}"
 

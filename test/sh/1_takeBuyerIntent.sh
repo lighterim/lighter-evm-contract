@@ -77,17 +77,15 @@ fi
 # Load sensitive information from environment variables
 export buyerPrivKey=$BUYER_PRIVATE_KEY
 export sellerPrivKey=$SELLER_PRIVATE_KEY
-export relayerPrivKey=${RELAYER_PRIVATE_KEY:-$sellerPrivKey}  # Default to seller if not set
+export relayerPrivKey=${RELAYER_PRIVATE_KEY:-$sellerPrivKey}
 export tbaBuyer=$TBA_BUYER
 export tbaSeller=$TBA_SELLER
 export tradeId=${TRADE_ID:-2}
 
-# Contract addresses (can be overridden via environment variables)
 export usdc=${USDC:-0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238}
-export permit2=0x000000000022D473030F116dDEE9F6B43aC78BA3  # Standard Permit2 address
+export permit2=0x000000000022D473030F116dDEE9F6B43aC78BA3
 export usdcDecimals=6
 
-# Load contract addresses from environment or use defaults
 export LighterAccount=${LIGHTER_ACCOUNT:-0x31d42A0f1C9d338B5477fce674745835CEEde398}
 export LighterTicket=${LIGHTER_TICKET:-0xac70D4678Bc57B402c58F863a79d3437425C7305}
 export Escrow=${ESCROW:-0x6C99AF667b8Ea8c7f7B2083F08CfDb8feF653B87}
@@ -112,10 +110,7 @@ echo ""
 
 # Get EOA seller address (from seller private key)
 export eoaSeller=$(cast wallet address --private-key=$sellerPrivKey)
-
-# Get EOA buyer address (from buyer private key)
 export eoaBuyer=$(cast wallet address --private-key=$buyerPrivKey)
-
 cast send $usdc 'approve(address,uint256)' $permit2 $(cast --to-uint256 99999999999999999999999) --private-key=$sellerPrivKey --rpc-url $ETH_RPC_URL
 
 #export expiryTime=$(date -d "+7 days" +%s) #ubuntu
@@ -126,6 +121,9 @@ export paymentMethod=$(cast keccak "wechat")
 export payeeDetails=$(cast keccak $PAYEE_DETAILS)
 export price=1000000000000000000
 export usdRate=1000000000000000000
+export clientId=123456
+export accumulatedUsd=0
+export completedRatioBp=0
 export sellerFeeRate=20
 export buyerFeeRate=20
 export bp=10000
@@ -133,11 +131,11 @@ export permit2Nonce=$(LC_ALL=C tr -dc '0-9' < /dev/urandom | head -c 11)
 export permit2Amount=$(echo "($amount * ($bp + $sellerFeeRate) + ($bp - 1)) / $bp" | bc)
 
 export permit="(($usdc,$permit2Amount),$permit2Nonce,$expiryTime)"
-export intentParams="($usdc,($amount,$amount), $expiryTime, $currency, $paymentMethod, $payeeDetails, $price)"
+export intentParams="($usdc,($amount,$amount), $expiryTime, $currency, $paymentMethod, $payeeDetails, $price, $clientId, $accumulatedUsd, $completedRatioBp)"
 export escrowParms="($tradeId, $usdc, $amount, $price, $usdRate, $eoaSeller, $tbaSeller, $sellerFeeRate, $paymentMethod, $currency, $payeeDetails, $tbaBuyer, $buyerFeeRate)"
 # getIntentTypedHash((address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256)) # token, range, expiryTime, currency, paymentMethod, payeeDetails, price
 # getEscrowTypedHash((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256)) # id, token, volume, price, usdRate, payer, seller, sellerFeeRate, paymentMethod, currency, payeeDetails, buyer, buyerFeeRate
-export intentTypedHash=$(cast call $TakeIntent "getIntentTypedHash((address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256))" $intentParams --rpc-url $ETH_RPC_URL)
+export intentTypedHash=$(cast call $TakeIntent "getIntentTypedHash((address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256,uint256,uint256,uint32))" $intentParams --rpc-url $ETH_RPC_URL)
 export escrowTypedHash=$(cast call $TakeIntent "getEscrowTypedHash((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256))" $escrowParms --rpc-url $ETH_RPC_URL)
 export tokenPermissionsHash=$(cast call $TakeIntent "getTokenPermissionsHash((address,uint256))" "($usdc, $permit2Amount)" --rpc-url $ETH_RPC_URL)
 
@@ -149,8 +147,8 @@ export relayerSig=$(cast wallet sign --no-hash $escrowTypedHash --private-key=$r
 
 export transferDetails="($Escrow,$permit2Amount)"
 
-export action1Selector=$(cast sig "ESCROW_AND_INTENT_CHECK((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),(address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256),bytes)")
-export action1Params=$(cast abi-encode "x((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),(address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256),bytes)" "$escrowParms" "$intentParams" "$intentSignature")
+export action1Selector=$(cast sig "ESCROW_AND_INTENT_CHECK((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),(address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256,uint256,uint256,uint32),bytes)")
+export action1Params=$(cast abi-encode "x((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),(address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256,uint256,uint256,uint32),bytes)" "$escrowParms" "$intentParams" "$intentSignature")
 export action1Data="${action1Selector}${action1Params:2}" 
 export action2Selector=$(cast sig "ESCROW_PARAMS_CHECK((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),bytes)")
 export action2Params=$(cast abi-encode "x((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),bytes)" $escrowParms $relayerSig)
