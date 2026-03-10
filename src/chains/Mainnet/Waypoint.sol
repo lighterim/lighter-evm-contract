@@ -173,7 +173,7 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
         uint32 disputeWindowSeconds = paymentMethodRegistry.getPaymentMethodConfig(escrowParams.paymentMethod).disputeWindowSeconds;
         uint256 sellerFee = getFeeAmount(volume, escrowParams.sellerFeeRate);
         uint256 buyerFee = getFeeAmount(volume, escrowParams.buyerFeeRate);
-        bool isInitiatedByBuyer = escrow.resolve(
+        (bool isInitiatedByBuyer, bool acceptedByCounterparty, uint32 resolutionSeconds) = escrow.resolve(
             escrowHash, escrowParams, 
             buyerFee, sellerFee,
             disputeWindowSeconds,
@@ -203,7 +203,9 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
         lighterAccount.resolvePendingTx(
             escrowParams.buyer, buyerAmount, 
             escrowParams.seller, sellerAmount,
-            isInitiatedByBuyer, isBuyerLoseDispute
+            tbaArbitrator, resolutionSeconds,
+            isInitiatedByBuyer, isBuyerLoseDispute,
+            acceptedByCounterparty
         );
     }
 

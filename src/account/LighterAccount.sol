@@ -51,6 +51,8 @@ contract LighterAccount is Ownable, ReentrancyGuard {
     mapping(address => uint256) public ticketRents;
     // user honour list [user => honour]
     mapping(address => ISettlerBase.Honour) internal userHonour;
+    // arbitrator standing list [arbitrator => standing]
+    mapping(address => ISettlerBase.ArbitratorStanding) internal arbitratorStanding;
     // authorized list [operator => isAuthorized]
     mapping(address => bool) internal authorizedOperators;
     
@@ -309,11 +311,42 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         uint256 buyerAmount, 
         address tbaSeller, 
         uint256 sellerAmount,
+        address tbaArbitrator,
+        uint32 resolvedSeconds,
         bool isInitiatedByBuyer,
-        bool isBuyerLoseDispute
+        bool isBuyerLoseDispute,
+        bool acceptedByCounterparty
     ) public onlyAuthorized {
+        _updateArbitratorStanding(tbaArbitrator, isInitiatedByBuyer, isBuyerLoseDispute, acceptedByCounterparty, resolvedSeconds, (buyerAmount + sellerAmount));
         _updateHonourOnResolve(tbaBuyer, buyerAmount, isInitiatedByBuyer, isBuyerLoseDispute);
         _updateHonourOnResolve(tbaSeller, sellerAmount, !isInitiatedByBuyer, !isBuyerLoseDispute);
+    }
+
+    function _updateArbitratorStanding(
+        address tbaArbitrator,
+        bool isInitiatedByBuyer,
+        bool isBuyerLoseDispute,
+        bool acceptedByCounterparty,
+        uint32 resolvedSeconds,
+        uint256 usdAmount
+    ) private {
+        ISettlerBase.ArbitratorStanding storage standing = arbitratorStanding[tbaArbitrator];
+        uint32 currentAvg = standing.avgResolutionSeconds;
+        uint32 totalCases = standing.totalCases;
+
+        unchecked {
+            // The counterparty accepts the arbitration result
+            if(acceptedByCounterparty){
+                standing.resultsAcceptedCount += 1;
+            }
+            // If buyer initiates and buyer wins, or seller initiates and seller wins, it counts as arbitration result favoring the initiator
+            if((isInitiatedByBuyer && !isBuyerLoseDispute) || (!isInitiatedByBuyer && isBuyerLoseDispute)){
+                standing.ruledInFavorOfInitiator += 1;
+            }
+            standing.avgResolutionSeconds = _calcAvg(currentAvg, totalCases, resolvedSeconds);
+            standing.totalCases = totalCases + 1;
+            standing.totalAccumulatedUsd += usdAmount;
+        }
     }
 
     function _updateHonourOnResolve(

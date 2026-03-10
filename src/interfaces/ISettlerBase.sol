@@ -144,4 +144,35 @@ interface ISettlerBase {
         uint32 avgPaidSeconds;
     }
 
+    /**
+     * @notice Arbitrator reputation and performance tracking
+     * @dev Tracks the history and reliability of an arbitrator in the dispute resolution system
+     */
+    struct ArbitratorStanding {
+        /// @notice Total number of disputes handled
+        uint32 totalCases;
+        /**
+         * @dev BIAS TRACKING:
+         */
+        /// @notice Times ruled in favor of the Initiator (claimant)
+        uint32 ruledInFavorOfInitiator;
+        // / @notice Times ruled in favor of the Respondent (defendant)
+        // uint32 ruledInFavorOfRespondent;
+        /**
+         * @dev ACCEPTANCE & FINALITY:
+         * How often counterparties accept the ruling without further escalation.
+         */
+        /// @notice Number of times the incoming party accepted the result
+        uint32 resultsAcceptedCount;
+        
+        /// @notice Total value of disputes handled (in USD)
+        uint256 totalAccumulatedUsd;
+        
+        /**
+         * @dev EFFICIENCY:
+         */
+        /// @notice Average time taken to reach a decision (in seconds)
+        uint32 avgResolutionSeconds;
+    }
+
 }

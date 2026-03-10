@@ -341,7 +341,9 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         address tbaArbitrator, 
         bytes32 resolvedResultTypedHash, 
         bytes memory counterpartySig
-    ) external onlyAuthorizedExecutor returns(bool isInitiatedByBuyer){
+    ) external onlyAuthorizedExecutor returns(
+        bool isInitiatedByBuyer, bool acceptedByCounterparty, uint32 resolutionSeconds
+        ) {
 
         ISettlerBase.EscrowData storage escrowData = allEscrow[escrowHash];
         ISettlerBase.EscrowStatus status = escrowData.status;
@@ -350,13 +352,20 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
             && status != ISettlerBase.EscrowStatus.SellerDisputed
         ) revert InvalidEscrowStatus(escrowHash, status);
 
-        isInitiatedByBuyer = (status == ISettlerBase.EscrowStatus.BuyerDisputed);
         uint256 currentTs = block.timestamp;
         uint64 lastActionTs = escrowData.lastActionTs;
         address token = escrowParams.token;
         uint256 volume = escrowParams.volume;
         address seller = escrowParams.seller;
         address buyer = escrowParams.buyer;
+
+        isInitiatedByBuyer = (status == ISettlerBase.EscrowStatus.BuyerDisputed);
+        unchecked {
+            // casting to 'uint32' is safe because time difference between timestamps (both uint64)
+            // will not exceed uint32 max (2^32 - 1 seconds ≈ 136 years), which is sufficient for escrow durations
+            // forge-lint: disable-next-line(unsafe-typecast)
+            resolutionSeconds = uint32(currentTs - lastActionTs);
+        }
 
         // 1. Check time window first (Cheapest check - fails fast)
         if (currentTs < lastActionTs + disputeWindowSeconds) {
@@ -368,6 +377,10 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
             if (!SignatureChecker.isValidSignatureNow(expectedSigner, resolvedResultTypedHash, counterpartySig)) {
                 revert InvalidCounterpartySignature();
             }
+            acceptedByCounterparty = true;
+        }
+        else{
+            acceptedByCounterparty = false;
         }
 
         escrowData.status = ISettlerBase.EscrowStatus.Resolved;
