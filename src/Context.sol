@@ -3,7 +3,8 @@ pragma solidity ^0.8.25;
 
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-
+import {FullMath} from "./vendor/FullMath.sol";
+import {UnsafeMath} from "./utils/UnsafeMath.sol";
 import {IEscrow} from "./interfaces/IEscrow.sol";
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
 import {ParamsHash} from "./utils/ParamsHash.sol";
@@ -20,8 +21,17 @@ abstract contract Context is AbstractContext {
 
     using ParamsHash for ISettlerBase.EscrowParams;
     using ParamsHash for ISettlerBase.ResolvedResult;
+    using FullMath for uint256;
+    using UnsafeMath for uint256;
+    
+    uint256 constant public BASIS_POINTS_BASE = 10000;
+        uint8 constant public USD_DECIMALS = 6;
+    uint8 constant public PRICE_DECIMALS = 18;
+    uint8 constant public USD_RATE_DECIMALS = 18;
+
     IEscrow internal escrow;
     address internal relayer;
+        
 
     constructor(IEscrow escrow_, address lighterRelayer_) {
         escrow = escrow_;
@@ -90,6 +100,16 @@ abstract contract Context is AbstractContext {
         ISettlerBase.ResolvedResult memory resolvedResult = ISettlerBase.ResolvedResult(escrowHash, buyerThresholdBp);
         (resolvedResultHash, resolvedResultTypedHash) = getResolvedResultTypedHash(resolvedResult, domainSeparator);
         if(!isValidSignature(relayer, resolvedResultTypedHash, sig)) revert InvalidResolvedResultSignature();
+    }
+
+        /**
+     * @notice Get the fee amount for a given amount and fee rate
+     * @param amount The amount to get the fee for
+     * @param feeRate The fee rate to get the fee for (e.g. 1000 for 10%)
+     * @return The fee amount
+     */
+    function getFeeAmount(uint256 amount, uint256 feeRate) public pure returns (uint256) {
+        return amount.mulDivUp(feeRate, BASIS_POINTS_BASE);
     }
 
 }

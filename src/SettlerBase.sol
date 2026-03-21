@@ -25,11 +25,6 @@ abstract contract SettlerBase is ISettlerBase, SettlerAbstract {
     using CalldataDecoder for bytes[];
     using UnsafeMath for uint256;
 
-    uint256 constant public BASIS_POINTS_BASE = 10000;
-    uint8 constant public USD_DECIMALS = 6;
-    uint8 constant public PRICE_DECIMALS = 18;
-    uint8 constant public USD_RATE_DECIMALS = 18;
-
     IPaymentMethodRegistry internal paymentMethodRegistry;
 
     receive() external payable {}
@@ -104,15 +99,6 @@ abstract contract SettlerBase is ISettlerBase, SettlerAbstract {
         return amount.mulDivUp(BASIS_POINTS_BASE + feeRate, BASIS_POINTS_BASE);
     }
 
-    /**
-     * @notice Get the fee amount for a given amount and fee rate
-     * @param amount The amount to get the fee for
-     * @param feeRate The fee rate to get the fee for (e.g. 1000 for 10%)
-     * @return The fee amount
-     */
-    function getFeeAmount(uint256 amount, uint256 feeRate) public pure returns (uint256) {
-        return amount.mulDivUp(feeRate, BASIS_POINTS_BASE);
-    }
 
     function _generateDispatch(bytes[] calldata actions) internal virtual returns (bool){
         if (actions.length > 100) revert InvalidActionsLength();

@@ -1,4 +1,5 @@
-pragma solidity ^0.8.20;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.25;
 
 import {IVerifyProofAggregation} from "../../interfaces/IVerifyProofAggregation.sol";
 import {IProofVerifier} from "../../interfaces/IProofVerifier.sol";
@@ -31,13 +32,13 @@ contract ZkVerifyProofVerifier is IProofVerifier {
         ZkVerifyProof calldata zkProof,
         bytes calldata sig
     ) external returns (bool){
-        if(submittedTx[payment.method][payment.paymentId]) revert InvalidPaymentId();
-        submittedTx[payment.method][payment.paymentId] = true;
+        if(submittedTx[payment.paymentMethod][payment.paymentId]) revert InvalidPaymentId();
+        submittedTx[payment.paymentMethod][payment.paymentId] = true;
         // bytes32 escrowTypedHash = userTxn.makesureEscrowParams(escrowParams, sig);
         if(escrowParams.buyer != msg.sender) revert InvalidSender();
-        if(escrowParams.paymentMethod != payment.method 
+        if(escrowParams.paymentMethod != payment.paymentMethod 
         || escrowParams.currency != payment.currency 
-        || escrowParams.payeeDetails != payment.payeeDetails) revert InvalidPayment();
+        || escrowParams.payeeDetails != payment.account) revert InvalidPayment();
         bool isValid = IVerifyProofAggregation(zkVerify).verifyProofAggregation(
             zkProof.domainId,
             zkProof.aggregationId,

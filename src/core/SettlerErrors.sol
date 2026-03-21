@@ -71,6 +71,9 @@ error EscrowNotExists(bytes32 escrowHash);
 error InvalidEscrowStatus(bytes32 escrowHash, ISettlerBase.EscrowStatus actual);
 
 error InvalidEscrowSignature();
+
+error InvalidTlsnProofSignature();
+
 error InvalidResolvedResultSignature();
 
 error InvalidIntentSignature();
@@ -80,6 +83,8 @@ error InvalidPayment();
 error InvalidPaymentId();
 
 error InvalidPrice();
+
+error InvalidNullifier();
 
 error InvalidAccountAddress();
 

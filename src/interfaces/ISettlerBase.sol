@@ -87,12 +87,19 @@ interface ISettlerBase {
         bool isEnabled;
     }
 
+    /**
+     * paymentMethod, paymentId,account,account2,account3,amount,currency,confirmTs,id
+     */
     struct PaymentDetails {
+        bytes32 paymentMethod;
         bytes32 paymentId;
-        bytes32 method;
-        bytes32 currency;
-        bytes32 payeeDetails;
+        bytes32 account;
+        bytes32 account2;
+        bytes32 account3;
         uint256 amount;
+        bytes32 currency;
+        uint64 confirmTs;
+        uint256 id;
     }
 
     struct ResolvedResult{

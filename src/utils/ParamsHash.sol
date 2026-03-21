@@ -38,6 +38,10 @@ library ParamsHash {
         "EscrowParams(uint256 id,address token,uint256 volume,uint256 price,uint256 usdRate,address payer,address seller,uint256 sellerFeeRate,bytes32 paymentMethod,bytes32 currency,bytes32 payeeDetails,address buyer,uint256 buyerFeeRate)"
     );
 
+    bytes32 public constant _PAYMENT_DETAILS_TYPEHASH = keccak256(
+        "PaymentDetails(bytes32 paymentMethod,bytes32 paymentId,bytes32 account,bytes32 account2,bytes32 account3,uint256 amount,bytes32 currency,uint64 confirmTs,uint256 id)"
+    );
+
     bytes32 public constant _RESOLVED_RESULT_TYPEHASH = keccak256(
         "ResolvedResult(bytes32 escrowHash,uint16 buyerThresholdBp)"
     );
@@ -46,6 +50,35 @@ library ParamsHash {
     //     "PermitBatchWitnessTransferFrom(TokenPermissions[] permitted,address spender,uint256 nonce,uint256 deadline,";
     function hashWithWitness(ISettlerBase.IntentParams memory intentParams) internal pure returns (bytes32 result) {
         return hash(intentParams);
+    }
+
+    function hash(ISettlerBase.PaymentDetails memory paymentDetails) internal pure returns (bytes32 result) {
+        bytes32 typeHash = _PAYMENT_DETAILS_TYPEHASH;
+        bytes32 paymentMethod = paymentDetails.paymentMethod;
+        bytes32 paymentId = paymentDetails.paymentId;
+        bytes32 account = paymentDetails.account;
+        bytes32 account2 = paymentDetails.account2;
+        bytes32 account3 = paymentDetails.account3;
+        uint256 amount = paymentDetails.amount;
+        bytes32 currency = paymentDetails.currency;
+        uint64 confirmTs = paymentDetails.confirmTs;
+        uint256 id = paymentDetails.id;
+        
+        assembly ("memory-safe") {
+            let ptr := mload(0x40)
+            mstore(ptr, typeHash)               // 0x00
+            mstore(add(ptr, 0x20), paymentMethod) // 0x20
+            mstore(add(ptr, 0x40), paymentId)     // 0x40
+            mstore(add(ptr, 0x60), account)       // 0x60
+            mstore(add(ptr, 0x80), account2)      // 0x80
+            mstore(add(ptr, 0xa0), account3)      // 0xa0
+            mstore(add(ptr, 0xc0), amount)        // 0xc0
+            mstore(add(ptr, 0xe0), currency)      // 0xe0
+            mstore(add(ptr, 0x100), confirmTs)    // 0x100
+            mstore(add(ptr, 0x120), id)           // 0x120
+
+            result := keccak256(ptr, 0x140) // 0x140 = 320 bytes (10 * 32 bytes = 320 bytes)
+        }
     }
 
     function hash(ISettlerBase.ResolvedResult memory resolvedResult) internal pure returns (bytes32 result) {
