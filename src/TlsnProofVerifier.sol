@@ -10,16 +10,22 @@ import {VerifierAbstract} from "./core/VerifierAbstract.sol";
 import {ITlsnProofVerifier} from "./interfaces/ITlsnProofVerifier.sol";
 import {IEscrow} from "./interfaces/IEscrow.sol";
 import {LighterAccount} from "./account/LighterAccount.sol";
-import {UnauthorizedCaller, InvalidTlsnProofSignature} from "./core/SettlerErrors.sol";
+import {
+    UnauthorizedCaller, InvalidTlsnProofSignature, InvalidNullifier, InvalidPaymentMethod, InvalidEscrowId,
+    InvalidCurrency, InvalidPayeeDetails, PaymentInsufficient
+} from "./core/SettlerErrors.sol";
 import {ParamsHash} from "./utils/ParamsHash.sol";
 import {Context} from "./Context.sol";
 
 abstract contract TlsnProofVerifier is VerifierAbstract, ITlsnProofVerifier, EIP712 {
 
     using ParamsHash for ISettlerBase.PaymentDetails;
+    using ParamsHash for ISettlerBase.EscrowParams;
 
     LighterAccount internal lighterAccount;
     address internal tlsnWitness;
+
+    mapping(bytes32 => bool) internal nullifiers;
 
     event GitCommit(bytes20 indexed);
 
@@ -34,13 +40,20 @@ abstract contract TlsnProofVerifier is VerifierAbstract, ITlsnProofVerifier, EIP
         lighterAccount = lighterAccount_;
     }
 
-    function _checkNullifier(bytes32 paymentId) internal view virtual;
+    function _getPaymentMethod() internal view virtual returns (bytes32);
 
-    function _nullifier(bytes32 paymentId) internal virtual;
+    function getDomainSeparator() public view returns (bytes32){
+        return _domainSeparatorV4();
+    }
 
-    function _domainSeparator() internal view virtual returns (bytes32);
+    function _domainSeparator() internal view returns (bytes32){
+        return _domainSeparatorV4();
+    }
 
-    function _makesurePaymentParams(ISettlerBase.PaymentDetails calldata paymentParams) internal view virtual returns (ISettlerBase.PaymentDetails memory);
+    function getEscrowTypedHash(ISettlerBase.EscrowParams memory params) public view returns (bytes32){
+        bytes32 escrowHash = params.hash();
+        return _hashTypedDataV4(escrowHash);
+    }
 
     function releaseAfterProofVerify(
         ISettlerBase.EscrowParams calldata escrowParams, 
@@ -50,32 +63,39 @@ abstract contract TlsnProofVerifier is VerifierAbstract, ITlsnProofVerifier, EIP
     ) external returns (bool) {
         (bytes32 escrowHash,) = makesureEscrowParams(_domainSeparator(), escrowParams, sig);
         if(!lighterAccount.isOwnerCall(escrowParams.buyer, msg.sender)) revert UnauthorizedCaller(msg.sender);
-        _ensureTlsnProof(paymentParams, tlsnProofSig);
+        
+        bytes32 paymentMethod = _getPaymentMethod();
+        if(escrowParams.paymentMethod != paymentMethod || paymentParams.paymentMethod != paymentMethod) revert InvalidPaymentMethod();
+        if(!isValidSignature(tlsnWitness, paymentParams.hash(), tlsnProofSig)) revert InvalidTlsnProofSignature();
 
-        _checkNullifier(paymentParams.paymentId);
-        _releaseByVerifier(escrowHash, escrowParams);
-        _nullifier(paymentParams.paymentId);
+        if(escrowParams.id != paymentParams.id) revert InvalidEscrowId();
+        if(escrowParams.currency != paymentParams.currency) revert InvalidCurrency();
+        if(escrowParams.payeeDetails != paymentParams.payeeDetails) revert InvalidPayeeDetails();
+
+        address token = escrowParams.token;
+        uint8 tokenDecimals = IERC20(token).decimals();
+        uint256 amount = _calcAmount(escrowParams.volume, tokenDecimals, escrowParams.price);
+        if (paymentParams.amount < amount) revert PaymentInsufficient(amount, paymentParams.amount);
+
+        bytes32 nullifier = _hashNullifier(paymentMethod, paymentParams.paymentId);
+        if(nullifiers[nullifier]) revert InvalidNullifier();
+
+        _releaseByVerifier(escrowHash, tokenDecimals, escrowParams, paymentParams.confirmTs);
+        
+        nullifiers[nullifier] = true;
 
         return true;
     }
 
-    function _ensureTlsnProof(
-        ISettlerBase.PaymentDetails calldata paymentParams,
-        bytes calldata tlsnProofSig
-    ) internal view {
-        ISettlerBase.PaymentDetails memory paymentDetails = _makesurePaymentParams(paymentParams);
-        if(!isValidSignature(tlsnWitness, paymentDetails.hash(), tlsnProofSig)) revert InvalidTlsnProofSignature();
-    }
 
-    function _releaseByVerifier(bytes32 escrowHash, ISettlerBase.EscrowParams calldata escrowParams) internal override {
+    function _releaseByVerifier(bytes32 escrowHash, uint8 tokenDecimals, ISettlerBase.EscrowParams calldata escrowParams, uint64 confirmTs) internal override {
         uint256 volume = escrowParams.volume;
         address token = escrowParams.token;
         address buyer = escrowParams.buyer;
         address seller = escrowParams.seller;
         uint256 buyerFee = getFeeAmount(volume, escrowParams.buyerFeeRate);
         uint256 sellerFee = getFeeAmount(volume, escrowParams.sellerFeeRate);
-        (uint32 paidSeconds, uint32 releaseSeconds) = escrow.releaseByVerifier(escrowHash, escrowParams.id, token, buyer, buyerFee, seller, sellerFee, volume);
-        uint8 tokenDecimals = IERC20(token).decimals();
+        (uint32 paidSeconds, uint32 releaseSeconds) = escrow.releaseByVerifier(escrowHash, escrowParams.id, token, buyer, buyerFee, seller, sellerFee, volume, confirmTs);
         uint256 amountUsd = _calcAmountUsd(volume, tokenDecimals, escrowParams.price, escrowParams.usdRate);
         lighterAccount.releasePendingTx(buyer, seller, amountUsd, paidSeconds, releaseSeconds);
     }
@@ -112,4 +132,13 @@ abstract contract TlsnProofVerifier is VerifierAbstract, ITlsnProofVerifier, EIP
 
         amountUsd = (tokenAmount * price * usdRate) / (10 ** exponent);
     }
+
+    function _calcAmount(uint256 tokenAmount, uint8 tokenDecimals, uint256 price) internal pure returns (uint256 amount) {
+        amount = tokenAmount * price / (10 ** (uint256(tokenDecimals) + PRICE_DECIMALS - USD_DECIMALS));
+    }
+
+    modifier finalize(address sender, ISettlerBase.EscrowParams memory escrowParams) override {
+        _;
+    }
+
 }

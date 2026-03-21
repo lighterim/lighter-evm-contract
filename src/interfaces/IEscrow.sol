@@ -58,11 +58,12 @@ interface IEscrow {
      * @param seller The seller of the escrow
      * @param sellerFee The fee of the seller
      * @param amount The amount of the escrow
+     * @param confirmTs The timestamp of the confirmation of the payment
      */
     function releaseByVerifier(
         bytes32 escrowHash, uint256 id, address token,
         address buyer, uint256 buyerFee, address seller, uint256 sellerFee,
-        uint256 amount
+        uint256 amount, uint64 confirmTs
         ) external returns (uint32 paidSeconds, uint32 releaseSeconds);
 
     /**

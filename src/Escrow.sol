@@ -17,7 +17,7 @@ import {
     EscrowAlreadyExists, EscrowNotExists, InvalidEscrowStatus, InsufficientBalance, 
     TokenNotWhitelisted, UnauthorizedCreator, UnauthorizedExecutor, UnauthorizedVerifier, 
     UnauthorizedCaller, CancelWithinWindow, SellerCancelWithinWindow, InvalidCounterpartySignature,
-    ZeroAddress
+    ZeroAddress, InvalidPaymentConfirmTimestamp
     } from "./core/SettlerErrors.sol";
 
 /**
@@ -189,12 +189,15 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
 
     function releaseByVerifier(
         bytes32 escrowHash, uint256 id, address token, address buyer, uint256 buyerFee, address seller, 
-        uint256 sellerFee, uint256 amount
+        uint256 sellerFee, uint256 amount, uint64 confirmTs
         ) external nonReentrant onlyAuthorizedVerifier
         returns (uint32 paidSeconds, uint32 releaseSeconds) {
 
-        ISettlerBase.EscrowStatus status = allEscrow[escrowHash].status;
+        ISettlerBase.EscrowData storage escrowData = allEscrow[escrowHash];
+        ISettlerBase.EscrowStatus status = escrowData.status;
         if(status != ISettlerBase.EscrowStatus.Escrowed) revert InvalidEscrowStatus(escrowHash, status);
+        if(confirmTs > 0 && (confirmTs > uint64(block.timestamp) || confirmTs < escrowData.lastActionTs)) revert InvalidPaymentConfirmTimestamp();
+
         (paidSeconds, releaseSeconds) = _release(
             escrowHash, id, token, buyer, buyerFee, seller, sellerFee, amount, 
             ISettlerBase.EscrowStatus.ThresholdReachedReleased

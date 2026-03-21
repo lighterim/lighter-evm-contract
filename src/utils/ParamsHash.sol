@@ -39,7 +39,7 @@ library ParamsHash {
     );
 
     bytes32 public constant _PAYMENT_DETAILS_TYPEHASH = keccak256(
-        "PaymentDetails(bytes32 paymentMethod,bytes32 paymentId,bytes32 account,bytes32 account2,bytes32 account3,uint256 amount,bytes32 currency,uint64 confirmTs,uint256 id)"
+        "PaymentDetails(bytes32 paymentMethod,bytes32 paymentId,bytes32 payeeDetails,uint256 amount,bytes32 currency,uint64 confirmTs,uint256 id)"
     );
 
     bytes32 public constant _RESOLVED_RESULT_TYPEHASH = keccak256(
@@ -56,9 +56,7 @@ library ParamsHash {
         bytes32 typeHash = _PAYMENT_DETAILS_TYPEHASH;
         bytes32 paymentMethod = paymentDetails.paymentMethod;
         bytes32 paymentId = paymentDetails.paymentId;
-        bytes32 account = paymentDetails.account;
-        bytes32 account2 = paymentDetails.account2;
-        bytes32 account3 = paymentDetails.account3;
+        bytes32 payeeDetails = paymentDetails.payeeDetails;
         uint256 amount = paymentDetails.amount;
         bytes32 currency = paymentDetails.currency;
         uint64 confirmTs = paymentDetails.confirmTs;
@@ -69,15 +67,13 @@ library ParamsHash {
             mstore(ptr, typeHash)               // 0x00
             mstore(add(ptr, 0x20), paymentMethod) // 0x20
             mstore(add(ptr, 0x40), paymentId)     // 0x40
-            mstore(add(ptr, 0x60), account)       // 0x60
-            mstore(add(ptr, 0x80), account2)      // 0x80
-            mstore(add(ptr, 0xa0), account3)      // 0xa0
-            mstore(add(ptr, 0xc0), amount)        // 0xc0
-            mstore(add(ptr, 0xe0), currency)      // 0xe0
-            mstore(add(ptr, 0x100), confirmTs)    // 0x100
-            mstore(add(ptr, 0x120), id)           // 0x120
+            mstore(add(ptr, 0x60), payeeDetails)       // 0x60
+            mstore(add(ptr, 0x80), amount)        // 0x80
+            mstore(add(ptr, 0xa0), currency)      // 0xa0
+            mstore(add(ptr, 0xc0), confirmTs)    // 0xc0
+            mstore(add(ptr, 0xe0), id)           // 0xe0
 
-            result := keccak256(ptr, 0x140) // 0x140 = 320 bytes (10 * 32 bytes = 320 bytes)
+            result := keccak256(ptr, 0x100) // 0x100 = 256 bytes (8 * 32 bytes = 256 bytes)
         }
     }
 

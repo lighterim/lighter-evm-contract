@@ -6,7 +6,7 @@ import {Context} from "../Context.sol";
 
 abstract contract VerifierAbstract is Context {
    
-    function _releaseByVerifier(bytes32 escrowHash, ISettlerBase.EscrowParams calldata escrowParams) internal virtual;
+    function _releaseByVerifier(bytes32 escrowHash, uint8 tokenDecimals, ISettlerBase.EscrowParams calldata escrowParams, uint64 confirmTs) internal virtual;
     
     modifier finalize(address sender, ISettlerBase.EscrowParams memory escrowParams) virtual;
    

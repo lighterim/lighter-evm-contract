@@ -38,7 +38,7 @@ contract ZkVerifyProofVerifier is IProofVerifier {
         if(escrowParams.buyer != msg.sender) revert InvalidSender();
         if(escrowParams.paymentMethod != payment.paymentMethod 
         || escrowParams.currency != payment.currency 
-        || escrowParams.payeeDetails != payment.account) revert InvalidPayment();
+        || escrowParams.payeeDetails != payment.payeeDetails) revert InvalidPayment();
         bool isValid = IVerifyProofAggregation(zkVerify).verifyProofAggregation(
             zkProof.domainId,
             zkProof.aggregationId,
@@ -59,7 +59,8 @@ contract ZkVerifyProofVerifier is IProofVerifier {
             buyerFee,
             escrowParams.seller,
             sellerFee,
-            escrowParams.volume
+            escrowParams.volume,
+            payment.confirmTs
             );
         return true;
     }

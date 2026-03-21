@@ -63,10 +63,19 @@ error InvalidRentPrice();
 error InsufficientQuota(address account);
 error InsufficientAccumulatedUsd(uint256 required, uint256 provided);
 error InsufficientCompletedRatioBp(uint32 required, uint32 provided);
+error PaymentInsufficient(uint256 required, uint256 provided);
 
 error EscrowAlreadyExists(bytes32 escrowHash);
 
 error EscrowNotExists(bytes32 escrowHash);
+
+error InvalidEscrowId();
+
+error InvalidCurrency();
+
+error InvalidPayeeDetails();
+
+error InvalidPaymentConfirmTimestamp();
 
 error InvalidEscrowStatus(bytes32 escrowHash, ISettlerBase.EscrowStatus actual);
 

@@ -93,9 +93,7 @@ interface ISettlerBase {
     struct PaymentDetails {
         bytes32 paymentMethod;
         bytes32 paymentId;
-        bytes32 account;
-        bytes32 account2;
-        bytes32 account3;
+        bytes32 payeeDetails;
         uint256 amount;
         bytes32 currency;
         uint64 confirmTs;
