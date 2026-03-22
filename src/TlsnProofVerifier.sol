@@ -72,15 +72,13 @@ abstract contract TlsnProofVerifier is VerifierAbstract, ITlsnProofVerifier, EIP
         if(escrowParams.currency != paymentParams.currency) revert InvalidCurrency();
         if(escrowParams.payeeDetails != paymentParams.payeeDetails) revert InvalidPayeeDetails();
 
-        address token = escrowParams.token;
-        uint8 tokenDecimals = IERC20(token).decimals();
-        uint256 amount = _calcAmount(escrowParams.volume, tokenDecimals, escrowParams.price);
+        uint256 amount = escrowParams.volume * escrowParams.price;
         if (paymentParams.amount < amount) revert PaymentInsufficient(amount, paymentParams.amount);
 
         bytes32 nullifier = _hashNullifier(paymentMethod, paymentParams.paymentId);
         if(nullifiers[nullifier]) revert InvalidNullifier();
 
-        _releaseByVerifier(escrowHash, tokenDecimals, escrowParams, paymentParams.confirmTs);
+        _releaseByVerifier(escrowHash, escrowParams, paymentParams.confirmTs);
         
         nullifiers[nullifier] = true;
 
@@ -88,7 +86,7 @@ abstract contract TlsnProofVerifier is VerifierAbstract, ITlsnProofVerifier, EIP
     }
 
 
-    function _releaseByVerifier(bytes32 escrowHash, uint8 tokenDecimals, ISettlerBase.EscrowParams calldata escrowParams, uint64 confirmTs) internal override {
+    function _releaseByVerifier(bytes32 escrowHash, ISettlerBase.EscrowParams calldata escrowParams, uint64 confirmTs) internal override {
         uint256 volume = escrowParams.volume;
         address token = escrowParams.token;
         address buyer = escrowParams.buyer;
@@ -96,6 +94,7 @@ abstract contract TlsnProofVerifier is VerifierAbstract, ITlsnProofVerifier, EIP
         uint256 buyerFee = getFeeAmount(volume, escrowParams.buyerFeeRate);
         uint256 sellerFee = getFeeAmount(volume, escrowParams.sellerFeeRate);
         (uint32 paidSeconds, uint32 releaseSeconds) = escrow.releaseByVerifier(escrowHash, escrowParams.id, token, buyer, buyerFee, seller, sellerFee, volume, confirmTs);
+        uint8 tokenDecimals = IERC20(token).decimals();
         uint256 amountUsd = _calcAmountUsd(volume, tokenDecimals, escrowParams.price, escrowParams.usdRate);
         lighterAccount.releasePendingTx(buyer, seller, amountUsd, paidSeconds, releaseSeconds);
     }
@@ -131,10 +130,6 @@ abstract contract TlsnProofVerifier is VerifierAbstract, ITlsnProofVerifier, EIP
         }
 
         amountUsd = (tokenAmount * price * usdRate) / (10 ** exponent);
-    }
-
-    function _calcAmount(uint256 tokenAmount, uint8 tokenDecimals, uint256 price) internal pure returns (uint256 amount) {
-        amount = tokenAmount * price / (10 ** (uint256(tokenDecimals) + PRICE_DECIMALS - USD_DECIMALS));
     }
 
     modifier finalize(address sender, ISettlerBase.EscrowParams memory escrowParams) override {

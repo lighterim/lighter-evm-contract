@@ -118,6 +118,9 @@ export paymentMethod=$(cast keccak "wechat")
 export payeeDetails=$(cast keccak $PAYEE_DETAILS)
 export price=1000000000000000000
 export usdRate=1000000000000000000
+export clientId=1234567890
+export accumulatedUsd=0
+export completedRatioBp=0
 
 export sellerFeeRate=20
 export buyerFeeRate=20

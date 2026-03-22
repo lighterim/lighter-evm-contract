@@ -14,6 +14,7 @@ import {MainnetWaypoint} from "../src/chains/Horizen/Waypoint.sol";
 import {PaymentMethodRegistry} from "../src/PaymentMethodRegistry.sol";
 import {ISettlerBase} from "../src/interfaces/ISettlerBase.sol";
 import {ZkVerifyProofVerifier} from "../src/chains/Horizen/ZkVerifyProofVerifier.sol";
+import {PaymentTlsnProofVerifier} from "../src/chains/Mainnet/PaymentTlsnProofVerifier.sol";
 
 contract HorizenDeployer is Script {
 
@@ -27,11 +28,13 @@ contract HorizenDeployer is Script {
     MainnetTakeIntent public takeIntent;
     PaymentMethodRegistry public paymentMethodRegistry;
     ZkVerifyProofVerifier public zkVerifyProofVerifier;
+    PaymentTlsnProofVerifier public paymentTlsnProofVerifier;
 
     uint256 public rentPrice = 0.00001 ether;
     
     address public deployer;
     address public zkVerify;
+    address public tlsnWitness;
     address public usdc;
     address public registryAddr;
     address public accountImplAddr;
@@ -39,6 +42,7 @@ contract HorizenDeployer is Script {
     function setUp() public {
         deployer = vm.envAddress("DEPLOYER");
         zkVerify = vm.envAddress("ZK_VERIFY");
+        tlsnWitness = vm.envAddress("TLSN_WITNESS");
         registryAddr = vm.envAddress("ERC6551_REGISTRY");
         accountImplAddr = vm.envAddress("ACCOUNT_V3_IMPL");
         usdc = vm.envAddress("USDC");
@@ -112,10 +116,16 @@ contract HorizenDeployer is Script {
         lighterAccount.authorizeOperator(address(mainnetWaypoint), true);
         console.log("MainnetWaypoint deployed at:", address(mainnetWaypoint));
         
-        console.log("Deploying ZkVerifyProofVerifier...");
-        zkVerifyProofVerifier = new ZkVerifyProofVerifier(escrow, zkVerify);
-        escrow.authorizeVerifier(address(zkVerifyProofVerifier), true);
-        console.log("ZkVerifyProofVerifier deployed at:", address(zkVerifyProofVerifier));
+        // console.log("Deploying ZkVerifyProofVerifier...");
+        // zkVerifyProofVerifier = new ZkVerifyProofVerifier(escrow, zkVerify);
+        // escrow.authorizeVerifier(address(zkVerifyProofVerifier), true);
+        // console.log("ZkVerifyProofVerifier deployed at:", address(zkVerifyProofVerifier));
+        
+        console.log("Deploying PaymentTlsnProofVerifier...");
+        paymentTlsnProofVerifier = new PaymentTlsnProofVerifier(keccak256("wise"), lighterAccount, tlsnWitness, escrow, deployer, bytes20(0));
+        escrow.authorizeVerifier(address(paymentTlsnProofVerifier), true);
+        paymentMethodRegistry.addVerifier(keccak256("wise"), ISettlerBase.Stage.ZK_TLSN, address(paymentTlsnProofVerifier));
+        console.log("PaymentTlsnProofVerifier deployed at:", address(paymentTlsnProofVerifier));
         
         console.log("Deploying completed!");
         console.log("Deployer:", deployer);
@@ -129,7 +139,8 @@ contract HorizenDeployer is Script {
         console.log("export AllowanceHolder=%s", address(allowanceHolder));
         console.log("export TakeIntent=%s", address(takeIntent));
         console.log("export SetWaypoint=%s", address(mainnetWaypoint));
-        console.log("export ZkVerifyProofVerifier=%s", address(zkVerifyProofVerifier));
+        // console.log("export ZkVerifyProofVerifier=%s", address(zkVerifyProofVerifier));
+        console.log("export TlsnProofVerifier=%s", address(paymentTlsnProofVerifier));
         console.log("export PaymentMethodRegistry=%s", address(paymentMethodRegistry));
         
         vm.stopBroadcast();

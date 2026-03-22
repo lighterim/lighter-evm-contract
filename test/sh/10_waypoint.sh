@@ -112,7 +112,6 @@ export eoaSeller=$(cast wallet address --private-key=$sellerPrivKey)
 export eoaBuyer=$(cast wallet address --private-key=$buyerPrivKey)
 
 #export expiryTime=$(date -d "+7 days" +%s) #ubuntu
-
 #export amount=1234567
 export amount=234567
 export currency=$(cast keccak "USD")

@@ -5,7 +5,7 @@ interface ISettlerBase {
 
     enum Stage{
         MANUAL,
-        ZK_TLS,
+        ZK_TLSN,
         ZK_MAIL,
         OPT1,
         OPT2,
