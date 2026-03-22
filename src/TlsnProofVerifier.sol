@@ -55,6 +55,11 @@ abstract contract TlsnProofVerifier is VerifierAbstract, ITlsnProofVerifier, EIP
         return _hashTypedDataV4(escrowHash);
     }
 
+    function getPaymentTypedHash(ISettlerBase.PaymentDetails memory params) public view returns (bytes32){
+        bytes32 paymentHash = params.hash();
+        return _hashTypedDataV4(paymentHash);
+    }
+
     function releaseAfterProofVerify(
         ISettlerBase.EscrowParams calldata escrowParams, 
         ISettlerBase.PaymentDetails calldata paymentParams,
@@ -66,7 +71,7 @@ abstract contract TlsnProofVerifier is VerifierAbstract, ITlsnProofVerifier, EIP
         
         bytes32 paymentMethod = _getPaymentMethod();
         if(escrowParams.paymentMethod != paymentMethod || paymentParams.paymentMethod != paymentMethod) revert InvalidPaymentMethod();
-        if(!isValidSignature(tlsnWitness, paymentParams.hash(), tlsnProofSig)) revert InvalidTlsnProofSignature();
+        if(!isValidSignature(tlsnWitness, getPaymentTypedHash(paymentParams), tlsnProofSig)) revert InvalidTlsnProofSignature();
 
         if(escrowParams.id != paymentParams.id) revert InvalidEscrowId();
         if(escrowParams.currency != paymentParams.currency) revert InvalidCurrency();

@@ -124,6 +124,7 @@ contract DeployerContract is Script {
         console.log("Deploying PaymentTlsnProofVerifier...");
         paymentTlsnProofVerifier = new PaymentTlsnProofVerifier(keccak256("wise"), lighterAccount, tlsnWitness, escrow, deployer, bytes20(0));
         escrow.authorizeVerifier(address(paymentTlsnProofVerifier), true);
+        lighterAccount.authorizeOperator(address(paymentTlsnProofVerifier), true);
         paymentMethodRegistry.addVerifier(keccak256("wise"), ISettlerBase.Stage.ZK_TLSN, address(paymentTlsnProofVerifier));
         console.log("PaymentTlsnProofVerifier deployed at:", address(paymentTlsnProofVerifier));
         

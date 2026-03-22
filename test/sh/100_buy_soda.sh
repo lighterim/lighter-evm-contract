@@ -249,6 +249,9 @@ cast send $TakeIntent \
   --private-key=$buyerPrivKey \
   --gas-limit 5000000
 
+echo "================ sleep 30 seconds =========================="
+sleep 30
+echo "================ sleep 30 seconds done =========================="
 
 export waypointEscrowTypedHash=$(cast call $SetWaypoint "getEscrowTypedHash((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256))" "$escrowParms")
 echo "waypointEscrowTypedHash: $waypointEscrowTypedHash \n escrowParms: $escrowParms"
@@ -280,6 +283,10 @@ cast send $SetWaypoint \
   --private-key=$buyerPrivKey \
   --gas-limit 5000000
 
+
+echo "================ sleep 30 seconds =========================="
+sleep 30
+echo "================ sleep 30 seconds done =========================="
 
 export action1Selector=$(cast sig "RELEASE_BY_SELLER((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),bytes)")
 export action1Params=$(cast abi-encode "x((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),bytes)" "$escrowParms" "$relayerSig")
