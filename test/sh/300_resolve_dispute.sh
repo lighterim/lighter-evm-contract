@@ -398,7 +398,6 @@ echo "================ sleep 30 seconds =========================="
 sleep 30
 echo "================ sleep 30 seconds done =========================="
 
-
 export buyerThresholdBp=${BUYER_THRESHOLD_BP:-10000}
 export resolvedResult="($escrowHash, $buyerThresholdBp)"
 export domainSeparator=$(cast call $SetWaypoint "getDomainSeparator()(bytes32)")
