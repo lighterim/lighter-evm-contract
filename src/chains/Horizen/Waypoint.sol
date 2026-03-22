@@ -39,7 +39,7 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
         return _domainSeparatorV4();
     }
 
-    function getEscrowTypedHash(ISettlerBase.EscrowParams memory params) public view returns (bytes32){
+    function getEscrowTypedHash(ISettlerBase.EscrowParams calldata params) public view returns (bytes32){
         bytes32 escrowHash = params.hash();
         return _hashTypedDataV4(escrowHash);
     }
@@ -162,7 +162,7 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
         if(lighterAccount.getTicketType(tbaArbitrator) != ISettlerBase.TicketType.GENESIS2) revert InvalidArbitratorTicket();
         bytes32 domainSeparator = _domainSeparator();
         (bytes32 escrowHash,) = makesureEscrowParams(domainSeparator, escrowParams, sig);
-        (,bytes32 resolvedResultTypedHash) = makesureResolvedResult(domainSeparator, escrowHash, buyerThresholdBp, arbitratorSig);
+        bytes32 resolvedResultTypedHash = makesureResolvedResult(domainSeparator, escrowHash, buyerThresholdBp, tbaArbitrator, arbitratorSig);
         if(
             !lighterAccount.isOwnerCall(escrowParams.buyer, sender) 
             && !lighterAccount.isOwnerCall(escrowParams.seller, sender)

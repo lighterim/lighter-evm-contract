@@ -139,3 +139,9 @@ export TBA_BUYER=$tbaBuyer
 export eoaSeller=$(cast wallet address --private-key=$sellerPrivKey)
 export tbaSeller=$(create_account_and_get_tba $LighterAccount $LighterTicket $sellerPrivKey $nostrSeller)
 export TBA_SELLER=$tbaSeller
+
+export eoaArbitrator=$(cast wallet address --private-key=$arbitratorPrivKey)
+cast send $LighterAccount 'createAccount(uint8,address,bytes32)' 11 $eoaArbitrator $nostrArbitrator --private-key $sellerPrivKey
+export tbaArbitrator=$(cast call $LighterAccount "getAccountAddress(uint256)(address)" 11)
+echo "tbaArbitrator: $tbaArbitrator"
+export TBA_ARBITRATOR=$tbaArbitrator

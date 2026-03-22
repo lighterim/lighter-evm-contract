@@ -7,10 +7,14 @@ import {SettlerBase} from "./SettlerBase.sol";
 
 import {ISettlerActions} from "./ISettlerActions.sol";
 import {WaypointAbstract} from "./core/WaypointAbstract.sol";
-import {revertActionInvalid} from "./core/SettlerErrors.sol";
+import {revertActionInvalid, InvalidResolvedResultSignature} from "./core/SettlerErrors.sol";
+
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {ParamsHash} from "./utils/ParamsHash.sol";
 
 abstract contract SettlerWaypoint is ISettlerWaypoint, WaypointAbstract, SettlerBase {
-    
+
+    using ParamsHash for ISettlerBase.ResolvedResult;
 
     function _tokenId() internal pure virtual override returns (uint256) {
         return 3;
@@ -77,6 +81,26 @@ abstract contract SettlerWaypoint is ISettlerWaypoint, WaypointAbstract, Settler
 
     function _dispatch(uint256 /*i*/, uint256 /*action*/, bytes calldata /*data*/) internal virtual override returns (bool) { 
         return false;
+    }
+
+    function getResolvedResultTypedHash(
+        ISettlerBase.ResolvedResult memory resolvedResult,
+        bytes32 domainSeparator
+    )public pure returns (bytes32 resolvedResultTypedHash) {
+        bytes32 resolvedResultHash = resolvedResult.hash();
+        resolvedResultTypedHash = MessageHashUtils.toTypedDataHash(domainSeparator, resolvedResultHash);
+    }
+
+    function makesureResolvedResult(
+        bytes32 domainSeparator,
+        bytes32 escrowHash,
+        uint16 buyerThresholdBp,
+        address tbaArbitrator,
+        bytes memory sig
+    ) internal view virtual returns (bytes32 resolvedResultTypedHash){
+        ISettlerBase.ResolvedResult memory resolvedResult = ISettlerBase.ResolvedResult(escrowHash, buyerThresholdBp);
+        resolvedResultTypedHash = getResolvedResultTypedHash(resolvedResult, domainSeparator);
+        if(!isValidSignature(tbaArbitrator, resolvedResultTypedHash, sig)) revert InvalidResolvedResultSignature();
     }
 
 

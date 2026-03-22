@@ -8,9 +8,7 @@ import {UnsafeMath} from "./utils/UnsafeMath.sol";
 import {IEscrow} from "./interfaces/IEscrow.sol";
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
 import {ParamsHash} from "./utils/ParamsHash.sol";
-import {
-    InvalidEscrowSignature, InvalidResolvedResultSignature
-    } from "./core/SettlerErrors.sol";
+import {InvalidEscrowSignature} from "./core/SettlerErrors.sol";
 
 abstract contract AbstractContext {
     
@@ -20,18 +18,16 @@ abstract contract AbstractContext {
 abstract contract Context is AbstractContext {
 
     using ParamsHash for ISettlerBase.EscrowParams;
-    using ParamsHash for ISettlerBase.ResolvedResult;
     using FullMath for uint256;
     using UnsafeMath for uint256;
     
     uint256 constant public BASIS_POINTS_BASE = 10000;
-        uint8 constant public USD_DECIMALS = 6;
+    uint8 constant public USD_DECIMALS = 6;
     uint8 constant public PRICE_DECIMALS = 18;
     uint8 constant public USD_RATE_DECIMALS = 18;
 
     IEscrow internal escrow;
     address internal relayer;
-        
 
     constructor(IEscrow escrow_, address lighterRelayer_) {
         escrow = escrow_;
@@ -51,14 +47,6 @@ abstract contract Context is AbstractContext {
     )internal pure returns (bytes32 escrowHash, bytes32 escrowTypedHash) {
         escrowHash = params.hash();
         escrowTypedHash = MessageHashUtils.toTypedDataHash(domainSeparator, escrowHash);
-    }
-
-    function getResolvedResultTypedHash(
-        ISettlerBase.ResolvedResult memory resolvedResult,
-        bytes32 domainSeparator
-    )internal pure returns (bytes32 resolvedResultHash, bytes32 resolvedResultTypedHash) {
-        resolvedResultHash = resolvedResult.hash();
-        resolvedResultTypedHash = MessageHashUtils.toTypedDataHash(domainSeparator, resolvedResultHash);
     }
 
     function _msgSender() internal view virtual override returns (address) {
@@ -91,18 +79,8 @@ abstract contract Context is AbstractContext {
         if(!isValidSignature(relayer, escrowTypedHash, sig)) revert InvalidEscrowSignature();
     }
 
-    function makesureResolvedResult(
-        bytes32 domainSeparator,
-        bytes32 escrowHash,
-        uint16 buyerThresholdBp,
-        bytes memory sig
-    ) internal view virtual returns (bytes32 resolvedResultHash, bytes32 resolvedResultTypedHash){
-        ISettlerBase.ResolvedResult memory resolvedResult = ISettlerBase.ResolvedResult(escrowHash, buyerThresholdBp);
-        (resolvedResultHash, resolvedResultTypedHash) = getResolvedResultTypedHash(resolvedResult, domainSeparator);
-        if(!isValidSignature(relayer, resolvedResultTypedHash, sig)) revert InvalidResolvedResultSignature();
-    }
 
-        /**
+    /**
      * @notice Get the fee amount for a given amount and fee rate
      * @param amount The amount to get the fee for
      * @param feeRate The fee rate to get the fee for (e.g. 1000 for 10%)
