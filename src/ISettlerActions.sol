@@ -58,6 +58,13 @@ interface ISettlerActions {
         address tbaArbitrator, 
         bytes memory sig, bytes memory arbitratorSig, bytes memory counterpartySig
         ) external;
+    
+    function UPDATE_ARBITRATION(
+        ISettlerBase.ResolvedResult memory resolvedResult,
+        address tbaArbitrator, 
+        bytes memory arbitratorSig,
+        bytes memory sig
+    ) external;
 
 
     function RELEASE_BY_VERIFIER(ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) external;

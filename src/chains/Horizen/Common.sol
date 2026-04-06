@@ -9,6 +9,8 @@ import {IEscrow} from "../../interfaces/IEscrow.sol";
 import {Context} from "../../Context.sol";
 import {LighterAccount} from "../../account/LighterAccount.sol";
 import {IPaymentMethodRegistry} from "../../interfaces/IPaymentMethodRegistry.sol";
+import {ISettlerBase} from "../../interfaces/ISettlerBase.sol";
+import {UnauthorizedCaller, InvalidArbitratorTicket} from "../../core/SettlerErrors.sol";
 // import {console} from "forge-std/console.sol";
 
 
@@ -28,6 +30,11 @@ abstract contract MainnetMixin is SettlerBase, FreeMemory{
 
     function getLighterAccount() public view returns (LighterAccount) {
         return lighterAccount;
+    }
+
+    function _ensureArbitratorCall(address sender, address tbaArbitrator) internal view {
+        if(lighterAccount.getTicketType(tbaArbitrator) != ISettlerBase.TicketType.GENESIS2) revert InvalidArbitratorTicket();
+        if(!lighterAccount.isOwnerCall(tbaArbitrator, sender)) revert UnauthorizedCaller(sender);
     }
 
 

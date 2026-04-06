@@ -81,9 +81,12 @@ error InvalidEscrowStatus(bytes32 escrowHash, ISettlerBase.EscrowStatus actual);
 
 error InvalidEscrowSignature();
 
+error InvalidArbitrationNonce();
+
 error InvalidTlsnProofSignature();
 
 error InvalidResolvedResultSignature();
+
 
 error InvalidIntentSignature();
 

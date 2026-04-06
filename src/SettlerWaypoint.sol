@@ -7,7 +7,7 @@ import {SettlerBase} from "./SettlerBase.sol";
 
 import {ISettlerActions} from "./ISettlerActions.sol";
 import {WaypointAbstract} from "./core/WaypointAbstract.sol";
-import {revertActionInvalid, InvalidResolvedResultSignature} from "./core/SettlerErrors.sol";
+import {revertActionInvalid, InvalidResolvedResultSignature, InvalidEscrowSignature, InvalidArbitrationNonce} from "./core/SettlerErrors.sol";
 
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {ParamsHash} from "./utils/ParamsHash.sol";
@@ -15,6 +15,11 @@ import {ParamsHash} from "./utils/ParamsHash.sol";
 abstract contract SettlerWaypoint is ISettlerWaypoint, WaypointAbstract, SettlerBase {
 
     using ParamsHash for ISettlerBase.ResolvedResult;
+
+    event ArbitrationUpdated(bytes32 indexed escrowHash, uint256 nonce, uint64 resolutionTs, uint16 buyerThresholdBp);
+
+    mapping(bytes32 => uint256) internal _latestArbitrationNonce;
+    
 
     function _tokenId() internal pure virtual override returns (uint256) {
         return 3;
@@ -60,20 +65,34 @@ abstract contract SettlerWaypoint is ISettlerWaypoint, WaypointAbstract, Settler
             (
                 ISettlerBase.EscrowParams memory escrowParams, 
                 uint16 buyerThresholdBp,
+                uint256 nonce,
+                uint64 resolutionTs,
                 address tbaArbitrator,
                 bytes memory sig, 
                 bytes memory arbitratorSig, 
                 bytes memory counterpartySig
-            ) = abi.decode(data, (ISettlerBase.EscrowParams, uint16, address, bytes, bytes, bytes));
+            ) = abi.decode(data, (ISettlerBase.EscrowParams, uint16, uint256, uint64, address, bytes, bytes, bytes));
             _resolve(
                 _msgSender(), 
                 escrowParams, 
                 buyerThresholdBp, 
+                nonce,
+                resolutionTs,
                 tbaArbitrator, 
                 sig, 
                 arbitratorSig, 
                 counterpartySig
             );
+            return true;
+        }
+        else if(action == uint32(ISettlerActions.UPDATE_ARBITRATION.selector)) {
+            (
+                ISettlerBase.ResolvedResult memory resolvedResult,
+                address tbaArbitrator,
+                bytes memory arbitratorSig,
+                bytes memory sig
+            ) = abi.decode(data, (ISettlerBase.ResolvedResult, address, bytes, bytes));
+            _updateArbitration(_msgSender(), resolvedResult, tbaArbitrator, arbitratorSig, sig);
             return true;
         }
         return false;
@@ -94,13 +113,32 @@ abstract contract SettlerWaypoint is ISettlerWaypoint, WaypointAbstract, Settler
     function makesureResolvedResult(
         bytes32 domainSeparator,
         bytes32 escrowHash,
+        uint256 nonce,
+        uint64 resolutionTs,
         uint16 buyerThresholdBp,
         address tbaArbitrator,
         bytes memory sig
     ) internal view virtual returns (bytes32 resolvedResultTypedHash){
-        ISettlerBase.ResolvedResult memory resolvedResult = ISettlerBase.ResolvedResult(escrowHash, buyerThresholdBp);
+        ISettlerBase.ResolvedResult memory resolvedResult = ISettlerBase.ResolvedResult(escrowHash, nonce, resolutionTs, buyerThresholdBp);
         resolvedResultTypedHash = getResolvedResultTypedHash(resolvedResult, domainSeparator);
         if(!isValidSignature(tbaArbitrator, resolvedResultTypedHash, sig)) revert InvalidResolvedResultSignature();
+    }
+
+    function _updateArbitration(bytes32 domainSeparator, ISettlerBase.ResolvedResult memory resolvedResult, address tbaArbitrator, bytes memory arbitratorSig, bytes memory sig) internal virtual {
+        bytes32 resolvedResultTypedHash = getResolvedResultTypedHash(resolvedResult, domainSeparator);
+        // verify the arbitrator signature
+        if(!isValidSignature(tbaArbitrator, resolvedResultTypedHash, arbitratorSig)) revert InvalidResolvedResultSignature();
+        // verify the relayer signature
+        if(!isValidSignature(relayer, resolvedResultTypedHash, sig)) revert InvalidEscrowSignature();
+        
+        _updateArbitrationNonce(resolvedResult.escrowHash, resolvedResult.nonce);
+        
+        emit ArbitrationUpdated(resolvedResult.escrowHash, resolvedResult.nonce, resolvedResult.resolutionTs, resolvedResult.buyerThresholdBp);
+    }
+
+    function _updateArbitrationNonce(bytes32 escrowHash, uint256 nonce) internal {
+        if(nonce <= _latestArbitrationNonce[escrowHash]) revert InvalidArbitrationNonce();
+        _latestArbitrationNonce[escrowHash] = nonce;
     }
 
 

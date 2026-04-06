@@ -59,7 +59,7 @@ contract LighterTicket is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
         uint256 tokenId = _tokenIdCounter;
         _tokenIdCounter++;
         
-        string memory metadataURI = LibString.toHexString(uint256(nostrPubKey));
+        string memory metadataURI = LibString.toHexString(uint256(nostrPubKey), 32);
         _safeMint(to, tokenId);
         _setTokenURI(tokenId, metadataURI);
         
@@ -71,7 +71,7 @@ contract LighterTicket is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
         uint256 tokenId = uint256(nftId);
         if(nftId >= GENESIS2_END || super._ownerOf(tokenId) != address(0)) revert DenyMint();
 
-        string memory metadataURI = LibString.toHexString(uint256(nostrPubKey));
+        string memory metadataURI = LibString.toHexString(uint256(nostrPubKey), 32);
         _safeMint(to, tokenId);
         _setTokenURI(tokenId, metadataURI);
 

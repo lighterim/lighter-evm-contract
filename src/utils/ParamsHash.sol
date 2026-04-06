@@ -43,7 +43,7 @@ library ParamsHash {
     );
 
     bytes32 public constant _RESOLVED_RESULT_TYPEHASH = keccak256(
-        "ResolvedResult(bytes32 escrowHash,uint16 buyerThresholdBp)"
+        "ResolvedResult(bytes32 escrowHash,uint256 nonce,uint64 resolutionTs,uint16 buyerThresholdBp)"
     );
 
     // string public constant _PERMIT_BATCH_WITNESS_TRANSFER_FROM_TYPEHASH_STUB =
@@ -80,15 +80,19 @@ library ParamsHash {
     function hash(ISettlerBase.ResolvedResult memory resolvedResult) internal pure returns (bytes32 result) {
         bytes32 typeHash = _RESOLVED_RESULT_TYPEHASH;
         bytes32 escrowHash = resolvedResult.escrowHash;
+        uint256 nonce = resolvedResult.nonce;
+        uint64 resolutionTs = resolvedResult.resolutionTs;
         uint16 buyerThresholdBp = resolvedResult.buyerThresholdBp;
 
         assembly ("memory-safe") {
             let ptr := mload(0x40)
             mstore(ptr, typeHash)
             mstore(add(ptr, 0x20), escrowHash)
-            mstore(add(ptr, 0x40), buyerThresholdBp)
-            // Compute keccak256 hash of 0x60 bytes (3 * 32 bytes = 96 bytes)
-            result := keccak256(ptr, 0x60) // 0x60 = 96
+            mstore(add(ptr, 0x40), nonce)
+            mstore(add(ptr, 0x60), resolutionTs)
+            mstore(add(ptr, 0x80), buyerThresholdBp)
+            // Compute keccak256 hash of 0xa0 bytes (5 * 32 bytes = 160 bytes)
+            result := keccak256(ptr, 0xa0) // 0xa0 = 160 bytes
         }
     }
     

@@ -102,6 +102,8 @@ interface ISettlerBase {
 
     struct ResolvedResult{
         bytes32 escrowHash;
+        uint256 nonce;
+        uint64 resolutionTs;
         uint16 buyerThresholdBp;
     }
 

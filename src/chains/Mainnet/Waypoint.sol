@@ -12,7 +12,10 @@ import {ISettlerBase} from "../../interfaces/ISettlerBase.sol";
 import {IEscrow} from "../../interfaces/IEscrow.sol";
 import {LighterAccount} from "../../account/LighterAccount.sol";
 import {ParamsHash} from "../../utils/ParamsHash.sol";
-import {UnauthorizedCaller, InvalidArbitratorTicket} from "../../core/SettlerErrors.sol";
+import {
+    UnauthorizedCaller, InvalidArbitratorTicket, InvalidResolvedResultSignature,
+    InvalidEscrowSignature, InvalidArbitrationNonce
+    } from "../../core/SettlerErrors.sol";
 
 
 contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
@@ -153,7 +156,9 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
     function _resolve(
         address sender, 
         ISettlerBase.EscrowParams memory escrowParams, 
-        uint16 buyerThresholdBp, 
+        uint16 buyerThresholdBp,
+        uint256 nonce,
+        uint64 resolutionTs,
         address tbaArbitrator, 
         bytes memory sig, 
         bytes memory arbitratorSig, 
@@ -162,7 +167,7 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
         if(lighterAccount.getTicketType(tbaArbitrator) != ISettlerBase.TicketType.GENESIS2) revert InvalidArbitratorTicket();
         bytes32 domainSeparator = _domainSeparator();
         (bytes32 escrowHash,) = makesureEscrowParams(domainSeparator, escrowParams, sig);
-        bytes32 resolvedResultTypedHash = makesureResolvedResult(domainSeparator, escrowHash, buyerThresholdBp, tbaArbitrator, arbitratorSig);
+        bytes32 resolvedResultTypedHash = makesureResolvedResult(domainSeparator, escrowHash, nonce, resolutionTs, buyerThresholdBp, tbaArbitrator, arbitratorSig);
         if(
             !lighterAccount.isOwnerCall(escrowParams.buyer, sender) 
             && !lighterAccount.isOwnerCall(escrowParams.seller, sender)
@@ -173,6 +178,10 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
         uint32 disputeWindowSeconds = paymentMethodRegistry.getPaymentMethodConfig(escrowParams.paymentMethod).disputeWindowSeconds;
         uint256 sellerFee = getFeeAmount(volume, escrowParams.sellerFeeRate);
         uint256 buyerFee = getFeeAmount(volume, escrowParams.buyerFeeRate);
+        
+        // use the nonce to update the arbitration nonce
+        _updateArbitrationNonce(escrowHash, nonce);
+        
         (bool isInitiatedByBuyer, bool acceptedByCounterparty, uint32 resolutionSeconds) = escrow.resolve(
             escrowHash, escrowParams, 
             buyerFee, sellerFee,
@@ -208,6 +217,14 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
             acceptedByCounterparty
         );
     }
+
+    function _updateArbitration(address sender, ISettlerBase.ResolvedResult memory resolvedResult, address tbaArbitrator, bytes memory arbitratorSig, bytes memory sig) internal virtual override{
+        // verify the arbitrator call is valid
+        _ensureArbitratorCall(sender, tbaArbitrator);
+
+        _updateArbitration(_domainSeparator(), resolvedResult, tbaArbitrator, arbitratorSig, sig);
+    } 
+
 
     /**
      * @notice Calculates the USD value of a given token amount.

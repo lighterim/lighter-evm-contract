@@ -61,6 +61,8 @@ abstract contract WaypointAbstract is Context {
      * @param sender sender
      * @param escrowParams escrow parameters
      * @param buyerThresholdBp buyer threshold in basis points
+     * @param nonce nonce
+     * @param resolutionTs resolution timestamp
      * @param tbaArbitrator tba arbitrator
      * @param sig signature of the sender
      * @param arbitratorSig signature of the arbitrator
@@ -70,10 +72,29 @@ abstract contract WaypointAbstract is Context {
         address sender, 
         ISettlerBase.EscrowParams memory escrowParams, 
         uint16 buyerThresholdBp, 
+        uint256 nonce,
+        uint64 resolutionTs,
         address tbaArbitrator, 
         bytes memory sig, 
         bytes memory arbitratorSig, 
         bytes memory counterpartySig
+    ) internal virtual;
+
+
+    /**
+     * the arbitrator updates the arbitration
+     * @param sender sender
+     * @param resolvedResult resolved result
+     * @param tbaArbitrator tba arbitrator
+     * @param arbitratorSig signature of the arbitrator
+     * @param sig signature of the relayer to update the arbitration
+     */
+    function _updateArbitration(
+        address sender,
+        ISettlerBase.ResolvedResult memory resolvedResult,
+        address tbaArbitrator, 
+        bytes memory arbitratorSig,
+        bytes memory sig
     ) internal virtual;
 
     // /**
