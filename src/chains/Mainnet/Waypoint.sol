@@ -12,10 +12,7 @@ import {ISettlerBase} from "../../interfaces/ISettlerBase.sol";
 import {IEscrow} from "../../interfaces/IEscrow.sol";
 import {LighterAccount} from "../../account/LighterAccount.sol";
 import {ParamsHash} from "../../utils/ParamsHash.sol";
-import {
-    UnauthorizedCaller, InvalidArbitratorTicket, InvalidResolvedResultSignature,
-    InvalidEscrowSignature, InvalidArbitrationNonce
-    } from "../../core/SettlerErrors.sol";
+import {UnauthorizedCaller, InvalidArbitratorTicket} from "../../core/SettlerErrors.sol";
 
 
 contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
@@ -97,10 +94,11 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
         
         ISettlerBase.PaymentMethodConfig memory cfg = _getPaymentMethodConfig(escrowParams.paymentMethod);
         uint256 sellerFee = getFeeAmount(escrowParams.volume, escrowParams.sellerFeeRate);
-        escrow.cancel(
+        bool ghosted = escrow.cancel(
             escrowHash, escrowParams, sellerFee, cfg.windowSeconds
         );
-        lighterAccount.cancelPendingTx(escrowParams.buyer, escrowParams.seller, true);
+        lighterAccount.cancelPendingTx(escrowParams.buyer, escrowParams.seller, true, ghosted);
+
     }
 
     /**

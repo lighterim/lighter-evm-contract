@@ -298,16 +298,8 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         unchecked {
             honour.pendingCount = (pendingCount -1);
             honour.count++;
-        }
-        if(ghosted) {
-            unchecked {
-                honour.ghostedCount++;
-            }
-        }
-        if(isDuty) {
-            unchecked {
-                honour.cancelledCount++;
-            }
+            if(ghosted) honour.ghostedCount++;
+            if(isDuty) honour.cancelledCount++;
         }
     }
 
