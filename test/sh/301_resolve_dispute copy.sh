@@ -119,9 +119,7 @@ sig_resolved_result() {
     local verifyContractAddress=$4
     local escrowHash=$5
     local buyerThresholdBp=$6
-    local nonce=$7
-    local resolutionTs=$8
-    local privKey=$9
+    local privKey=$7
 #
     local tmp_json=$(mktemp /tmp/eip712_XXXXXX.json)
 
@@ -136,8 +134,6 @@ sig_resolved_result() {
     ],
     "ResolvedResult": [
       { "name": "escrowHash", "type": "bytes32" },
-      { "name": "nonce", "type": "uint256" },
-      { "name": "resolutionTs", "type": "uint64" },
       { "name": "buyerThresholdBp", "type": "uint16" }
     ]
   },
@@ -150,8 +146,6 @@ sig_resolved_result() {
   },
   "message": {
     "escrowHash": "$escrowHash",
-    "nonce": $nonce,
-    "resolutionTs": $resolutionTs,
     "buyerThresholdBp": $buyerThresholdBp
   }
 }
@@ -387,17 +381,26 @@ echo "================ sleep 30 seconds =========================="
 sleep 30
 echo "================ sleep 30 seconds done =========================="
 
-export action1Selector=$(cast sig "DISPUTE_BY_BUYER((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),bytes)")
+export action1Selector=$(cast sig "DISPUTE_BY_SELLER((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),bytes)")
 export action1Params=$(cast abi-encode "x((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),bytes)" "$escrowParms" "$relayerSig")
 export action1Data="${action1Selector}${action1Params:2}"
 export action1Hex=$(echo "$action1Data" | grep -q "^0x" && echo "$action1Data" || echo "0x$action1Data")
+
+echo "=========================================="
+echo "Executing dispute by seller..."
+echo "=========================================="
+echo "SetWaypoint Contract: $SetWaypoint"
+echo "Payer (EOA Seller): $eoaSeller"
+echo "Executor (EOA Buyer): $eoaBuyer"
+echo "Escrow Typed Hash (witness): $waypointEscrowTypedHash"
+echo "=========================================="
 
 cast send $SetWaypoint \
   "execute(bytes32,bytes[])" \
   $waypointEscrowTypedHash \
   "[$action1Hex]" \
   --rpc-url $ETH_RPC_URL \
-  --private-key=$buyerPrivKey \
+  --private-key=$sellerPrivKey \
   --gas-limit 5000000
 
 echo "================ sleep 30 seconds =========================="
@@ -406,14 +409,48 @@ echo "================ sleep 30 seconds done =========================="
 
 export buyerThresholdBp=${BUYER_THRESHOLD_BP:-10000}
 export nonce=$(cast --to-dec $(cast call $SetWaypoint "arbitrationNonce(bytes32)" "$escrowHash"))
+export nonce=$((nonce + 1))
 export resolutionTs=$(date +%s)
 export resolvedResult="($escrowHash, $nonce, $resolutionTs, $buyerThresholdBp)"
 export domainSeparator=$(cast call $SetWaypoint "getDomainSeparator()(bytes32)")
 export resolvedResultTypedHash=$(cast call $SetWaypoint "getResolvedResultTypedHash((bytes32,uint256,uint64,uint16),bytes32)" "$resolvedResult" "$domainSeparator")
 export arbitratorSig=$(cast wallet sign --no-hash $resolvedResultTypedHash --private-key=$arbitratorPrivKey)
 echo "arbitratorSig: $arbitratorSig"
-export counterpartySig=$(cast wallet sign --no-hash $resolvedResultTypedHash --private-key=$sellerPrivKey)
+export relayerSig=$(cast wallet sign --no-hash $resolvedResultTypedHash --private-key=$relayerPrivKey)
+echo "relayerSig: $relayerSig"
+
+export action1Selector=$(cast sig "UPDATE_ARBITRATION((bytes32,uint256,uint64,uint16),address,bytes,bytes)")
+export action1Params=$(cast abi-encode "x((bytes32,uint256,uint64,uint16),address,bytes,bytes)" "$resolvedResult" "$tbaArbitrator" "$arbitratorSig" "$relayerSig")
+export action1Data="${action1Selector}${action1Params:2}"
+export action1Hex=$(echo "$action1Data" | grep -q "^0x" && echo "$action1Data" || echo "0x$action1Data")
+
+echo "action1Data: $action1Data"
+echo "action1Hex: $action1Hex"
+echo "=========================================="
+echo "Executing update arbitration..."
+echo "=========================================="
+echo "SetWaypoint Contract: $SetWaypoint"
+echo "Payer (EOA Buyer): $eoaBuyer"
+echo "Executor (EOA Arbitrator): $eoaArbitrator"
+echo "Executor (EOA Seller): $eoaSeller"
+
+cast send $SetWaypoint \
+  "execute(bytes32,bytes[])" \
+  $waypointEscrowTypedHash \
+  "[$action1Hex]" \
+  --rpc-url $ETH_RPC_URL \
+  --private-key=$arbitratorPrivKey \
+  --gas-limit 5000000
+
+echo "================ sleep 30 seconds =========================="
+sleep 30
+echo "================ sleep 30 seconds done =========================="
+
+
+export counterpartySig=$(cast wallet sign --no-hash $resolvedResultTypedHash --private-key=$buyerPrivKey)
 echo "counterpartySig: $counterpartySig"
+export relayerSig=$(cast wallet sign --no-hash $waypointEscrowTypedHash --private-key=$relayerPrivKey)
+
 
 export action1Selector=$(cast sig "RESOLVE((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),uint16,uint256,uint64,address,bytes,bytes,bytes)")
 export action1Params=$(cast abi-encode "x((uint256,address,uint256,uint256,uint256,address,address,uint256,bytes32,bytes32,bytes32,address,uint256),uint16,uint256,uint64,address,bytes,bytes,bytes)" "$escrowParms" "$buyerThresholdBp" "$nonce" "$resolutionTs" "$tbaArbitrator" "$relayerSig" "$arbitratorSig" "$counterpartySig")

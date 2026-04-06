@@ -55,6 +55,8 @@ interface ISettlerActions {
     function RESOLVE(
         ISettlerBase.EscrowParams memory escrowParams,
         uint16 buyerThresholdBp, // buyer threshold in basis points
+        uint256 nonce,
+        uint64 resolutionTs,
         address tbaArbitrator, 
         bytes memory sig, bytes memory arbitratorSig, bytes memory counterpartySig
         ) external;

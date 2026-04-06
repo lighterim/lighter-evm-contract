@@ -124,7 +124,7 @@ abstract contract SettlerWaypoint is ISettlerWaypoint, WaypointAbstract, Settler
         if(!isValidSignature(tbaArbitrator, resolvedResultTypedHash, sig)) revert InvalidResolvedResultSignature();
     }
 
-    function _updateArbitration(bytes32 domainSeparator, ISettlerBase.ResolvedResult memory resolvedResult, address tbaArbitrator, bytes memory arbitratorSig, bytes memory sig) internal virtual {
+    function _updateArbitration(bytes32 domainSeparator, ISettlerBase.ResolvedResult memory resolvedResult, address tbaArbitrator, bytes memory arbitratorSig, bytes memory sig) internal {
         bytes32 resolvedResultTypedHash = getResolvedResultTypedHash(resolvedResult, domainSeparator);
         // verify the arbitrator signature
         if(!isValidSignature(tbaArbitrator, resolvedResultTypedHash, arbitratorSig)) revert InvalidResolvedResultSignature();
