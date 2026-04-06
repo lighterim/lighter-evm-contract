@@ -279,7 +279,7 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
     function cancel(
         bytes32 escrowHash, ISettlerBase.EscrowParams memory escrowParams, 
         uint256 sellerFee, uint256 windowSeconds
-    ) external onlyAuthorizedExecutor nonReentrant{
+    ) external onlyAuthorizedExecutor nonReentrant returns (bool ghosted){
         ISettlerBase.EscrowData storage escrowData = allEscrow[escrowHash];
         ISettlerBase.EscrowStatus status = escrowData.status;
         
@@ -291,6 +291,10 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         if(status == ISettlerBase.EscrowStatus.SellerRequestCancel){
             uint256 canCancelTs = windowSeconds + escrowData.cancelTs;
             if(block.timestamp < canCancelTs) revert SellerCancelWithinWindow(canCancelTs);
+            ghosted = true;
+        }
+        else{
+            ghosted = false;
         }
         
         uint256 refundAmount = (escrowParams.volume + sellerFee);
@@ -341,6 +345,7 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         uint256 sellerFee,
         uint32 disputeWindowSeconds,
         uint16 buyerThresholdBp, 
+        uint64 resolutionTs,
         address tbaArbitrator, 
         bytes32 resolvedResultTypedHash, 
         bytes memory counterpartySig
@@ -371,7 +376,7 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         }
 
         // 1. Check time window first (Cheapest check - fails fast)
-        if (currentTs < lastActionTs + disputeWindowSeconds) {
+        if (currentTs < resolutionTs + disputeWindowSeconds) {
             // 2. Determine who the expected signer is based on dispute status
             // Logic: If Buyer disputed, we need Seller's sig. Otherwise, we need Buyer's sig.
             address expectedSigner = isInitiatedByBuyer ? seller : buyer;

@@ -177,13 +177,13 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
         uint256 buyerFee = getFeeAmount(volume, escrowParams.buyerFeeRate);
 
         // use the nonce to update the arbitration nonce
-        _updateArbitrationNonce(escrowHash, nonce);
+        _useArbitrationNonce(escrowHash, nonce);
         
         (bool isInitiatedByBuyer, bool acceptedByCounterparty, uint32 resolutionSeconds) = escrow.resolve(
             escrowHash, escrowParams, 
             buyerFee, sellerFee,
             disputeWindowSeconds,
-            buyerThresholdBp, tbaArbitrator, resolvedResultTypedHash, counterpartySig
+            buyerThresholdBp, resolutionTs, tbaArbitrator, resolvedResultTypedHash, counterpartySig
         );
 
         uint256 buyerAmount = 0;

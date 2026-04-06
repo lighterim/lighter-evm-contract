@@ -286,18 +286,23 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         }
     }
 
-    function cancelPendingTx(address tbaBuyer, address tbaSeller, bool isBuyerDuty) public onlyAuthorized {
-        _cancelPendingTx(tbaBuyer, isBuyerDuty);
-        _cancelPendingTx(tbaSeller, !isBuyerDuty);
+    function cancelPendingTx(address tbaBuyer, address tbaSeller, bool isBuyerDuty, bool ghosted) public onlyAuthorized {
+        _cancelPendingTx(tbaBuyer, isBuyerDuty, ghosted);
+        _cancelPendingTx(tbaSeller, !isBuyerDuty, false);
     }
 
-    function _cancelPendingTx(address account, bool isDuty) private {
+    function _cancelPendingTx(address account, bool isDuty, bool ghosted) private {
         ISettlerBase.Honour storage honour = userHonour[account];
         uint32 pendingCount = honour.pendingCount;
         if(pendingCount == 0) revert NoPendingTx(account);
         unchecked {
             honour.pendingCount = (pendingCount -1);
             honour.count++;
+        }
+        if(ghosted) {
+            unchecked {
+                honour.ghostedCount++;
+            }
         }
         if(isDuty) {
             unchecked {
@@ -318,8 +323,8 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         bool acceptedByCounterparty
     ) public onlyAuthorized {
         _updateArbitratorStanding(tbaArbitrator, isInitiatedByBuyer, isBuyerLoseDispute, acceptedByCounterparty, resolvedSeconds, (buyerAmount + sellerAmount));
-        _updateHonourOnResolve(tbaBuyer, buyerAmount, isInitiatedByBuyer, isBuyerLoseDispute);
-        _updateHonourOnResolve(tbaSeller, sellerAmount, !isInitiatedByBuyer, !isBuyerLoseDispute);
+        _updateHonourOnResolve(tbaBuyer, buyerAmount, isInitiatedByBuyer, isBuyerLoseDispute, acceptedByCounterparty);
+        _updateHonourOnResolve(tbaSeller, sellerAmount, !isInitiatedByBuyer, !isBuyerLoseDispute, acceptedByCounterparty);
     }
 
     function _updateArbitratorStanding(
@@ -353,7 +358,8 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         address account,
         uint256 usdAmount,
         bool iAmInitiator, 
-        bool iLose
+        bool iLose,
+        bool acceptedByCounterparty
     ) private {
         ISettlerBase.Honour storage honour = userHonour[account];
         uint32 pendingCount = honour.pendingCount;
@@ -367,6 +373,11 @@ contract LighterAccount is Ownable, ReentrancyGuard {
             if(iLose) {
                 if(iAmInitiator) honour.failedInitiations++;
                 else honour.totalAdverseRulings++;
+            }
+            // If the counterparty does not accept the arbitration result, it counts as a ghosted dispute
+            if(!iAmInitiator) {
+                if(!acceptedByCounterparty) honour.ghostedDisputesCount++;
+                else honour.positiveResponseCount++;
             }
         }
     }

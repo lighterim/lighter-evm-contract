@@ -141,6 +141,15 @@ abstract contract SettlerWaypoint is ISettlerWaypoint, WaypointAbstract, Settler
         _latestArbitrationNonce[escrowHash] = nonce;
     }
 
+    function _useArbitrationNonce(bytes32 escrowHash, uint256 nonce) internal {
+        if(nonce < _latestArbitrationNonce[escrowHash]) revert InvalidArbitrationNonce();
+        _latestArbitrationNonce[escrowHash] = nonce;
+    }
+
+    function arbitrationNonce(bytes32 escrowHash) public view returns (uint256) {
+        return _latestArbitrationNonce[escrowHash];
+    }
+
 
     // /**
     //  * processing escrow transaction

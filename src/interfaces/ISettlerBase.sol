@@ -120,6 +120,8 @@ interface ISettlerBase {
         uint32 pendingCount;
         /// @notice Number of cancelled transactions (typically by buyer)
         uint32 cancelledCount;
+        /// @notice Number of ghosted trades
+        uint32 ghostedCount;
        
 
         /**
@@ -145,6 +147,10 @@ interface ISettlerBase {
         uint32 failedInitiations;
         
 
+        /// @notice Number of ghosted disputes
+        uint32 ghostedDisputesCount;
+        /// @notice Number of positive responses to disputes
+        uint32 positiveResponseCount;
         /// @notice Average release time in seconds (from payment to release completion)
         uint32 avgReleaseSeconds;
         /// @notice Average payment time in seconds
