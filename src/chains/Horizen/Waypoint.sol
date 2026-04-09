@@ -12,11 +12,13 @@ import {ISettlerBase} from "../../interfaces/ISettlerBase.sol";
 import {IEscrow} from "../../interfaces/IEscrow.sol";
 import {LighterAccount} from "../../account/LighterAccount.sol";
 import {ParamsHash} from "../../utils/ParamsHash.sol";
+import {FullMath} from "../../vendor/FullMath.sol";
 import {UnauthorizedCaller, InvalidArbitratorTicket} from "../../core/SettlerErrors.sol";
 
 
 contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
 
+    using FullMath for uint256;
     using ParamsHash for ISettlerBase.EscrowParams;
 
     constructor(
@@ -242,6 +244,6 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
             exponent = uint256(tokenDecimals) + PRICE_DECIMALS + USD_RATE_DECIMALS - USD_DECIMALS;
         }
 
-        amountUsd = (tokenAmount * price * usdRate) / (10 ** exponent);
+        amountUsd = (tokenAmount * price).mulDiv(usdRate, 10 ** exponent);
     }
 }

@@ -15,10 +15,12 @@ import {
     InvalidCurrency, InvalidPayeeDetails, PaymentInsufficient
 } from "./core/SettlerErrors.sol";
 import {ParamsHash} from "./utils/ParamsHash.sol";
+import {FullMath} from "./vendor/FullMath.sol";
 import {Context} from "./Context.sol";
 
-abstract contract TlsnProofVerifier is VerifierAbstract, ITlsnProofVerifier, EIP712 {
+abstract contract TlsnProofVerifier is VerifierAbstract, ITlsnProofVerifier, EIP712{
 
+    using FullMath for uint256;
     using ParamsHash for ISettlerBase.PaymentDetails;
     using ParamsHash for ISettlerBase.EscrowParams;
 
@@ -82,10 +84,10 @@ abstract contract TlsnProofVerifier is VerifierAbstract, ITlsnProofVerifier, EIP
 
         bytes32 nullifier = _hashNullifier(paymentMethod, paymentParams.paymentId);
         if(nullifiers[nullifier]) revert InvalidNullifier();
-
-        _releaseByVerifier(escrowHash, escrowParams, paymentParams.confirmTs);
         
         nullifiers[nullifier] = true;
+        _releaseByVerifier(escrowHash, escrowParams, paymentParams.confirmTs);
+        
 
         return true;
     }
@@ -134,7 +136,7 @@ abstract contract TlsnProofVerifier is VerifierAbstract, ITlsnProofVerifier, EIP
             exponent = uint256(tokenDecimals) + PRICE_DECIMALS + USD_RATE_DECIMALS - USD_DECIMALS;
         }
 
-        amountUsd = (tokenAmount * price * usdRate) / (10 ** exponent);
+        amountUsd = (tokenAmount * price).mulDiv(usdRate, 10 ** exponent);
     }
 
     modifier finalize(address sender, ISettlerBase.EscrowParams memory escrowParams) override {
