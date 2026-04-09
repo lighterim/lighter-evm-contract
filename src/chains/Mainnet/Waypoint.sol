@@ -12,14 +12,13 @@ import {ISettlerBase} from "../../interfaces/ISettlerBase.sol";
 import {IEscrow} from "../../interfaces/IEscrow.sol";
 import {LighterAccount} from "../../account/LighterAccount.sol";
 import {ParamsHash} from "../../utils/ParamsHash.sol";
-import {FullMath} from "../../vendor/FullMath.sol";
+import {AmountMath} from "../../utils/AmountMath.sol";
 import {UnauthorizedCaller, InvalidArbitratorTicket} from "../../core/SettlerErrors.sol";
 
 
 contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
 
     using ParamsHash for ISettlerBase.EscrowParams;
-    using FullMath for uint256;
 
     constructor(
         address lighterRelayer, IEscrow escrow, LighterAccount lighterAccount, 
@@ -147,7 +146,7 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
         );
 
         uint8 tokenDecimals = IERC20(token).decimals();
-        uint256 amountUsd = _calcAmountUsd(volume, tokenDecimals, escrowParams.price, escrowParams.usdRate);
+        uint256 amountUsd = AmountMath.calcAmountUsd(volume, tokenDecimals, escrowParams.price, escrowParams.usdRate);
         lighterAccount.releasePendingTx(buyer, seller, amountUsd, paidSeconds, releaseSeconds);
     }
     
@@ -190,7 +189,7 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
         uint256 buyerAmount = 0;
         uint256 sellerAmount = 0;
         uint8 tokenDecimals = IERC20(escrowParams.token).decimals();
-        uint256 amountUsd = _calcAmountUsd(volume, tokenDecimals, escrowParams.price, escrowParams.usdRate);
+        uint256 amountUsd = AmountMath.calcAmountUsd(volume, tokenDecimals, escrowParams.price, escrowParams.usdRate);
 
         bool isBuyerLoseDispute;
         if(buyerThresholdBp >= BASIS_POINTS_BASE) {
@@ -224,28 +223,4 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
     } 
 
 
-    /**
-     * @notice Calculates the USD value of a given token amount.
-     * @dev Formula: (tokenAmount * price * usdRate) / 10^(tokenDecimals + PRICE_DECIMALS + USD_RATE_DECIMALS - USD_DECIMALS)
-     * @param tokenAmount The raw amount of the token (in its smallest unit)
-     * @param tokenDecimals The decimals of the token
-     * @param price The price of the token (scaled by PRICE_DECIMALS)
-     * @param usdRate The conversion rate to USD (scaled by USD_RATE_DECIMALS)
-     * @return amountUsd The total value in USD (scaled by USD_DECIMALS)
-     */
-    function _calcAmountUsd(
-        uint256 tokenAmount,
-        uint8 tokenDecimals,
-        uint256 price,
-        uint256 usdRate
-    ) internal pure returns (uint256 amountUsd) {
-        // Optimization: Calculate the shared exponent once.
-        // Small uint8 operations are safe from overflow in this context.
-        uint256 exponent;
-        unchecked {
-            exponent = uint256(tokenDecimals) + PRICE_DECIMALS + USD_RATE_DECIMALS - USD_DECIMALS;
-        }
-
-        amountUsd = (tokenAmount * price).mulDiv(usdRate, 10 ** exponent);
-    }
 }

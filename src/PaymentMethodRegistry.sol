@@ -5,7 +5,7 @@ pragma solidity ^0.8.25;
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
 import {IPaymentMethodRegistry} from "./interfaces/IPaymentMethodRegistry.sol";
-import {InvalidWindowSeconds} from "./core/SettlerErrors.sol";
+import {InvalidWindowSeconds, ZeroAddress} from "./core/SettlerErrors.sol";
 
 /**
  * @title PaymentMethodsRegistry
@@ -20,6 +20,7 @@ contract PaymentMethodRegistry is Ownable, IPaymentMethodRegistry {
 
     event PaymentMethodConfigAdded(bytes32 indexed paymentMethod, ISettlerBase.PaymentMethodConfig config);
     event VerifierAdded(bytes32 indexed paymentMethod, ISettlerBase.Stage stage, address indexed verifier);
+    event VerifierRemoved(bytes32 indexed paymentMethod, ISettlerBase.Stage stage, address indexed verifier);
 
     constructor() Ownable(msg.sender) {
     }
@@ -35,9 +36,15 @@ contract PaymentMethodRegistry is Ownable, IPaymentMethodRegistry {
     }
 
     function addVerifier(bytes32 _paymentMethod, ISettlerBase.Stage _stage, address _verifier) external onlyOwner {
+        if(_verifier == address(0)) revert ZeroAddress();
         verifiers[_paymentMethod][_stage] = _verifier;
-
         emit VerifierAdded(_paymentMethod, _stage, _verifier);
+    }
+
+    function removeVerifier(bytes32 _paymentMethod, ISettlerBase.Stage _stage) external onlyOwner {
+        address verifier = verifiers[_paymentMethod][_stage];
+        delete verifiers[_paymentMethod][_stage];
+        emit VerifierRemoved(_paymentMethod, _stage, verifier);
     }
 
     function getVerifier(bytes32 _paymentMethod, ISettlerBase.Stage _stage) external view returns (address) {
