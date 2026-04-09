@@ -70,7 +70,7 @@ error EscrowAlreadyExists(bytes32 escrowHash);
 error EscrowNotExists(bytes32 escrowHash);
 
 error InvalidEscrowId();
-
+error InvalidWindowSeconds();
 error InvalidCurrency();
 
 error InvalidPayeeDetails();

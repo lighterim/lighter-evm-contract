@@ -85,12 +85,11 @@ interface IEscrow {
 
     /**
      * cancel the escrow
-     * @param escrowHash The hash of the escrow
      * @param escrowParams The parameters of the escrow
      * @param sellerFee The fee of the seller
      * @param windowSeconds The window seconds for the payment method
      */
-    function cancel(bytes32 escrowHash, ISettlerBase.EscrowParams memory escrowParams, uint256 sellerFee, uint256 windowSeconds) external returns (bool ghosted);
+    function cancel(ISettlerBase.EscrowParams memory escrowParams, uint256 sellerFee, uint256 windowSeconds) external returns (bool ghosted);
 
     /**
      * cancel the escrow by buyer
@@ -125,7 +124,7 @@ interface IEscrow {
     function dispute(bytes32 escrowHash, uint256 id, address token, address buyer, address seller, ISettlerBase.EscrowStatus status) external;
 
     function resolve(
-        bytes32 escrowHash, ISettlerBase.EscrowParams memory escrowParams,
+        ISettlerBase.EscrowParams memory escrowParams,
         uint256 buyerFee, uint256 sellerFee, uint32 disputeWindowSeconds,
         uint16 buyerThresholdBp, uint64 resolutionTs, address tbaArbitrator, 
         bytes32 escrowTypedHash, bytes memory counterpartySig
@@ -161,7 +160,7 @@ interface IEscrow {
     event Resolved(address indexed token, address indexed buyer, address indexed seller, bytes32 escrowHash, uint256 id, address tbaArbitrator, uint256 buyerThresholdBp);
     event Claimed(address indexed token, address indexed tba, address indexed to, uint256 amount);
     event CollectedFee(address indexed token, address indexed to, uint256 amount);
-
+    
 
     event AddAuthorizedCreator(address indexed creator);
     event AddAuthorizedExecutor(address indexed executor);
@@ -172,5 +171,6 @@ interface IEscrow {
     event RemoveAuthorizedExecutor(address indexed executor);
     event RemoveAuthorizedVerifier(address indexed verifier);
     event UnwhitelistedToken(address indexed token);
+    event FeeCollectorUpdated(address indexed feeCollector);
 
 }

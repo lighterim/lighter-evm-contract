@@ -5,6 +5,7 @@ pragma solidity ^0.8.25;
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
 import {IPaymentMethodRegistry} from "./interfaces/IPaymentMethodRegistry.sol";
+import {InvalidWindowSeconds} from "./core/SettlerErrors.sol";
 
 /**
  * @title PaymentMethodsRegistry
@@ -24,8 +25,8 @@ contract PaymentMethodRegistry is Ownable, IPaymentMethodRegistry {
     }
 
     function addPaymentMethodConfig(bytes32 _paymentMethod, ISettlerBase.PaymentMethodConfig memory _config) external onlyOwner {
+        if(_config.windowSeconds == 0 || _config.disputeWindowSeconds == 0) revert InvalidWindowSeconds();
         configs[_paymentMethod] = _config;
-
         emit PaymentMethodConfigAdded(_paymentMethod, _config);
     }
 

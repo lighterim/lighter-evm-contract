@@ -8,7 +8,7 @@ import {UnsafeMath} from "./utils/UnsafeMath.sol";
 import {IEscrow} from "./interfaces/IEscrow.sol";
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
 import {ParamsHash} from "./utils/ParamsHash.sol";
-import {InvalidEscrowSignature} from "./core/SettlerErrors.sol";
+import {InvalidEscrowSignature, ZeroAddress} from "./core/SettlerErrors.sol";
 
 abstract contract AbstractContext {
     
@@ -30,6 +30,7 @@ abstract contract Context is AbstractContext {
     address internal relayer;
 
     constructor(IEscrow escrow_, address lighterRelayer_) {
+        if(lighterRelayer_ == address(0)) revert ZeroAddress();
         escrow = escrow_;
         relayer = lighterRelayer_;
     }

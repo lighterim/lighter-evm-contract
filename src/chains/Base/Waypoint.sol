@@ -94,9 +94,7 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
         
         ISettlerBase.PaymentMethodConfig memory cfg = _getPaymentMethodConfig(escrowParams.paymentMethod);
         uint256 sellerFee = getFeeAmount(escrowParams.volume, escrowParams.sellerFeeRate);
-        bool ghosted = escrow.cancel(
-            escrowHash, escrowParams, sellerFee, cfg.windowSeconds
-        );
+        bool ghosted = escrow.cancel(escrowParams, sellerFee, cfg.windowSeconds);
         lighterAccount.cancelPendingTx(escrowParams.buyer, escrowParams.seller, true, ghosted);
     }
 
@@ -180,7 +178,7 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
         _useArbitrationNonce(escrowHash, nonce);
         
         (bool isInitiatedByBuyer, bool acceptedByCounterparty, uint32 resolutionSeconds) = escrow.resolve(
-            escrowHash, escrowParams, 
+            escrowParams, 
             buyerFee, sellerFee,
             disputeWindowSeconds,
             buyerThresholdBp, resolutionTs, tbaArbitrator, resolvedResultTypedHash, counterpartySig

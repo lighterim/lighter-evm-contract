@@ -137,6 +137,7 @@ contract LighterAccount is Ownable, ReentrancyGuard {
      * @param newPrice New price
      */
     function setRentPrice(uint256 newPrice) external onlyOwner {
+        if (newPrice == 0) revert InvalidRentPrice();
         uint256 oldPrice = rentPrice;
         rentPrice = newPrice;
         emit RentPriceUpdated(oldPrice, newPrice);
@@ -185,7 +186,9 @@ contract LighterAccount is Ownable, ReentrancyGuard {
                 unchecked{
                     // calculate the completed ratio bp, the result is a uint32 value.(It's safe to cast to uint32 because the result is always less than BASIS_POINTS_BASE)
                     // forge-lint: disable-next-line(unsafe-typecast)
-                    currentCompletedRatioBp = uint32(uint256(honour.count) * BASIS_POINTS_BASE / uint256(honour.count + honour.cancelledCount));
+                    currentCompletedRatioBp = uint32(
+                        uint256(honour.count - honour.cancelledCount) * BASIS_POINTS_BASE / uint256(honour.count)
+                    );
                 }
                 if (completedRatioBp > currentCompletedRatioBp) revert InsufficientCompletedRatioBp(completedRatioBp, currentCompletedRatioBp);
             }
@@ -419,7 +422,7 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         tbaAddress = _createAccount(tokenId, nostrPubKey, recipient);
     }
 
-    function _createAccount(uint256 tokenId, bytes32 nostrPubKey, address recipient) internal returns (address) {
+    function _createAccount(uint256 tokenId, bytes32 nostrPubKey, address recipient) private returns (address) {
         // 2. Create TBA (AccountV3 instance)
         address tbaAddress = IERC6551Registry(REGISTRY).createAccount(
             ACCOUNT_IMPL,
@@ -432,7 +435,9 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         // 3. Update statistics
         unchecked {
             totalRented++;
-            ticketRents[tbaAddress] += msg.value;
+            if(msg.value > 0) {
+                ticketRents[tbaAddress] += msg.value;
+            }
         }
 
         emit TicketRentedWithTBA(recipient, tokenId, tbaAddress, msg.value, nostrPubKey);

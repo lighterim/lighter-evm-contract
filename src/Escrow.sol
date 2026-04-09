@@ -8,6 +8,7 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
+import {ParamsHash} from "./utils/ParamsHash.sol";
 import {IEscrow} from "./interfaces/IEscrow.sol";
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
 import {SafeTransferLib} from "./vendor/SafeTransferLib.sol";
@@ -64,6 +65,7 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
 
     using SafeTransferLib for IERC20;
     using FullMath for uint256;
+    using ParamsHash for ISettlerBase.EscrowParams;
 
     /// @notice Basis points base (10000 = 100%)
     uint256 constant BASIS_POINTS_BASE = 10000;
@@ -150,7 +152,24 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         else emit RemoveAuthorizedVerifier(verifier);
     }
 
+    function updateFeeCollector(address newFeeCollector) external onlyOwner{
+        if(newFeeCollector == address(0)) revert ZeroAddress();
+        feeCollector = newFeeCollector;
+        emit FeeCollectorUpdated(newFeeCollector);
+    }
 
+    /**
+     * @notice Create an escrow。
+     * when the contract is paused, cannot create new escrow.
+     * @param token The token address to create the escrow for
+     * @param buyer The buyer address to create the escrow for
+     * @param seller The seller address to create the escrow for
+     * @param amount The amount of the escrow
+     * @param sellerFee The seller fee of the escrow
+     * @param escrowHash The hash of the escrow data
+     * @param id The id of the escrow
+     * @param escrowData The data of the escrow
+     */
     function create(address token, address buyer, address seller, uint256 amount, 
         uint256 sellerFee,
         bytes32 escrowHash, uint256 id, ISettlerBase.EscrowData memory escrowData) external 
@@ -196,6 +215,9 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         ISettlerBase.EscrowData storage escrowData = allEscrow[escrowHash];
         ISettlerBase.EscrowStatus status = escrowData.status;
         if(status != ISettlerBase.EscrowStatus.Escrowed) revert InvalidEscrowStatus(escrowHash, status);
+        /// @dev When `confirmTs` is zero, no payment-confirmation timestamp is enforced (some gateways do not provide one).
+        ///      When non-zero, `confirmTs` is expected to come from off-chain attestation (e.g. ZKP via zkVerify/Horizen or TLSN proof)
+        ///      ultimately sourced from the payment gateway via a trusted notarization path (e.g. MPC); it is not chosen by the caller.
         if(confirmTs > 0 && (confirmTs > uint64(block.timestamp) || confirmTs < escrowData.lastActionTs)) revert InvalidPaymentConfirmTimestamp();
 
         (paidSeconds, releaseSeconds) = _release(
@@ -277,9 +299,10 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
     }
 
     function cancel(
-        bytes32 escrowHash, ISettlerBase.EscrowParams memory escrowParams, 
+        ISettlerBase.EscrowParams memory escrowParams, 
         uint256 sellerFee, uint256 windowSeconds
     ) external onlyAuthorizedExecutor nonReentrant returns (bool ghosted){
+        bytes32 escrowHash = escrowParams.hash();
         ISettlerBase.EscrowData storage escrowData = allEscrow[escrowHash];
         ISettlerBase.EscrowStatus status = escrowData.status;
         
@@ -301,7 +324,7 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         sellerEscrow[escrowParams.seller][escrowParams.token] -= refundAmount;
         escrowData.status = ISettlerBase.EscrowStatus.SellerCancelled;
         escrowData.lastActionTs = uint64(block.timestamp);
-        
+        /// @dev If the escrow is finally cancelled, the funds will be returned to the payer, and no fees will be generated.
         IERC20(escrowParams.token).safeTransfer(escrowParams.payer, refundAmount);
 
         emit Cancelled(escrowParams.token, escrowParams.buyer, escrowParams.seller, escrowHash, escrowParams.id, escrowParams.volume);
@@ -339,7 +362,6 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
     }
 
     function resolve(
-        bytes32 escrowHash,
         ISettlerBase.EscrowParams memory escrowParams,
         uint256 buyerFee, 
         uint256 sellerFee,
@@ -349,10 +371,11 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         address tbaArbitrator, 
         bytes32 resolvedResultTypedHash, 
         bytes memory counterpartySig
-    ) external onlyAuthorizedExecutor returns(
+    ) external onlyAuthorizedExecutor nonReentrant returns(
         bool isInitiatedByBuyer, bool acceptedByCounterparty, uint32 resolutionSeconds
         ) {
 
+        bytes32 escrowHash = escrowParams.hash();
         ISettlerBase.EscrowData storage escrowData = allEscrow[escrowHash];
         ISettlerBase.EscrowStatus status = escrowData.status;
         if(
@@ -375,6 +398,7 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
             resolutionSeconds = uint32(currentTs - lastActionTs);
         }
 
+        // @dev The resolutionTs is from the arbitrator's signature data, which is trusted.
         // 1. Check time window first (Cheapest check - fails fast)
         if (currentTs < resolutionTs + disputeWindowSeconds) {
             // 2. Determine who the expected signer is based on dispute status
@@ -403,6 +427,7 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         userCredit[tbaArbitrator][token] += sellerFee;
 
         if(buyerThresholdBp == 0){
+            /// @dev If the buyerThresholdBp is 0, the funds will be returned to the payer, and no buyer settlement fees will be generated.
             IERC20(token).safeTransfer(escrowParams.payer, volume);
         }
         else {
@@ -414,6 +439,7 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
             else{
                 uint256 buyerResolveAmount = buyerNet * buyerThresholdBp / BASIS_POINTS_BASE;
                 userCredit[buyer][token] += buyerResolveAmount;
+                /// @dev The funds awarded to the seller are returned directly to the payer.
                 IERC20(token).safeTransfer(escrowParams.payer, buyerNet - buyerResolveAmount);
             }
         }
