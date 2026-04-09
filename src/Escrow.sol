@@ -3,9 +3,10 @@ pragma solidity ^0.8.25;
 
 
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
 import {ParamsHash} from "./utils/ParamsHash.sol";
@@ -61,7 +62,7 @@ import {
     SellerCancelled --> [*]
     Resolved --> [*]
  */
-contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
+contract Escrow is OwnableUpgradeable, PausableUpgradeable, IEscrow, ReentrancyGuardUpgradeable, UUPSUpgradeable {
 
     using SafeTransferLib for IERC20;
     using FullMath for uint256;
@@ -70,7 +71,7 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
     /// @notice Basis points base (10000 = 100%)
     uint256 constant BASIS_POINTS_BASE = 10000;
 
-    LighterAccount immutable lighterAccount;
+    LighterAccount public lighterAccount;
     address public feeCollector;
 
     // for trade(escrow data)
@@ -105,9 +106,22 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
         _;
     }
 
-    constructor(LighterAccount lighterAccount_, address feeCollector_) Ownable(msg.sender) {
-        if(feeCollector_ == address(0)) revert ZeroAddress();
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
 
+    function initialize(
+        LighterAccount lighterAccount_,
+        address feeCollector_,
+        address owner_
+    ) external initializer {
+        __Ownable_init(owner_);
+        __Pausable_init();
+        __ReentrancyGuard_init();
+        __UUPSUpgradeable_init();
+        if (address(lighterAccount_) == address(0)) revert ZeroAddress();
+        if (feeCollector_ == address(0)) revert ZeroAddress();
         lighterAccount = lighterAccount_;
         feeCollector = feeCollector_;
     }
@@ -501,4 +515,8 @@ contract Escrow is Ownable, Pausable, IEscrow, ReentrancyGuard{
     function unpause() public onlyOwner {
         _unpause();
     }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+    uint256[50] private __gap;
 }

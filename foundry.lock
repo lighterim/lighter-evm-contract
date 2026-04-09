@@ -1,4 +1,7 @@
 {
+  "lib/forge-gas-snapshot": {
+    "rev": "cf34ad1ed0a1f323e77557b9bce420f3385f7400"
+  },
   "lib/forge-std": {
     "tag": {
       "name": "v1.11.0",
@@ -7,6 +10,12 @@
   },
   "lib/openzeppelin-contracts": {
     "rev": "6308fdc5e8e0d5e8a94dc9d5d4c79f6331334c81"
+  },
+  "lib/openzeppelin-contracts-upgradeable": {
+    "tag": {
+      "name": "v5.1.0",
+      "rev": "fa525310e45f91eb20a6d3baa2644be8e0adba31"
+    }
   },
   "lib/permit2": {
     "rev": "cc56ad0f3439c502c246fc5cfcc3db92bb8b7219"

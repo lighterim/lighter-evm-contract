@@ -1,6 +1,7 @@
 pragma solidity ^0.8.25;
 
 import {Script, console} from "forge-std/Script.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import {LighterTicket} from "../src/token/LighterTicket.sol";
 import {ERC6551Registry} from "erc6551/src/ERC6551Registry.sol";
@@ -68,7 +69,15 @@ contract DeployerContract is Script {
         
         console.log("Deploying LighterAccount...");
 
-        lighterAccount = new LighterAccount(address(ticket), address(registry), address(accountImpl), rentPrice);
+        LighterAccount lighterAccountImpl = new LighterAccount();
+        ERC1967Proxy lighterAccountProxy = new ERC1967Proxy(
+            address(lighterAccountImpl),
+            abi.encodeCall(
+                LighterAccount.initialize,
+                (address(ticket), registryAddr, accountImplAddr, rentPrice, deployer)
+            )
+        );
+        lighterAccount = LighterAccount(address(lighterAccountProxy));
         console.log("LighterAccount deployed at:", address(lighterAccount));
         
         console.log("Transferring LighterTicket ownership to LighterAccount...");
@@ -76,7 +85,12 @@ contract DeployerContract is Script {
         console.log("LighterTicket ownership transferred to LighterAccount");
         
         console.log("Deploying Escrow...");
-        escrow = new Escrow(lighterAccount, deployer);
+        Escrow escrowImpl = new Escrow();
+        ERC1967Proxy escrowProxy = new ERC1967Proxy(
+            address(escrowImpl),
+            abi.encodeCall(Escrow.initialize, (lighterAccount, deployer, deployer))
+        );
+        escrow = Escrow(address(escrowProxy));
         escrow.whitelistToken(usdc, true);
         console.log("Escrow deployed at:", address(escrow));
         

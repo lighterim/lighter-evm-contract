@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IERC6551Registry} from "erc6551/src/interfaces/IERC6551Registry.sol";
 import {IERC6551Account} from "erc6551/src/interfaces/IERC6551Account.sol";
@@ -25,15 +26,15 @@ import {
  * 2. Automatically create TBA (AccountV3 instance) for each minted NFT
  * 4. Price management 
  */
-contract LighterAccount is Ownable, ReentrancyGuard {
+contract LighterAccount is OwnableUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable {
 
     /// @notice LighterTicket contract instance
-    LighterTicket public immutable TICKET_CONTRACT;
+    LighterTicket public TICKET_CONTRACT;
     /// @notice ERC6551Registry address
-    address public immutable REGISTRY;
+    address public REGISTRY;
     /// @notice AccountV3 implementation contract address
-    address public immutable ACCOUNT_IMPL;
-    bytes32 public immutable SALT;
+    address public ACCOUNT_IMPL;
+    bytes32 public SALT;
 
     // the end token id for genesis1(user group for genesis1) and genesis2(user group for genesis2)
     uint8 public constant GENESIS1_END = 10;
@@ -112,20 +113,29 @@ contract LighterAccount is Ownable, ReentrancyGuard {
      * @param accountImplementation_ AccountV3 implementation address
      * @param rentPrice_ Initial mint price
      */
-    constructor(
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(
         address ticketContract_,
         address registry_,
         address accountImplementation_,
-        uint256 rentPrice_
-    ) Ownable(msg.sender) {
+        uint256 rentPrice_,
+        address owner_
+    ) external initializer {
+        __Ownable_init(owner_);
+        __ReentrancyGuard_init();
+        __UUPSUpgradeable_init();
         if (rentPrice_ == 0) revert InvalidRentPrice();
         if (ticketContract_ == address(0)) revert ZeroAddress();
         if (registry_ == address(0)) revert ZeroAddress();
         if (accountImplementation_ == address(0)) revert ZeroAddress();
-        
+
         TICKET_CONTRACT = LighterTicket(ticketContract_);
         REGISTRY = registry_;
-        ACCOUNT_IMPL= accountImplementation_;
+        ACCOUNT_IMPL = accountImplementation_;
         rentPrice = rentPrice_;
         SALT = bytes32(uint256(uint160(address(this))));
     }
@@ -591,6 +601,9 @@ contract LighterAccount is Ownable, ReentrancyGuard {
         return size > 0;
     }
 
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+    uint256[50] private __gap;
 
 }
 
