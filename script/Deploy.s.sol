@@ -14,7 +14,7 @@ import {MainnetWaypoint} from "../src/chains/Mainnet/Waypoint.sol";
 import {PaymentMethodRegistry} from "../src/PaymentMethodRegistry.sol";
 import {ISettlerBase} from "../src/interfaces/ISettlerBase.sol";
 import {MockUSDC} from "../src/utils/TokenMock.sol";
-import {ZkVerifyProofVerifier} from "../src/chains/Mainnet/ZkVerifyProofVerifier.sol";
+// import {ZkVerifyProofVerifier} from "../src/chains/Mainnet/ZkVerifyProofVerifier.sol";
 import {PaymentTlsnProofVerifier} from "../src/chains/Mainnet/PaymentTlsnProofVerifier.sol";
 
 contract DeployerContract is Script {
@@ -28,7 +28,7 @@ contract DeployerContract is Script {
     MainnetWaypoint public mainnetWaypoint;
     MainnetTakeIntent public takeIntent;
     PaymentMethodRegistry public paymentMethodRegistry;
-    ZkVerifyProofVerifier public zkVerifyProofVerifier;
+    // ZkVerifyProofVerifier public zkVerifyProofVerifier;
     PaymentTlsnProofVerifier public paymentTlsnProofVerifier;
     uint256 public rentPrice = 0.00001 ether;
     

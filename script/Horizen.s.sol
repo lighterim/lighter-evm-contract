@@ -14,7 +14,6 @@ import {MainnetTakeIntent} from "../src/chains/Horizen/TakeIntent.sol";
 import {MainnetWaypoint} from "../src/chains/Horizen/Waypoint.sol";
 import {PaymentMethodRegistry} from "../src/PaymentMethodRegistry.sol";
 import {ISettlerBase} from "../src/interfaces/ISettlerBase.sol";
-import {ZkVerifyProofVerifier} from "../src/chains/Horizen/ZkVerifyProofVerifier.sol";
 import {PaymentTlsnProofVerifier} from "../src/chains/Mainnet/PaymentTlsnProofVerifier.sol";
 
 contract HorizenDeployer is Script {
@@ -28,7 +27,7 @@ contract HorizenDeployer is Script {
     MainnetWaypoint public mainnetWaypoint;
     MainnetTakeIntent public takeIntent;
     PaymentMethodRegistry public paymentMethodRegistry;
-    ZkVerifyProofVerifier public zkVerifyProofVerifier;
+    // ZkVerifyProofVerifier public zkVerifyProofVerifier;
     PaymentTlsnProofVerifier public paymentTlsnProofVerifier;
 
     uint256 public rentPrice = 0.00001 ether;

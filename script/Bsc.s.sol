@@ -14,7 +14,6 @@ import {MainnetTakeIntent} from "../src/chains/Bsc/TakeIntent.sol";
 import {MainnetWaypoint} from "../src/chains/Bsc/Waypoint.sol";
 import {PaymentMethodRegistry} from "../src/PaymentMethodRegistry.sol";
 import {ISettlerBase} from "../src/interfaces/ISettlerBase.sol";
-import {ZkVerifyProofVerifier} from "../src/chains/Bsc/ZkVerifyProofVerifier.sol";
 import {PaymentTlsnProofVerifier} from "../src/chains/Mainnet/PaymentTlsnProofVerifier.sol";
 
 
@@ -29,7 +28,6 @@ contract BscDeployer is Script {
     MainnetWaypoint public mainnetWaypoint;
     MainnetTakeIntent public takeIntent;
     PaymentMethodRegistry public paymentMethodRegistry;
-    ZkVerifyProofVerifier public zkVerifyProofVerifier;
     PaymentTlsnProofVerifier public paymentTlsnProofVerifier;
     uint256 public rentPrice = 0.00001 ether;
     
