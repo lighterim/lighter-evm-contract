@@ -82,10 +82,8 @@ if [ -z "$SELLER_PRIV_KEY" ]; then
 fi
 
 export usdc=${USDC:-0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238}
-export permit2=0x000000000022D473030F116dDEE9F6B43aC78BA3  # Standard Permit2 address
+export permit2=0x000000000022D473030F116dDEE9F6B43aC78BA3
 export usdcDecimals=6
-
-# Load contract addresses from environment or use defaults
 export LighterAccount=${LIGHTER_ACCOUNT}
 export LighterTicket=${LIGHTER_TICKET}
 export Escrow=${ESCROW}
