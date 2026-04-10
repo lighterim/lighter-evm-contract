@@ -38,6 +38,9 @@ contract HorizenDeployer is Script {
     address public usdc;
     address public registryAddr;
     address public accountImplAddr;
+    address public feeCollector;
+    address public relayer;
+    bytes20 public gitCommit;
 
     function setUp() public {
         deployer = vm.envAddress("DEPLOYER");
@@ -46,9 +49,11 @@ contract HorizenDeployer is Script {
         registryAddr = vm.envAddress("ERC6551_REGISTRY");
         accountImplAddr = vm.envAddress("ACCOUNT_V3_IMPL");
         usdc = vm.envAddress("USDC");
-        // MockUSDC u = new MockUSDC();
-        // usdc = address(u);
-        // console.log("usdc deployed at:", usdc);
+        feeCollector = vm.envAddress("FEE_COLLECTOR");
+        relayer = vm.envAddress("RELAYER");
+        bytes memory gitCommitBytes = vm.envBytes("GIT_COMMIT");
+        require(gitCommitBytes.length >= 20, "Environment variable too short");
+        gitCommit = bytes20(gitCommitBytes);
     }
 
     function run() public{
@@ -87,7 +92,7 @@ contract HorizenDeployer is Script {
         Escrow escrowImpl = new Escrow();
         ERC1967Proxy escrowProxy = new ERC1967Proxy(
             address(escrowImpl),
-            abi.encodeCall(Escrow.initialize, (lighterAccount, deployer, deployer))
+            abi.encodeCall(Escrow.initialize, (lighterAccount, feeCollector, deployer))
         );
         escrow = Escrow(address(escrowProxy));
         escrow.whitelistToken(usdc, true);
@@ -118,13 +123,13 @@ contract HorizenDeployer is Script {
         // paymentMethodRegistry.addVerifier(bytes32(0), ISettlerBase.Stage.MANUAL, address(zkVerifyProofVerifier));
 
         console.log("Deploying MainnetTakeIntent...");
-        takeIntent = new MainnetTakeIntent(deployer, escrow, lighterAccount, paymentMethodRegistry, bytes20(0), allowanceHolder);
+        takeIntent = new MainnetTakeIntent(relayer, escrow, lighterAccount, paymentMethodRegistry, gitCommit, allowanceHolder);
         escrow.authorizeCreator(address(takeIntent), true);
         lighterAccount.authorizeOperator(address(takeIntent), true);
         console.log("MainnetTakeIntent deployed at:", address(takeIntent));
 
         console.log("Deploying MainnetWaypoint...");
-        mainnetWaypoint = new MainnetWaypoint(deployer, escrow, lighterAccount, paymentMethodRegistry, bytes20(0));
+        mainnetWaypoint = new MainnetWaypoint(relayer, escrow, lighterAccount, paymentMethodRegistry, gitCommit);
         escrow.authorizeExecutor(address(mainnetWaypoint), true);
         lighterAccount.authorizeOperator(address(mainnetWaypoint), true);
         console.log("MainnetWaypoint deployed at:", address(mainnetWaypoint));
@@ -135,7 +140,7 @@ contract HorizenDeployer is Script {
         // console.log("ZkVerifyProofVerifier deployed at:", address(zkVerifyProofVerifier));
         
         console.log("Deploying PaymentTlsnProofVerifier...");
-        paymentTlsnProofVerifier = new PaymentTlsnProofVerifier(keccak256("wise"), lighterAccount, tlsnWitness, escrow, deployer, bytes20(0));
+        paymentTlsnProofVerifier = new PaymentTlsnProofVerifier(keccak256("wise"), lighterAccount, tlsnWitness, escrow, relayer, gitCommit);
         escrow.authorizeVerifier(address(paymentTlsnProofVerifier), true);
         lighterAccount.authorizeOperator(address(paymentTlsnProofVerifier), true);
         paymentMethodRegistry.addVerifier(keccak256("wise"), ISettlerBase.Stage.ZK_TLSN, address(paymentTlsnProofVerifier));
@@ -146,10 +151,14 @@ contract HorizenDeployer is Script {
         console.log("ERC6551Registry:", address(registry));
         console.log("AccountV3Simplified:", address(accountImpl));
         console.log("ZkVerify:", zkVerify);
+        console.log("TLSN Witness:", tlsnWitness);
+        console.log("Relayer:", relayer);
 
         console.log("export LighterAccount=%s", address(lighterAccount));
+        console.log("export LighterAccountImpl=%s", address(lighterAccountImpl));
         console.log("export LighterTicket=%s", address(ticket)); 
         console.log("export Escrow=%s", address(escrow));
+        console.log("export EscrowImpl=%s", address(escrowImpl));
         console.log("export AllowanceHolder=%s", address(allowanceHolder));
         console.log("export TakeIntent=%s", address(takeIntent));
         console.log("export SetWaypoint=%s", address(mainnetWaypoint));

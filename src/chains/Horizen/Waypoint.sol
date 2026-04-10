@@ -90,7 +90,7 @@ contract MainnetWaypoint is MainnetMixin, SettlerWaypoint, EIP712 {
      * @param escrowParams escrow parameters
      */
     function _cancelBySeller(address sender, ISettlerBase.EscrowParams memory escrowParams, bytes memory sig) internal virtual override{
-        (bytes32 escrowHash,) = makesureEscrowParams(_domainSeparator(), escrowParams, sig);
+        makesureEscrowParams(_domainSeparator(), escrowParams, sig);
         if(!lighterAccount.isOwnerCall(escrowParams.seller, sender)) revert UnauthorizedCaller(sender);
         
         ISettlerBase.PaymentMethodConfig memory cfg = _getPaymentMethodConfig(escrowParams.paymentMethod);
