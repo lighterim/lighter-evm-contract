@@ -4,6 +4,7 @@ pragma solidity ^0.8.25;
 
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import {Test} from "forge-std/Test.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 // import {BasePairTest} from "./BasePairTest.t.sol";
 import {BasePairTest} from "./LocalBasePairTest.t.sol";
 import {Settler} from "../src/Settler.sol";
@@ -64,9 +65,23 @@ contract LocalTakeIntentTest is Permit2Signature {
         ERC6551Registry registry = new ERC6551Registry();
         AccountV3Simplified accountImpl = new AccountV3Simplified();
         
-        lighterAccount = new LighterAccount(address(lighterTicket), address(registry), address(accountImpl), rentPrice);
+        LighterAccount lighterAccountImpl = new LighterAccount();
+        ERC1967Proxy lighterAccountProxy = new ERC1967Proxy(
+            address(lighterAccountImpl),
+            abi.encodeCall(
+                LighterAccount.initialize,
+                (address(lighterTicket), address(registry), address(accountImpl), rentPrice, address(this))
+            )
+        );
+        lighterAccount = LighterAccount(address(lighterAccountProxy));
         lighterTicket.transferOwnership(address(lighterAccount));
-        escrow = new Escrow(lighterAccount, relayer);
+
+        Escrow escrowImpl = new Escrow();
+        ERC1967Proxy escrowProxy = new ERC1967Proxy(
+            address(escrowImpl),
+            abi.encodeCall(Escrow.initialize, (lighterAccount, relayer, address(this)))
+        );
+        escrow = Escrow(address(escrowProxy));
         escrow.whitelistToken(address(usdc), true);
         allowanceHolder = new AllowanceHolder();
         

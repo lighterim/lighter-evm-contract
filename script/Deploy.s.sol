@@ -68,7 +68,6 @@ contract DeployerContract is Script {
         console.log("AccountV3Simplified deployed at:", address(accountImpl));
         
         console.log("Deploying LighterAccount...");
-
         LighterAccount lighterAccountImpl = new LighterAccount();
         ERC1967Proxy lighterAccountProxy = new ERC1967Proxy(
             address(lighterAccountImpl),
