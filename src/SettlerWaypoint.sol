@@ -7,7 +7,7 @@ import {SettlerBase} from "./SettlerBase.sol";
 
 import {ISettlerActions} from "./ISettlerActions.sol";
 import {WaypointAbstract} from "./core/WaypointAbstract.sol";
-import {revertActionInvalid, InvalidResolvedResultSignature, InvalidEscrowSignature, InvalidArbitrationNonce} from "./core/SettlerErrors.sol";
+import {InvalidResolvedResultSignature, InvalidEscrowSignature, InvalidArbitrationNonce} from "./core/SettlerErrors.sol";
 
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {ParamsHash} from "./utils/ParamsHash.sol";

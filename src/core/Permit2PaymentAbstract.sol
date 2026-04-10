@@ -3,7 +3,7 @@ pragma solidity ^0.8.25;
 
 
 import {ISignatureTransfer} from "@uniswap/permit2/interfaces/ISignatureTransfer.sol";
-import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer.sol";
+// import {IAllowanceTransfer} from "@uniswap/permit2/interfaces/IAllowanceTransfer.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {ISettlerBase} from "../interfaces/ISettlerBase.sol";
 import {ParamsHash} from "../utils/ParamsHash.sol";

@@ -5,7 +5,6 @@ import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
 import {ISettlerBase} from "./interfaces/ISettlerBase.sol";
-import {revertActionInvalid} from "./core/SettlerErrors.sol";
 import {VerifierAbstract} from "./core/VerifierAbstract.sol";
 import {ITlsnProofVerifier} from "./interfaces/ITlsnProofVerifier.sol";
 import {IEscrow} from "./interfaces/IEscrow.sol";

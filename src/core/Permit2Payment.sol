@@ -47,7 +47,7 @@ abstract contract Permit2PaymentTakeIntent is SettlerBase, Permit2PaymentAbstrac
 
         // Solidity won't let us reference the constant `_PERMIT2` in assembly, but this compiles
         // down to just a single PUSH opcode just before the CALL, with optimization turned on.
-        ISignatureTransfer __PERMIT2 = _PERMIT2;
+        ISignatureTransfer _permit2 = _PERMIT2;
         assembly ("memory-safe") {
             let ptr := mload(0x40)
             mstore(ptr, 0x137c29fe) // selector for `permitWitnessTransferFrom(((address,uint256),uint256,uint256),(address,uint256),address,bytes32,string,bytes)`
@@ -76,7 +76,7 @@ abstract contract Permit2PaymentTakeIntent is SettlerBase, Permit2PaymentAbstrac
             if iszero(
                 call(
                     gas(),
-                    __PERMIT2,
+                    _permit2,
                     0x00,
                     add(0x1c, ptr),
                     add(0x184, add(witnessTypeStringLength, sigLength)),
