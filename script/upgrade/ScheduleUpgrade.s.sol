@@ -31,9 +31,11 @@ contract UpgradeScheduler is Script {
         bytes memory payload = abi.encodeCall(IUUPSLike.upgradeToAndCall, (newImplementation, initCallData));
         bytes32 opId = timelock.hashOperation(targetProxy, 0, payload, predecessor, salt);
 
-        vm.startBroadcast();
-        timelock.schedule(targetProxy, 0, payload, predecessor, salt, delay);
-        vm.stopBroadcast();
+        
+        // vm.startBroadcast();
+        // timelock.schedule(targetProxy, 0, payload, predecessor, salt, delay);
+        // vm.stopBroadcast();
+        
 
         console.log("Scheduled operation id:", vm.toString(opId));
         console.log("Timelock:", address(timelock));
@@ -41,6 +43,7 @@ contract UpgradeScheduler is Script {
         console.log("New implementation:", newImplementation);
         console.log("Delay:", delay);
         console.log("Ready at timestamp:", timelock.getTimestamp(opId));
+        console.logBytes(payload);
     }
 }
 

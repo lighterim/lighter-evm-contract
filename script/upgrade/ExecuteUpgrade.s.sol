@@ -28,7 +28,7 @@ contract UpgradeExecutor is Script {
     function run() public {
         bytes memory payload = abi.encodeCall(IUUPSLike.upgradeToAndCall, (newImplementation, initCallData));
         bytes32 opId = timelock.hashOperation(targetProxy, 0, payload, predecessor, salt);
-
+        console.logBytes32(opId);
         vm.startBroadcast();
         timelock.execute(targetProxy, 0, payload, predecessor, salt);
         vm.stopBroadcast();
