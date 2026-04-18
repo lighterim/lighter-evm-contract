@@ -30,7 +30,7 @@ contract HorizenDeployer is Script {
     // ZkVerifyProofVerifier public zkVerifyProofVerifier;
     PaymentTlsnProofVerifier public paymentTlsnProofVerifier;
 
-    uint256 public rentPrice = 0.00001 ether;
+    uint256 public rentPrice;
     
     address public deployer;
     address public zkVerify;
@@ -48,6 +48,7 @@ contract HorizenDeployer is Script {
         tlsnWitness = vm.envAddress("TLSN_WITNESS");
         registryAddr = vm.envAddress("ERC6551_REGISTRY");
         accountImplAddr = vm.envAddress("ACCOUNT_V3_IMPL");
+        rentPrice = vm.envUint("RENT_PRICE");
         usdc = vm.envAddress("USDC");
         feeCollector = vm.envAddress("FEE_COLLECTOR");
         relayer = vm.envAddress("RELAYER");
