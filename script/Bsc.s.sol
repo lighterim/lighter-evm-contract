@@ -3,6 +3,7 @@ pragma solidity ^0.8.25;
 
 import {Script, console} from "forge-std/Script.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import {LighterTicket} from "../src/token/LighterTicket.sol";
 import {ERC6551Registry} from "erc6551/src/ERC6551Registry.sol";
@@ -29,7 +30,7 @@ contract BscDeployer is Script {
     MainnetTakeIntent public takeIntent;
     PaymentMethodRegistry public paymentMethodRegistry;
     PaymentTlsnProofVerifier public paymentTlsnProofVerifier;
-    uint256 public rentPrice = 0.00001 ether;
+    uint256 public rentPrice;
     
     address public deployer;
     address public zkVerify;
@@ -48,6 +49,7 @@ contract BscDeployer is Script {
         registryAddr = vm.envAddress("ERC6551_REGISTRY");
         accountImplAddr = vm.envAddress("ACCOUNT_V3_IMPL");
         usdc = vm.envAddress("USDC");
+        rentPrice = vm.envUint("RENT_PRICE");
         feeCollector = vm.envAddress("FEE_COLLECTOR");
         relayer = vm.envAddress("RELAYER");
         bytes memory gitCommitBytes = vm.envBytes("GIT_COMMIT");
@@ -62,7 +64,8 @@ contract BscDeployer is Script {
         vm.startBroadcast();
  
         console.log("Deploying LighterTicket...");
-        ticket = new LighterTicket("LighterTicket", "LTK", "https://nft.lighter.im/horizen/");
+        string memory ticketBaseUri = string.concat("https://nft.lighter.im/", Strings.toString(block.chainid), "/");
+        ticket = new LighterTicket("LighterTicket", "LTK", ticketBaseUri);
         // ticket.genesisMint(deployer, 10);
         console.log("LighterTicket deployed at:", address(ticket));
         
@@ -108,17 +111,17 @@ contract BscDeployer is Script {
         paymentMethodRegistry = new PaymentMethodRegistry();
         console.log("PaymentMethodRegistry deployed at:", address(paymentMethodRegistry));
         paymentMethodRegistry.addPaymentMethodConfig(keccak256("wechat"), ISettlerBase.PaymentMethodConfig({
-            windowSeconds: 300,
+            windowSeconds: 1200,
             disputeWindowSeconds: 604800, // 7 days
             isEnabled: true
         }));
         paymentMethodRegistry.addPaymentMethodConfig(keccak256("wise"), ISettlerBase.PaymentMethodConfig({
-            windowSeconds: 300,
+            windowSeconds: 1200,
             disputeWindowSeconds: 604800, // 7 days
             isEnabled: true
         }));
         paymentMethodRegistry.addPaymentMethodConfig(keccak256("alipay"), ISettlerBase.PaymentMethodConfig({
-            windowSeconds: 300, 
+            windowSeconds: 1200, 
             disputeWindowSeconds: 604800, // 7 days
             isEnabled: true
         }));

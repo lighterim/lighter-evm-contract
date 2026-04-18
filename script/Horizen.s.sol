@@ -3,6 +3,7 @@ pragma solidity ^0.8.25;
 
 import {Script, console} from "forge-std/Script.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import {LighterTicket} from "../src/token/LighterTicket.sol";
 import {ERC6551Registry} from "erc6551/src/ERC6551Registry.sol";
@@ -61,7 +62,8 @@ contract HorizenDeployer is Script {
         vm.startBroadcast();
  
         console.log("Deploying LighterTicket...");
-        ticket = new LighterTicket("LighterTicket", "LTK", "https://nft.lighter.im/horizen/");
+        string memory ticketBaseUri = string.concat("https://nft.lighter.im/", Strings.toString(block.chainid), "/");
+        ticket = new LighterTicket("LighterTicket", "LTK", ticketBaseUri);
         // ticket.genesisMint(deployer, 10);
         console.log("LighterTicket deployed at:", address(ticket));
         
@@ -107,17 +109,17 @@ contract HorizenDeployer is Script {
         paymentMethodRegistry = new PaymentMethodRegistry();
         console.log("PaymentMethodRegistry deployed at:", address(paymentMethodRegistry));
         paymentMethodRegistry.addPaymentMethodConfig(keccak256("wechat"), ISettlerBase.PaymentMethodConfig({
-            windowSeconds: 300,
+            windowSeconds: 1200,
             disputeWindowSeconds: 604800, // 7 days
             isEnabled: true
         }));
         paymentMethodRegistry.addPaymentMethodConfig(keccak256("wise"), ISettlerBase.PaymentMethodConfig({
-            windowSeconds: 300,
+            windowSeconds: 1200,
             disputeWindowSeconds: 604800, // 7 days
             isEnabled: true
         }));
         paymentMethodRegistry.addPaymentMethodConfig(keccak256("alipay"), ISettlerBase.PaymentMethodConfig({
-            windowSeconds: 300, 
+            windowSeconds: 1200, 
             disputeWindowSeconds: 604800, // 7 days
             isEnabled: true
         }));

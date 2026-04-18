@@ -77,7 +77,7 @@ fi
 # Load sensitive information from environment variables
 export buyerPrivKey=$BUYER_PRIV_KEY
 export sellerPrivKey=$SELLER_PRIV_KEY
-export relayerPrivKey=${RELAYER_PRIVATE_KEY:-$sellerPrivKey}  # Default to seller if not set
+export relayerPrivKey=${RELAYER_PRIVATE_KEY}
 export tbaBuyer=$TBA_BUYER
 export tbaSeller=$TBA_SELLER
 export tradeId=${TRADE_ID:-1}
@@ -86,14 +86,14 @@ export permit2=0x000000000022D473030F116dDEE9F6B43aC78BA3  # Standard Permit2 ad
 export usdcDecimals=6
 
 # Load contract addresses from environment or use defaults
-export LighterAccount=${LIGHTER_ACCOUNT:-0x31d42A0f1C9d338B5477fce674745835CEEde398}
-export LighterTicket=${LIGHTER_TICKET:-0xac70D4678Bc57B402c58F863a79d3437425C7305}
-export Escrow=${ESCROW:-0x6C99AF667b8Ea8c7f7B2083F08CfDb8feF653B87}
-export AllowanceHolder=${ALLOWANCE_HOLDER:-0xb8846d05341446108BDE1a8248fC9b60975cD89C}
-export TakeIntent=${TAKE_INTENT:-0xb4557925b667f98767dA841c0fC03e6bC408C7Af}
-export SetWaypoint=${SET_WAYPOINT:-0x3a1F23470ED277898f962E3fcA94c2D0225FC6A0}
-export ZkVerifyProofVerifier=${ZK_VERIFY_PROOF_VERIFIER:-0xa2607E73CA6ccb2F5Ca5883cB7757904aB3fF74e}
-export Permit2Helper=${PERMIT2_HELPER:-0x69047390100A919bE0B6c453D4Acb05b3d317395}
+export LighterAccount=${LIGHTER_ACCOUNT}
+export LighterTicket=${LIGHTER_TICKET}
+export Escrow=${ESCROW}
+export AllowanceHolder=${ALLOWANCE_HOLDER}
+export TakeIntent=${TAKE_INTENT}
+export SetWaypoint=${SET_WAYPOINT}
+export ZkVerifyProofVerifier=${ZK_VERIFY_PROOF_VERIFIER}
+export Permit2Helper=${PERMIT2_HELPER}
 
 # Display configuration summary
 echo "=========================================="

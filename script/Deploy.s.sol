@@ -32,7 +32,7 @@ contract DeployerContract is Script {
     PaymentMethodRegistry public paymentMethodRegistry;
     // ZkVerifyProofVerifier public zkVerifyProofVerifier;
     PaymentTlsnProofVerifier public paymentTlsnProofVerifier;
-    uint256 public rentPrice = 0.00001 ether;
+    uint256 public rentPrice;
     
     address public deployer;
     address public zkVerify;
@@ -51,6 +51,7 @@ contract DeployerContract is Script {
         registryAddr = vm.envAddress("ERC6551_REGISTRY");
         accountImplAddr = vm.envAddress("ACCOUNT_V3_IMPL");
         usdc = vm.envAddress("USDC");
+        rentPrice = vm.envUint("RENT_PRICE");
         feeCollector = vm.envAddress("FEE_COLLECTOR");
         relayer = vm.envAddress("RELAYER");
         bytes memory gitCommitBytes = vm.envBytes("GIT_COMMIT");
@@ -112,17 +113,17 @@ contract DeployerContract is Script {
         paymentMethodRegistry = new PaymentMethodRegistry();
         console.log("PaymentMethodRegistry deployed at:", address(paymentMethodRegistry));
         paymentMethodRegistry.addPaymentMethodConfig(keccak256("wechat"), ISettlerBase.PaymentMethodConfig({
-            windowSeconds: 300,
+            windowSeconds: 1200,
             disputeWindowSeconds: 604800, // 7 days
             isEnabled: true
         }));
         paymentMethodRegistry.addPaymentMethodConfig(keccak256("wise"), ISettlerBase.PaymentMethodConfig({
-            windowSeconds: 300,
+            windowSeconds: 1200,
             disputeWindowSeconds: 604800, // 7 days
             isEnabled: true
         }));
         paymentMethodRegistry.addPaymentMethodConfig(keccak256("alipay"), ISettlerBase.PaymentMethodConfig({
-            windowSeconds: 300, 
+            windowSeconds: 1200, 
             disputeWindowSeconds: 604800, // 7 days
             isEnabled: true
         }));
