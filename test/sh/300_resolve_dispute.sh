@@ -91,6 +91,21 @@ if [ -z "$CHAIN_ID" ]; then
     exit 1
 fi
 
+ensure_seller_allowance(){
+    local sellerPrivKey=$1
+    local token=$2
+    local allowanceHolder=$3
+    local amount=$4
+    local uintMax=$(cast --to-uint256 99999999999999999999999999)
+
+    local eoa=$(cast wallet address --private-key=$sellerPrivKey)
+
+    local allowance = $(cast call $token "allowance(address,address)(uint256)" $eoa $allowanceHolder)
+    if [ $allowance -lt $amount ]; then
+        cast send $token 'approve(address,uint256)' $allowanceHolder $uintMax --private-key=$sellerPrivKey
+    fi
+}
+
 parse_log_data_field() {
     
     local json=$1
@@ -300,6 +315,7 @@ export action3Params=$(cast abi-encode "x(((address,uint256),uint256,uint256),(a
 echo "action3Params: $action3Params" 
 export action3Data="${action3Selector}${action3Params:2}"
 
+ensure_seller_allowance $sellerPrivKey $usdc $permit2 $permit2Amount
 # Note: For bytes[] encoding in cast abi-encode, we need to ensure each bytes value is properly formatted
 # Each action data is already a hex string with 0x prefix, which cast should handle correctly
 # However, we'll encode the array directly in the execute function call instead

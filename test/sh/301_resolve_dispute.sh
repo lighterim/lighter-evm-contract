@@ -91,6 +91,21 @@ if [ -z "$CHAIN_ID" ]; then
     exit 1
 fi
 
+ensure_seller_allowance(){
+    local sellerPrivKey=$1
+    local token=$2
+    local allowanceHolder=$3
+    local amount=$4
+    local uintMax=$(cast --to-uint256 99999999999999999999999999)
+
+    local eoa=$(cast wallet address --private-key=$sellerPrivKey)
+
+    local allowance=$(cast call $token "allowance(address,address)(uint256)" $eoa $allowanceHolder)
+    if [ $allowance -lt $amount ]; then
+        cast send $token 'approve(address,uint256)' $allowanceHolder $uintMax --private-key=$sellerPrivKey
+    fi
+}
+
 parse_log_data_field() {
     
     local json=$1
@@ -174,14 +189,14 @@ export permit2=0x000000000022D473030F116dDEE9F6B43aC78BA3
 export usdcDecimals=6
 
 # Load contract addresses from environment or use defaults
-export LighterAccount=${LIGHTER_ACCOUNT:-0x31d42A0f1C9d338B5477fce674745835CEEde398}
-export LighterTicket=${LIGHTER_TICKET:-0xac70D4678Bc57B402c58F863a79d3437425C7305}
-export Escrow=${ESCROW:-0x6C99AF667b8Ea8c7f7B2083F08CfDb8feF653B87}
-export AllowanceHolder=${ALLOWANCE_HOLDER:-0xb8846d05341446108BDE1a8248fC9b60975cD89C}
-export TakeIntent=${TAKE_INTENT:-0xb4557925b667f98767dA841c0fC03e6bC408C7Af}
-export SetWaypoint=${SET_WAYPOINT:-0x3a1F23470ED277898f962E3fcA94c2D0225FC6A0}
-export ZkVerifyProofVerifier=${ZK_VERIFY_PROOF_VERIFIER:-0xa2607E73CA6ccb2F5Ca5883cB7757904aB3fF74e}
-export Permit2Helper=${PERMIT2_HELPER:-0x69047390100A919bE0B6c453D4Acb05b3d317395}
+export LighterAccount=${LIGHTER_ACCOUNT}
+export LighterTicket=${LIGHTER_TICKET}
+export Escrow=${ESCROW}
+export AllowanceHolder=${ALLOWANCE_HOLDER}
+export TakeIntent=${TAKE_INTENT}
+export SetWaypoint=${SET_WAYPOINT}
+export ZkVerifyProofVerifier=${ZK_VERIFY_PROOF_VERIFIER}
+export Permit2Helper=${PERMIT2_HELPER}
 
 # Display configuration summary
 echo "=========================================="
@@ -294,6 +309,8 @@ echo "action3Selector: $action3Selector"
 export action3Params=$(cast abi-encode "x(((address,uint256),uint256,uint256),(address,uint256),(address,(uint256,uint256),uint64,bytes32,bytes32,bytes32,uint256,uint256,uint256,uint32),bytes)" "$permit" "$transferDetails" "$intentParams" "$sig")
 echo "action3Params: $action3Params" 
 export action3Data="${action3Selector}${action3Params:2}"
+
+ensure_seller_allowance $sellerPrivKey $usdc $permit2 $permit2Amount
 
 # Note: For bytes[] encoding in cast abi-encode, we need to ensure each bytes value is properly formatted
 # Each action data is already a hex string with 0x prefix, which cast should handle correctly

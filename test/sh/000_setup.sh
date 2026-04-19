@@ -81,7 +81,7 @@ if [ -z "$SELLER_PRIV_KEY" ]; then
     exit 1
 fi
 
-export usdc=${USDC:-0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238}
+export usdc=${USDC}
 export permit2=0x000000000022D473030F116dDEE9F6B43aC78BA3
 export usdcDecimals=6
 export LighterAccount=${LIGHTER_ACCOUNT}
@@ -92,11 +92,9 @@ export TakeIntent=${TAKE_INTENT}
 export SetWaypoint=${SET_WAYPOINT}
 export ZkVerifyProofVerifier=${ZK_VERIFY_PROOF_VERIFIER}
 export Permit2Helper=${PERMIT2_HELPER}
-export buyerPrivKey=${BUYER_PRIV_KEY}
-export sellerPrivKey=${SELLER_PRIV_KEY}
+export deployerPrivKey=${PRIV_KEY}
+export rentPrice=${RENT_PRICE}
 
-export nostrSeller=0x2a9716cdd08bd7b14c94119c8259c89f3baab64d7b161eb03ad43dc1c1ccec68
-export nostrBuyer=0x36bd5b22605899659cb1053737316096195b3ceb37c851645efd23e4497d7097
 
 # Function to create account and return TBA address
 # Parameters: privateKey, nostrPubkey, lighterTicket
@@ -112,7 +110,7 @@ create_account_and_get_tba() {
     fi
     
     local eoa=$(cast wallet address --private-key=$privateKey)
-    cast send $accountManager 'createAccount(address,bytes32)' $eoa $nostrPubkey --value 0.0001ether --private-key $privateKey
+    cast send $accountManager 'createAccount(address,bytes32)' $eoa $nostrPubkey --value $rentPrice --private-key $privateKey
     
     local tokenId=$(cast --to-dec $(cast call $nft "tokenOfOwnerByIndex(address,uint256)" $eoa $index))
     echo "tokenId: $tokenId" >&2
@@ -138,8 +136,9 @@ export eoaSeller=$(cast wallet address --private-key=$sellerPrivKey)
 export tbaSeller=$(create_account_and_get_tba $LighterAccount $LighterTicket $sellerPrivKey $nostrSeller)
 export TBA_SELLER=$tbaSeller
 
+
 export eoaArbitrator=$(cast wallet address --private-key=$arbitratorPrivKey)
-cast send $LighterAccount 'createAccount(uint8,address,bytes32)' 11 $eoaArbitrator $nostrArbitrator --private-key $sellerPrivKey
+cast send $LighterAccount 'createAccount(uint8,address,bytes32)' 11 $eoaArbitrator $nostrArbitrator --private-key $deployerPrivKey
 export tbaArbitrator=$(cast call $LighterAccount "getAccountAddress(uint256)(address)" 11)
 echo "tbaArbitrator: $tbaArbitrator"
 export TBA_ARBITRATOR=$tbaArbitrator

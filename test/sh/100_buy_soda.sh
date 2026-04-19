@@ -74,6 +74,21 @@ if [ -z "$PAYEE_DETAILS" ]; then
     exit 1
 fi
 
+ensure_seller_allowance(){
+    local sellerPrivKey=$1
+    local token=$2
+    local allowanceHolder=$3
+    local amount=$4
+    local uintMax=$(cast --to-uint256 99999999999999999999999999)
+
+    local eoa=$(cast wallet address --private-key=$sellerPrivKey)
+
+    local allowance = $(cast call $token "allowance(address,address)(uint256)" $eoa $allowanceHolder)
+    if [ $allowance -lt $amount ]; then
+        cast send $token 'approve(address,uint256)' $allowanceHolder $uintMax --private-key=$sellerPrivKey
+    fi
+}
+
 # Load sensitive information from environment variables
 export buyerPrivKey=$BUYER_PRIV_KEY
 export sellerPrivKey=$SELLER_PRIV_KEY
@@ -226,6 +241,9 @@ echo "Action 1 (ESCROW_AND_INTENT_CHECK): $action1Data"
 echo "Action 2 (ESCROW_PARAMS_CHECK): $action2Data"
 echo "Action 3 (SIGNATURE_TRANSFER_FROM_WITH_WITNESS): $action3Data"
 echo "=========================================="
+
+
+ensure_seller_allowance $sellerPrivKey $usdc $permit2 $permit2Amount
 
 # Build the full calldata for execute function
 # Note: cast abi-encode for bytes[] arrays can be tricky
